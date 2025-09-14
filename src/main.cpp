@@ -9,7 +9,6 @@
 #include "notation_utils.h"
 #include "evaluation.h"
 #include "engine.h"
-thereddff
 int main(){
     Zobrist::initialize_keys();
     Engine engine;
@@ -19,15 +18,15 @@ int main(){
     // } else {
     //     std::cout << "No existing table found. Starting fresh." << std::endl;
     // }
-    Board board("4kbr1/Q1p2p2/1rpqpn2/3p1p2/3P3p/2N1P3/PPPB1PPP/1R3RK1 w - - 0 15");
+    Board board;
     // std::cout << board.get_material_score() << std::endl;
     
     // // std::cout << board.get_positional_score() << std::endl;
-    /* for (size_t i = 6; i < 7; ++i)
-    //  {
+     for (size_t i = 5; i < 6; ++i)
+      {
          engine.perft_test(board,i);
      }
-     return 0*/;
+     return 0;
     // std::cout << engine.special_boards[0].get_material_score() << std::endl;
     // engine.special_boards[0].display();
     std::cout << "Choose a color, w for white, b for black" << std::endl;
