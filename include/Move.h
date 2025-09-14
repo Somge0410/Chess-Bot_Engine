@@ -10,7 +10,7 @@ struct Move{
     PieceType promotion_piece;
     bool is_castle;
     bool is_en_passant;
-    std::string old_castling_rights;
+    uint8_t old_castling_rights;
     int old_en_passant_square;
     Color move_color;
     Move()
@@ -22,11 +22,11 @@ struct Move{
           promotion_piece(PieceType::NONE),
           is_castle(false),
           is_en_passant(false),
-          old_castling_rights(""),
+          old_castling_rights(0),
           old_en_passant_square(-1)
     {
     }
-    Move(int from, int to, PieceType moved,Color color, PieceType captured=PieceType::NONE, std::string old_castling="", int old_ente_passente=-1,PieceType promo=PieceType::NONE,bool castle=false, bool ente_passente=false):
+    Move(int from, int to, PieceType moved,Color color, PieceType captured=PieceType::NONE, uint8_t old_castling=0, int old_ente_passente=-1,PieceType promo=PieceType::NONE,bool castle=false, bool ente_passente=false):
          from_square(from),
          to_square(to),
          piece_moved(moved),

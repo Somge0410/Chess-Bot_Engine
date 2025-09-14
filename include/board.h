@@ -32,7 +32,7 @@ class Board{
         PieceType get_piece_on_square(int square)const;
         CheckInfo count_attacker_on_square(const int square,const Color attacker_color,const int bound=2, const bool need_sq=true) const;
         int get_en_passant_rights() const;
-        std::string get_castle_rights() const;
+        uint8_t get_castle_rights() const;
         uint64_t get_hash() const;
         int get_material_score() const;
         double get_positional_score() const;
@@ -41,7 +41,7 @@ class Board{
         bool in_check() const;
     private:
         int turn;
-        std::string castling_rights;
+        uint8_t castling_rights;
         int en_passant_square;
         int half_moves;
         int move_count;

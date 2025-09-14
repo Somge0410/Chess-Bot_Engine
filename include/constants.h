@@ -9,6 +9,10 @@
 //color and piece constants
 enum class Color { WHITE, BLACK };
 enum class PieceType { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
+inline const uint8_t WHITE_KING_CASTLE = 1U << 3;
+inline const uint8_t WHITE_QUEEN_CASTLE = 1U << 2;
+inline const uint8_t BLACK_KING_CASTLE = 1U << 1;
+inline const uint8_t BLACK_QUEEN_CASTLE = 1U << 0;
 
 
 //FEN-constants

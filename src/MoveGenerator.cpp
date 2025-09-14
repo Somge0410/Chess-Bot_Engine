@@ -118,10 +118,9 @@ std::vector<Move> MoveGenerator::generate_king_moves(const Board& board,const Co
             possible_moves&=possible_moves-1;
         }
         if (board.count_attacker_on_square(king_square,other_color,1,false).count>0) return moves;
-        
-        char king_char=own_color==Color::WHITE ? 'K':'k';
-        char queen_char=own_color==Color::WHITE ? 'Q':'q';
-        if (board.get_castle_rights().find(king_char)!=-1)
+		uint8_t king_castle_mask = own_color == Color::WHITE ? WHITE_KING_CASTLE : BLACK_KING_CASTLE;
+		uint8_t queen_castle_mask = own_color == Color::WHITE ? WHITE_QUEEN_CASTLE : BLACK_QUEEN_CASTLE;
+        if ((board.get_castle_rights() & king_castle_mask)!= 0)
         {   
             int rook_square=king_square+3;
             uint64_t line_between=LINE_BETWEEN[king_square+1][king_square+2];
@@ -138,7 +137,7 @@ std::vector<Move> MoveGenerator::generate_king_moves(const Board& board,const Co
             }
             
         }
-        if (board.get_castle_rights().find(queen_char)!=-1)
+		if ((board.get_castle_rights() & queen_castle_mask) != 0)
         {
             uint64_t line_between=LINE_BETWEEN[king_square-1][king_square-3];
             if ((line_between & board.get_all_pieces())==0)

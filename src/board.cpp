@@ -74,10 +74,12 @@ void Board::parse_fen_turn(const  std::string& turn_data){
      turn= turn_data=="w" ? to_int(Color::WHITE):to_int(Color::BLACK); 
 }
 void Board::parse_fen_castling(const std::string& castling_data){
+	castling_rights = 0;
     if (castling_data!="-"){
-         castling_rights=castling_data;
-    }else{
-         castling_rights="";
+		if (castling_data.find('K') != std::string::npos) castling_rights |= (1U << 3); // White kingside
+		if (castling_data.find('Q') != std::string::npos) castling_rights |= (1U << 2); // White queenside
+		if (castling_data.find('k') != std::string::npos) castling_rights |= (1U << 1); // Black kingside
+		if (castling_data.find('q') != std::string::npos) castling_rights |= (1U << 0); // Black queenside
     }
 }
 
@@ -170,10 +172,7 @@ uint64_t Board::initialize_hash() const {
     if (turn== to_int(Color::BLACK)){
         h^=Zobrist::black_to_move_key;
     }
-    if (this->castling_rights.find('K') != std::string::npos) h ^= Zobrist::castling_keys[0];
-    if (this->castling_rights.find('Q') != std::string::npos) h ^= Zobrist::castling_keys[1];
-    if (this->castling_rights.find('k') != std::string::npos) h ^= Zobrist::castling_keys[2];
-    if (this->castling_rights.find('q') != std::string::npos) h ^= Zobrist::castling_keys[3];
+    h ^= Zobrist::castling_keys[this->castling_rights];
 
     // Hash en passant square
     if (this->en_passant_square != -1) {
@@ -294,10 +293,7 @@ void Board::update_game_phase(const Move& move,const bool undo){
 void Board::XOR_hash_rights(){
     // Give or remove all the old rights from the has:
      // 2. XOR out the keys for the current castling rights
-    if (this->castling_rights.find('K') != std::string::npos) this->zobrist_hash ^= Zobrist::castling_keys[0];
-    if (this->castling_rights.find('Q') != std::string::npos) this->zobrist_hash ^= Zobrist::castling_keys[1];
-    if (this->castling_rights.find('k') != std::string::npos) this->zobrist_hash ^= Zobrist::castling_keys[2];
-    if (this->castling_rights.find('q') != std::string::npos) this->zobrist_hash ^= Zobrist::castling_keys[3];
+	this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights];
 
     // XOR out the En_passant rights:
     if (en_passant_square!=-1){
@@ -311,28 +307,28 @@ void Board::update_castle_rights(const Move& move,const bool undo){
     if (move.piece_moved==PieceType::KING)
     {
         if (move.move_color==Color::WHITE)
-        {
-            remove_castling_right(castling_rights, 'K');
-            remove_castling_right(castling_rights,'Q');
+        {  
+            castling_rights &= ~WHITE_KING_CASTLE;
+			castling_rights &= ~WHITE_QUEEN_CASTLE;
         }else
-        {
-            remove_castling_right(castling_rights,'k');
-            remove_castling_right(castling_rights,'q');
+        {   
+			castling_rights &= ~BLACK_KING_CASTLE;
+			castling_rights &= ~BLACK_QUEEN_CASTLE;
         }
         
         
     }
     // 2. If a rook moves FROM its starting square, remove that one right
-    if (move.from_square == 7)  remove_castling_right(this->castling_rights, 'K'); 
-    if (move.from_square == 0)  remove_castling_right(this->castling_rights, 'Q'); 
-    if (move.from_square == 63) remove_castling_right(this->castling_rights, 'k'); 
-    if (move.from_square == 56) remove_castling_right(this->castling_rights, 'q');
+	if (move.from_square == 7)  castling_rights &= ~WHITE_KING_CASTLE;
+	if (move.from_square == 0)  castling_rights &= ~WHITE_QUEEN_CASTLE;
+    if (move.from_square == 63) castling_rights&= ~BLACK_KING_CASTLE; 
+	if (move.from_square == 56) castling_rights &= ~BLACK_QUEEN_CASTLE;
 
     // 3. If an enemy rook is captured ON its starting square, remove that right
-    if (move.to_square == 7)   remove_castling_right(this->castling_rights, 'K'); 
-    if (move.to_square == 0)   remove_castling_right(this->castling_rights, 'Q'); 
-    if (move.to_square == 63)  remove_castling_right(this->castling_rights, 'k'); 
-    if (move.to_square == 56)  remove_castling_right(this->castling_rights, 'q'); 
+	if (move.to_square == 7)   castling_rights &= ~WHITE_KING_CASTLE;
+	if (move.to_square == 0)   castling_rights &= ~WHITE_QUEEN_CASTLE;
+	if (move.to_square == 63)  castling_rights &= ~BLACK_KING_CASTLE;
+	if (move.to_square == 56)  castling_rights &= ~BLACK_QUEEN_CASTLE;
     }else
     {
         castling_rights=move.old_castling_rights;
@@ -531,7 +527,7 @@ PieceType Board::get_piece_on_square(int square) const {
 int Board::get_en_passant_rights() const{
     return en_passant_square;
 }
-std::string Board::get_castle_rights() const{
+uint8_t Board::get_castle_rights() const{
     return castling_rights;
 }
 uint64_t Board::get_hash() const{

@@ -3,7 +3,7 @@
 
 uint64_t Zobrist::piece_keys[2][6][64];
 uint64_t Zobrist::black_to_move_key;
-uint64_t Zobrist::castling_keys[4];
+uint64_t Zobrist::castling_keys[16];
 uint64_t Zobrist::en_passant_keys[8];
 
 void Zobrist:: initialize_keys(){
@@ -20,7 +20,7 @@ void Zobrist:: initialize_keys(){
 
     black_to_move_key =dist(gen);
 
-    for (int i=0; i<4; ++i){
+    for (int i=0; i<16; ++i){
         castling_keys[i]=dist(gen);
     }
     for (int i=0;i<8;++i){
