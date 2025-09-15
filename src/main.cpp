@@ -18,7 +18,7 @@ int main(){
     // } else {
     //     std::cout << "No existing table found. Starting fresh." << std::endl;
     // }
-    Board board;
+    Board board; 
     // std::cout << board.get_material_score() << std::endl;
     
     // // std::cout << board.get_positional_score() << std::endl;
