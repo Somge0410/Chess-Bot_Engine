@@ -7,7 +7,7 @@
 
 
 //color and piece constants
-enum class Color { WHITE, BLACK };
+enum class Color { WHITE, BLACK, NONE };
 enum class PieceType { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
 inline const uint8_t WHITE_KING_CASTLE = 1U << 3;
 inline const uint8_t WHITE_QUEEN_CASTLE = 1U << 2;
@@ -23,7 +23,7 @@ const std::map<char, PieceType> PIECE_TYPE_MAP = {
     {'.',PieceType::NONE},{'p', PieceType::PAWN}, {'n', PieceType::KNIGHT}, {'b', PieceType::BISHOP}, 
     {'r', PieceType::ROOK}, {'q', PieceType::QUEEN}, {'k', PieceType::KING},
 };
-const std::string PIECE_CHAR_LIST="PNBRQK";
+const std::string PIECE_CHAR_LIST="PNBRQK.";
 
 
 

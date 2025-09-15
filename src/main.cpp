@@ -22,7 +22,7 @@ int main(){
     // std::cout << board.get_material_score() << std::endl;
     
     // // std::cout << board.get_positional_score() << std::endl;
-     for (size_t i = 0; i < 7; ++i)
+     for (size_t i = 5; i < 6 ; ++i) 
       {
          engine.perft_test(board,i);
      }

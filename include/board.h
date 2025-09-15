@@ -30,6 +30,8 @@ class Board{
         uint64_t get_color_pieces(const Color color) const;
         uint64_t get_all_pieces() const;
         PieceType get_piece_on_square(int square)const;
+		Color get_color_on_square(int square) const;
+        char get_char_on_square(int square) const;
         CheckInfo count_attacker_on_square(const int square,const Color attacker_color,const int bound=2, const bool need_sq=true) const;
         int get_en_passant_rights() const;
         uint8_t get_castle_rights() const;

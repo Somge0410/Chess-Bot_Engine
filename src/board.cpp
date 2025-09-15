@@ -112,7 +112,7 @@ void Board::display() const{
         for (int file=0;file<8;++file){
             int square_index=rank*8+file;
 
-            char piece=square_to_piece_map[square_index];
+            char piece=get_char_on_square(square_index);
             std::cout << piece << " ";
         }
         std::cout << std::endl;
@@ -216,7 +216,7 @@ void Board::make_move(const Move& move){
     update_castle_rights(move );
     update_en_passsant_rights(move);
     update_pieces(move);
-    update_piece_map(move);
+    //update_piece_map(move);
     update_pieces_hash(move);
     XOR_hash_rights();
     update_turn_rights();
@@ -225,7 +225,7 @@ void Board::undo_move(const Move& move){
     update_turn_rights();
     XOR_hash_rights();
     update_pieces_hash(move);
-    update_piece_map(move,true);
+    //update_piece_map(move,true);
     update_pieces(move);
     update_en_passsant_rights(move,true);
     update_castle_rights(move,true);
@@ -522,7 +522,42 @@ uint64_t Board::get_all_pieces() const{
     return all_pieces;
 }
 PieceType Board::get_piece_on_square(int square) const {
-    return PIECE_TYPE_MAP.at(square_to_piece_map[square]);
+	PieceType piece_type = PieceType::NONE;
+    if ((all_pieces & (1ULL << square)) == 0) {
+        return piece_type;
+	}
+	int piece_type_index = 0;
+    uint64_t piece_mask = 0;
+    while (piece_type==PieceType::NONE && piece_type_index<6) {
+		piece_mask = pieces[0][piece_type_index] | pieces[1][piece_type_index];
+        if (piece_mask & (1ULL << square)) {
+            piece_type = static_cast<PieceType>(piece_type_index);
+		}
+		piece_type_index++;
+	}
+
+    return piece_type;
+}
+Color Board::get_color_on_square(int square) const {
+    
+    for (int color = 0; color < 2; ++color) {
+            if (color_pieces[color] & (1ULL << square)) {
+                return static_cast<Color>(color);
+            }
+    }
+	return Color::NONE;
+}
+char Board::get_char_on_square(int square) const {
+	char piece_char = PIECE_CHAR_LIST[to_int(get_piece_on_square(square))];
+    if (piece_char == '.') {
+        return piece_char; // Empty square
+	}
+    Color color = get_color_on_square(square);
+    if (color == Color::WHITE) {
+        return piece_char; // Uppercase for white pieces
+    } else if (color == Color::BLACK) {
+        return std::tolower(piece_char); // Lowercase for black pieces
+	}
 }
 int Board::get_en_passant_rights() const{
     return en_passant_square;
