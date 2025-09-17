@@ -11,10 +11,10 @@
 #include <fstream>
 Move Engine::search(const Board& position, int max_depth, int time_limit_seconds) {
     this->transposition_table.clear();
-    for (int i = 0; i < 128; ++i) { // 128 is MAX_PLY
-        this->killer_moves[i][0] = Move();
-        this->killer_moves[i][1] = Move();
-    }
+    std::memset(this->killer_moves, 0, sizeof(this->killer_moves));
+
+    std::memset(this->history_scores, 0, sizeof(this->history_scores));
+
     // Set the time control member variables for this search
     this->start_time = std::chrono::steady_clock::now();
     this->time_limit = std::chrono::seconds(time_limit_seconds);

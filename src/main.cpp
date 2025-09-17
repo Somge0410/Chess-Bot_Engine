@@ -18,7 +18,7 @@ int main(){
     // } else {
     //     std::cout << "No existing table found. Starting fresh." << std::endl;
     // }
-    Board board; 
+    Board board("4k2r/3bbppp/3p4/1p2pqB1/3PQ3/2P2N1n/PP3PPP/RN2RK2 b k - 8 20");
     // std::cout << board.get_material_score() << std::endl;
     
     // // std::cout << board.get_positional_score() << std::endl;
@@ -26,7 +26,7 @@ int main(){
       {
          engine.perft_test(board,i);
      }
-     return 0;
+     //return 0;
     // std::cout << engine.special_boards[0].get_material_score() << std::endl;
     // engine.special_boards[0].display();
     std::cout << "Choose a color, w for white, b for black" << std::endl;
@@ -82,7 +82,7 @@ int main(){
         }else
         {
             std::cout << "\nComputer is thinking..." << std::endl;
-            Move best_move = engine.search(board,15,30);
+            Move best_move = engine.search(board,20,30);
             if (best_move.from_square !=-1)
             {
                 std::cout << "Computer plays:" << to_san(best_move, legal_moves) << std::endl;
