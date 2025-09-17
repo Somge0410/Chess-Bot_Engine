@@ -147,11 +147,8 @@ void Board::initialize_game_phase() {
     int rook_phase   = popcount(pieces[to_int(Color::WHITE)][to_int(PieceType::ROOK)]   | pieces[to_int(Color::BLACK)][to_int(PieceType::ROOK)])   * ROOK_PHASE;
     int queen_phase  = popcount(pieces[to_int(Color::WHITE)][to_int(PieceType::QUEEN)]  | pieces[to_int(Color::BLACK)][to_int(PieceType::QUEEN)])  * QUEEN_PHASE;
 
-    int current_phase = knight_phase + bishop_phase + rook_phase + queen_phase;
+    game_phase = knight_phase + bishop_phase + rook_phase + queen_phase;
     
-    // Clamp the phase to the max value and divide to get a value between 0.0 and 1.0
-    // We cast to double to ensure the result is a floating-point number
-     game_phase=static_cast<double>(std::min(current_phase, INITIAL_PHASE_VALUE)) / INITIAL_PHASE_VALUE;
 }
 uint64_t Board::initialize_hash() const {
     uint64_t h=0;
@@ -191,8 +188,8 @@ MaterialScore Board::initialize_material_score()const {
     return {score};
 }
 PositionalScore Board::initialize_positional_score()const {
-        double score_mg=0;
-        double score_eg=0;
+        int score_mg=0;
+        int score_eg=0;
         for (int color=0;color<2;++color){
             for (int piece=0;piece<6;++piece){
                 uint64_t bitboard=pieces[color][piece];
@@ -206,30 +203,25 @@ PositionalScore Board::initialize_positional_score()const {
                 }
             }
         }
-        double tapered=score_mg*game_phase+score_eg*(1-game_phase);
-        return {tapered,score_mg,score_eg};
+        return {score_mg,score_eg};
 }
 void Board::make_move(const Move& move){
     update_material_score(move);
     update_positional_score(move);
-    XOR_hash_rights();
+    update_game_phase(move);
     update_castle_rights(move );
     update_en_passsant_rights(move);
     update_pieces(move);
-    //update_piece_map(move);
     update_pieces_hash(move);
-    XOR_hash_rights();
     update_turn_rights();
 }
 void Board::undo_move(const Move& move){
     update_turn_rights();
-    XOR_hash_rights();
     update_pieces_hash(move);
-    //update_piece_map(move,true);
     update_pieces(move);
     update_en_passsant_rights(move,true);
     update_castle_rights(move,true);
-    XOR_hash_rights();
+    update_game_phase(move, true);
     update_positional_score(move,true);
     update_material_score(move,true);
 
@@ -245,7 +237,7 @@ void Board::update_material_score(const Move& move, const bool undo){
     }
 }
 void Board::update_positional_score(const Move& move, const bool undo){
-    double weight=undo ? -1:1;
+    int weight=undo ? -1:1;
     PieceType piece_moved=move.piece_moved;
     PieceType piece_reached=move.promotion_piece==PieceType::NONE ? move.piece_moved:move.promotion_piece;
     positional_score.mg-=weight*get_mg_pos_score(move.move_color,piece_moved,move.from_square);
@@ -272,37 +264,28 @@ void Board::update_positional_score(const Move& move, const bool undo){
 
     }
     
-    update_game_phase(move,undo);
-    positional_score.tapered=positional_score.mg*game_phase+positional_score.eg*(1-game_phase);
 }
 void Board::update_turn_rights(){
         turn=turn==0 ? 1:0;
         zobrist_hash^=Zobrist::black_to_move_key;
 }
 void Board::update_game_phase(const Move& move,const bool undo){
-    double w=undo ? 1:-1;
+    int w=undo ? 1:-1;
     if (move.piece_captured!=PieceType::NONE){
         int piece_weight=PHASE_WEIGHTS[to_int(move.piece_captured)];
-        game_phase+=w*static_cast<double>(piece_weight)/24.0;
+        game_phase+=w*piece_weight;
     }
     if (move.promotion_piece!=PieceType::NONE){
         int piece_weight=PHASE_WEIGHTS[to_int(move.promotion_piece)];
-        game_phase-=w*static_cast<double>(piece_weight)/24.0;
-    }
-}
-void Board::XOR_hash_rights(){
-    // Give or remove all the old rights from the has:
-     // 2. XOR out the keys for the current castling rights
-	this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights];
-
-    // XOR out the En_passant rights:
-    if (en_passant_square!=-1){
-        zobrist_hash^=Zobrist::en_passant_keys[en_passant_square % 8];
+        game_phase-=w*piece_weight;
     }
 }
 void Board::update_castle_rights(const Move& move,const bool undo){
     if (!undo)
-    {
+    {   
+
+        this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Remove old rights from hash
+
         // if King moves
     if (move.piece_moved==PieceType::KING)
     {
@@ -329,22 +312,39 @@ void Board::update_castle_rights(const Move& move,const bool undo){
 	if (move.to_square == 0)   castling_rights &= ~WHITE_QUEEN_CASTLE;
 	if (move.to_square == 63)  castling_rights &= ~BLACK_KING_CASTLE;
 	if (move.to_square == 56)  castling_rights &= ~BLACK_QUEEN_CASTLE;
+
+
+	this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Add new rights to hash
     }else
     {
+        this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights];// Remove current rights from hash
         castling_rights=move.old_castling_rights;
+		this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Add old rights to hash
     }
 }
 void Board::update_en_passsant_rights(const Move& move,const bool undo){
     if (!undo)
     {
+        if (en_passant_square != -1) {
+            zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
+        }
         en_passant_square=-1;
         if (move.is_double_pawn_move())
         {
             en_passant_square=move.move_color==Color::WHITE ? move.to_square-8:move.to_square+8;
         }
+        if (en_passant_square != -1) {
+            zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
+        }
     }else
     {
+        if (en_passant_square != -1) {
+            zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
+        }
         en_passant_square=move.old_en_passant_square;
+        if (en_passant_square != -1) {
+            zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
+        }
     }
     
     
@@ -572,10 +572,10 @@ int Board::get_material_score() const{
     return material_score.score;
 }
 double Board::get_positional_score() const{
-    return positional_score.tapered;
+    return (positional_score.mg*game_phase+positional_score.eg*(1-game_phase))/24.0;
 }
 double Board::get_game_phase() const{
-    return game_phase;
+    return game_phase/24.0;
 }
 bool Board::has_enough_material_for_nmp() const {
     // Get the bitboard of all non-pawn/king pieces for the current side to move

@@ -80,10 +80,10 @@ inline char get_piece_char(const PieceType& piece,const Color& color){
 inline int get_piece_values(const Color& color, const PieceType& piece){
     return PIECE_VALUES[to_int(color)][to_int(piece)];
 }
-inline double get_mg_pos_score(const Color& color, const PieceType& piece,const int& square){
+inline int get_mg_pos_score(const Color& color, const PieceType& piece,const int& square){
     return MG_PST[to_int(color)][to_int(piece)][square];
 }
-inline double get_eg_pos_score(const Color& color, const PieceType& piece,const int& square){
+inline int get_eg_pos_score(const Color& color, const PieceType& piece,const int& square){
     return EG_PST[to_int(color)][to_int(piece)][square];
 }
 inline int get_first_blocker_sq(const uint64_t& ray, const uint64_t& occupied_mask,bool forwards=true){

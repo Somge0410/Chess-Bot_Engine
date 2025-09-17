@@ -5,9 +5,8 @@
 #include <cstdint>
 #include "Move.h"
 struct PositionalScore {
-    double tapered;
-    double mg;
-    double eg;
+    int mg;
+    int eg;
 };
 struct MaterialScore{
     int score;
@@ -42,22 +41,22 @@ class Board{
         bool has_enough_material_for_nmp() const;
         bool in_check() const;
     private:
+        uint64_t zobrist_hash;
+        int game_phase;
         int turn;
         uint8_t castling_rights;
         int en_passant_square;
+        MaterialScore material_score;
+        PositionalScore positional_score;
         int half_moves;
         int move_count;
         uint64_t pieces[2][6]={};
         uint64_t color_pieces[2]={};
         uint64_t all_pieces=0;
         char square_to_piece_map[64];
-        double game_phase;
         uint64_t initialize_hash() const;
-        uint64_t zobrist_hash;
         MaterialScore initialize_material_score() const;
         PositionalScore initialize_positional_score() const;
-        MaterialScore material_score;
-        PositionalScore positional_score;
 
 
         void parse_fen(const std::string& fen);
@@ -76,7 +75,6 @@ class Board{
         void update_pieces(const Move& move);
         void update_game_phase(const Move& move, const bool undo=false);
         void update_turn_rights();
-        void XOR_hash_rights();
         void update_castle_rights(const Move& move,const bool undo=false);
         void update_en_passsant_rights(const Move& move,const bool undo=false);
         void update_pieces_hash(const Move& move);
