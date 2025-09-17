@@ -44,8 +44,7 @@ void Board::parse_fen(const std::string& fen){
 }
 
 void Board::parse_fen_pieces(const std::string& piece_data){
-    
-    std::fill(std::begin(square_to_piece_map),std::end(square_to_piece_map),'.');
+ 
     int rank=7;
     int file=0;
     for(char c : piece_data){
@@ -61,7 +60,6 @@ void Board::parse_fen_pieces(const std::string& piece_data){
             int piece_type_index=to_int(PIECE_TYPE_MAP.at(toupper(c)));
 
             pieces[color_index][piece_type_index]|=(1ULL<< square_index);
-             square_to_piece_map[square_index]=c;
 
             file++;
 
@@ -413,55 +411,6 @@ void Board::update_pieces(const Move& move){
 
 
 
-}
-void Board::update_piece_map(const Move& move, const bool undo){
-    if (!undo)
-    {
-        square_to_piece_map[move.from_square]='.';
-        PieceType piece_reached=move.promotion_piece==PieceType::NONE ? move.piece_moved:move.promotion_piece;
-        char c=get_piece_char(piece_reached,move.move_color);
-        square_to_piece_map[move.to_square]=c;
-
-        if (move.is_en_passant)
-        {
-            int pawn_square=move.get_capture_square();
-            square_to_piece_map[pawn_square]='.';
-
-        }
-
-        if (move.is_castle)
-        {
-            bool king_side=move.to_square>move.from_square;
-            int old_rook_square=king_side ? move.to_square+1:move.to_square-2;
-            int new_rook_square=king_side ? move.to_square-1:move.to_square+1;
-
-            char c=get_piece_char(PieceType::ROOK,move.move_color);
-            square_to_piece_map[old_rook_square]='.';
-            square_to_piece_map[new_rook_square]=c;
-
-        }
-    }else
-    {
-        square_to_piece_map[move.from_square]=get_piece_char(move.piece_moved,move.move_color);
-        square_to_piece_map[move.to_square]='.';
-        if (move.piece_captured!=PieceType::NONE)
-        {
-            square_to_piece_map[move.get_capture_square()]=get_piece_char(move.piece_captured,move.get_capture_color());
-        }
-        
-
-        if (move.is_castle)
-        {
-            bool king_side=move.to_square>move.from_square;
-            int old_rook_square=king_side ? move.to_square+1:move.to_square-2;
-            int new_rook_square=king_side ? move.to_square-1:move.to_square+1;
-            char rook=get_piece_char(PieceType::ROOK,move.move_color);
-            square_to_piece_map[old_rook_square]=rook;
-            square_to_piece_map[new_rook_square]='.';
-        }      
-    }
-
-   
 }
 CheckInfo Board::count_attacker_on_square(const int square, const Color attacker_color,const int bound,const bool need_square)const {
     CheckInfo info={0,-1};
