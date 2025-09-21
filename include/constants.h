@@ -56,3 +56,8 @@ const std::vector<int> BISHOP_DIR_IND={0,2,4,6};
 const uint64_t BOARD_ALL_SET=0xFFFFFFFFFFFFFFFFULL;
 const uint64_t NOT_FILE_A=0xfefefefefefefefe;
 const uint64_t NOT_FILE_H=0x7f7f7f7f7f7f7f7f;
+const uint64_t CENTER_MASK = 1ULL << 27 | 1ULL << 28 | 1ULL << 35 | 1ULL << 36;
+const uint64_t EXTENDED_CENTER_MASK = 1ULL << 26 | 1ULL << 29 |
+                                      1ULL << 34 | 1ULL << 37 |
+                                      1ULL << 42 | 1ULL << 43 | 1ULL << 44 | 1ULL << 45 |
+	                                  1ULL << 18 | 1ULL << 19| 1ULL << 20 | 1ULL << 21;

@@ -10,8 +10,10 @@
 #include "pst.h"
 #include <algorithm>
 #include <cctype>
+#include <array>
 #include "attack_rays.h"
 #include "bitboard_masks.h"
+
 Board::Board(const std:: string& fen){
 
      parse_fen(fen);
@@ -20,6 +22,9 @@ Board::Board(const std:: string& fen){
      zobrist_hash=initialize_hash();
      material_score=initialize_material_score();
      positional_score=initialize_positional_score();
+     history.reserve(256);
+     history.push_back(get_board_state());
+
 }
 void Board::parse_fen(const std::string& fen){
     std::stringstream ss(fen);
@@ -65,6 +70,13 @@ void Board::parse_fen_pieces(const std::string& piece_data){
 
 
         }
+        if(c=='K' || c == 'k') {
+            if (isupper(c)){
+                white_king_square=rank*8+file-1;
+            }else{
+                black_king_square=rank*8+file-1;
+            }
+		}
     }
 }
 
@@ -204,24 +216,21 @@ PositionalScore Board::initialize_positional_score()const {
         return {score_mg,score_eg};
 }
 void Board::make_move(const Move& move){
+
+    history.push_back(get_board_state());
     update_material_score(move);
     update_positional_score(move);
     update_game_phase(move);
     update_castle_rights(move );
     update_en_passsant_rights(move);
+    update_king_square(move);
     update_pieces(move);
     update_pieces_hash(move);
     update_turn_rights();
 }
 void Board::undo_move(const Move& move){
-    update_turn_rights();
-    update_pieces_hash(move);
-    update_pieces(move);
-    update_en_passsant_rights(move,true);
-    update_castle_rights(move,true);
-    update_game_phase(move, true);
-    update_positional_score(move,true);
-    update_material_score(move,true);
+    recover_board_state(history.back());
+    history.pop_back();
 
 }
 void Board::update_material_score(const Move& move, const bool undo){
@@ -279,10 +288,7 @@ void Board::update_game_phase(const Move& move,const bool undo){
     }
 }
 void Board::update_castle_rights(const Move& move,const bool undo){
-    if (!undo)
-    {   
-
-        this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Remove old rights from hash
+    this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Remove old rights from hash
 
         // if King moves
     if (move.piece_moved==PieceType::KING)
@@ -313,16 +319,9 @@ void Board::update_castle_rights(const Move& move,const bool undo){
 
 
 	this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Add new rights to hash
-    }else
-    {
-        this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights];// Remove current rights from hash
-        castling_rights=move.old_castling_rights;
-		this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Add old rights to hash
-    }
 }
 void Board::update_en_passsant_rights(const Move& move,const bool undo){
-    if (!undo)
-    {
+    
         if (en_passant_square != -1) {
             zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
         }
@@ -334,16 +333,7 @@ void Board::update_en_passsant_rights(const Move& move,const bool undo){
         if (en_passant_square != -1) {
             zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
         }
-    }else
-    {
-        if (en_passant_square != -1) {
-            zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
-        }
-        en_passant_square=move.old_en_passant_square;
-        if (en_passant_square != -1) {
-            zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
-        }
-    }
+    
     
     
     
@@ -370,6 +360,36 @@ void Board::update_pieces_hash(const Move& move){
 
     }
     
+    
+}
+void Board::update_king_square(const Move& move,const bool undo){
+    if (!undo)
+    {
+        if (move.piece_moved==PieceType::KING)
+        {
+            if (move.move_color==Color::WHITE)
+            {
+                white_king_square=move.to_square;
+            }else
+            {
+                black_king_square=move.to_square;
+            }
+            
+        }
+    }else
+    {
+        if (move.piece_moved==PieceType::KING)
+        {
+            if (move.move_color==Color::WHITE)
+            {
+                white_king_square=move.from_square;
+            }else
+            {
+                black_king_square=move.from_square;
+            }
+            
+        }
+    }
     
 }
 void Board::update_pieces(const Move& move){
@@ -526,6 +546,27 @@ double Board::get_positional_score() const{
 double Board::get_game_phase() const{
     return game_phase/24.0;
 }
+int Board::get_king_square(Color color) const{
+    return color==Color::WHITE ? white_king_square:black_king_square;
+}
+BoardState Board::get_board_state() const {
+    BoardState current_state;
+    current_state.zobrist_hash=this->zobrist_hash;
+    current_state.castling_rights=this->castling_rights;
+    current_state.en_passant_square = this->en_passant_square;
+    current_state.game_phase = this->game_phase;
+    current_state.turn = this->turn;
+    current_state.white_king_square = this->white_king_square;
+    current_state.black_king_square = this->black_king_square;
+    current_state.pieces = this->pieces;
+    current_state.color_pieces = this->color_pieces;
+    current_state.all_pieces = this->all_pieces;
+    current_state.positional_score = this->positional_score;
+    current_state.material_score = this->material_score;
+    current_state.half_moves = this->half_moves;
+    current_state.move_count = this->move_count;
+    return current_state;
+}
 bool Board::has_enough_material_for_nmp() const {
     // Get the bitboard of all non-pawn/king pieces for the current side to move
     uint64_t pieces = this->pieces[this->turn][to_int(PieceType::KNIGHT)] |
@@ -539,7 +580,7 @@ bool Board::has_enough_material_for_nmp() const {
 bool Board::in_check() const{
     Color color=turn==0 ? Color::WHITE:Color::BLACK;
     Color attacker_color=turn== 0 ? Color::BLACK:Color::WHITE;
-    int king_sq=get_lsb(get_pieces(color,PieceType::KING));
+    int king_sq=color==Color::WHITE ? white_king_square : black_king_square;
     return count_attacker_on_square(king_sq,attacker_color,1,false).count>=1;
 }
 int Board::make_null_move(){
@@ -558,4 +599,21 @@ void Board::undo_null_move(int original_ep_square){
 
         if (en_passant_square!=-1) zobrist_hash^=Zobrist::en_passant_keys[en_passant_square % 8];
         
+}
+void Board::recover_board_state(const BoardState& previous_state) {
+
+    this->zobrist_hash = previous_state.zobrist_hash;
+    this->castling_rights = previous_state.castling_rights;
+    this->en_passant_square = previous_state.en_passant_square;
+    this->game_phase = previous_state.game_phase;
+    this->turn = previous_state.turn;
+    this->white_king_square = previous_state.white_king_square;
+    this->black_king_square = previous_state.black_king_square;
+    this->pieces = previous_state.pieces;
+    this->color_pieces = previous_state.color_pieces;
+    this->all_pieces = previous_state.all_pieces;
+    this->positional_score = previous_state.positional_score;
+    this->material_score = previous_state.material_score;
+    this->half_moves = previous_state.half_moves;
+    this->move_count = previous_state.move_count;
 }

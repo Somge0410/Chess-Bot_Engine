@@ -9,7 +9,10 @@
 #include "notation_utils.h"
 #include "evaluation.h"
 #include "engine.h"
+#include "rook_tables.h"
+#include "bishop_tables.h"
 int main(){
+	
     Zobrist::initialize_keys();
     Engine engine;
     // std::cout << "Loading transposition table..." << std::endl;
@@ -18,15 +21,26 @@ int main(){
     // } else {
     //     std::cout << "No existing table found. Starting fresh." << std::endl;
     // }
-    Board board("4k2r/3bbppp/3p4/1p2pqB1/3PQ3/2P2N1n/PP3PPP/RN2RK2 b k - 8 20");
+    Board board;
+    /*board.display();
+    int square = 3;
+    uint64_t piece_blocker = BISHOP_BLOCKER_MASK[square] & board.get_all_pieces();
+    std::cout << piece_blocker << std::endl;
+    display_bitboard(piece_blocker);
+    uint64_t index = (piece_blocker * MAGIC_BISHOP_NUMBER[square]) >> BISHOP_SHIFT_NUMBERS[square];
+    display_bitboard(BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[square] + index]);
+   */
+    //return 0;
+
     // std::cout << board.get_material_score() << std::endl;
     
     // // std::cout << board.get_positional_score() << std::endl;
+    
      for (size_t i = 5; i < 6 ; ++i) 
       {
          engine.perft_test(board,i);
      }
-     //return 0;
+     return 0;
     // std::cout << engine.special_boards[0].get_material_score() << std::endl;
     // engine.special_boards[0].display();
     std::cout << "Choose a color, w for white, b for black" << std::endl;
@@ -82,7 +96,7 @@ int main(){
         }else
         {
             std::cout << "\nComputer is thinking..." << std::endl;
-            Move best_move = engine.search(board,20,30);
+            Move best_move = engine.search(board,20,15);
             if (best_move.from_square !=-1)
             {
                 std::cout << "Computer plays:" << to_san(best_move, legal_moves) << std::endl;

@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include "constants.h"
-
+#include <array>
 void print_array(const std::string& name, const std:: vector<uint64_t>& arr){
     size_t size=arr.size();
     std:: cout <<"const uint64_t "<<name << "["<<size<<"] = {" << std::endl;
@@ -41,6 +41,74 @@ void print_2d_array(const std::string& name, const std:: vector<std::vector<uint
         std::cout << "},"<< std::endl;
     }
     std::cout <<"};" << std::endl << std::endl;
+    
+}
+void print_2d_int_array(const std::string& name, const std::vector<std::vector<int>>& arr) {
+    if (arr.empty() || arr[0].empty())
+    {
+        std::cout << "const uint64_t " << name << "[0][0] = {};" << std::endl;
+        return;
+    }
+    size_t rows = arr.size();
+    size_t cols = arr[0].size();
+
+    std::cout << "const int " << name << "[" << rows << "][" << cols << "] = {" << std::endl;
+    for (size_t i = 0; i < rows; ++i)
+    {
+        std::cout << "    { ";
+        for (size_t j = 0; j < cols; ++j)
+        {
+            std::cout <<arr[i][j] <<", "<< (j % 8 == 7 ? "\n      " : " ");
+        }
+        std::cout << "}," << std::endl;
+    }
+    std::cout << "};" << std::endl << std::endl;
+
+}
+std::array<std::vector<uint64_t>,64> rook_blocker_combinations;
+generate_blocker_subsets(int square,uint64_t blocker_mask) {
+	rook_blocker_combinations[square].push_back(0);
+	uint64_t subset = blocker_mask;
+    while (subset > 0) {
+                rook_blocker_combinations[square].push_back(subset);
+				subset = (subset - 1) & blocker_mask;
+    }
+}
+uint64_t calculate_rook_blocker_mask(int square) {
+    uint64_t mask = 0;
+    int rank = square / 8;
+    int file = square % 8;
+    // Horizontal (rank)
+    for (int f = file + 1; f <= 6; ++f) mask |= (1ULL << (rank * 8 + f));
+    for (int f = file - 1; f >= 1; --f) mask |= (1ULL << (rank * 8 + f));
+    // Vertical (file)
+    for (int r = rank + 1; r <= 6; ++r) mask |= (1ULL << (r * 8 + file));
+    for (int r = rank - 1; r >= 1; --r) mask |= (1ULL << (r * 8 + file));
+    return mask;
+}
+void find_all_combinations() {
+    for (int square = 0; square < 64; ++square) {
+        uint64_t blocker_mask = calculate_rook_blocker_mask(square);
+        generate_blocker_subsets(square, blocker_mask);
+    }
+}
+bool is_magic_number(uint64_t magic,int square) {
+	uint64_t calculate_rook_blocker_mask(int square);
+    int relevant_bits = popcount(calculate_rook_blocker_mask(square));
+    int combinations = 1 << relevant_bits;
+    std::vector<uint64_t> used_attacks(combinations, 0);
+    for (uint64_t blockers : rook_blocker_combinations[square]) {
+        uint64_t index = (blockers * magic) >> (64 - relevant_bits);
+        if (used_attacks[index] == 0) {
+            used_attacks[index] = 1;
+        } else if (used_attacks[index] != 0) {
+            return false; // Collision detected
+        }
+    }
+	return true; // No collisions, valid magic number
+}
+std::array<uint64_t> magic_rook_number;
+for(int square=0;square<64;++square){
     
 }
 
@@ -387,7 +455,15 @@ int main(){
         passed_pawn_mask[1][square]=backward_ranks & files;
         
     }
-    
+	std::vector<std::vector<int>> distance_bonus(64, std::vector<int>(64, 0));
+    for (int king_square = 0; king_square < 64; ++king_square) {
+        for (int att_sq = 0; att_sq < 64; ++att_sq) {
+            int rank_diff = std::abs((king_square / 8) - (att_sq / 8));
+            int file_diff = std::abs((king_square % 8) - (att_sq % 8));
+            int king_distance = std::max(rank_diff,file_diff);
+            distance_bonus[king_square][att_sq] = std::max(0, 3 - king_distance); 
+		}
+    }
     
     
 
@@ -398,7 +474,7 @@ int main(){
     // print_array("ROOK_ATTACKS",rook_attacks);
     // print_array("QUEEN_ATTACKS",rook_attacks);
     // print_array("WHITE_PAWN_ATTACKS",pawn_attacks[0]);
-    print_2d_array("PAWN_ATTACKS",pawn_attacks);
+    //print_2d_array("PAWN_ATTACKS",pawn_attacks);
     //print_2d_array("LINE_BETWEEN",line_between);
     //print_2d_array("KING_SHIELD",king_shield_mask);
     //print_array("KING_ZONE",king_zone);
@@ -407,6 +483,7 @@ int main(){
     //print_array("RANK_MASK",rank_mask);
     //print_array("ADJACENT_FILE_MASK",adjacend_file_mask);
     //print_2d_array("PASSED_PAWN_MASK",passed_pawn_mask);
+	print_2d_int_array("DISTANCE_BONUS", distance_bonus);
     return 0;
     
 }

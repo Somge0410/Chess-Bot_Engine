@@ -382,6 +382,7 @@ uint64_t Engine::perft_driver(Board& board, int depth, int original_depth){
         // if(board.in_check()){
         //     checks_count+=1;
         // }
+		//evaluate(board);
         new_nodes=perft_driver(board,depth-1,original_depth);
         nodes+=new_nodes;
         board.undo_move(move);

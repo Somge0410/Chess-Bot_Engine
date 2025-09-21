@@ -4,6 +4,7 @@
 #include "constants.h"
 #include <cstdint>
 #include "Move.h"
+#include <array>
 
 //helper Structs
 struct PositionalScore {
@@ -16,6 +17,22 @@ struct MaterialScore{
 struct CheckInfo{
     int count;
     int attacker_square;
+};
+struct BoardState {
+    uint64_t zobrist_hash;
+    uint8_t castling_rights;
+    int en_passant_square;
+    int game_phase;
+    int turn;
+    int white_king_square;
+    int black_king_square;
+    std::array<std::array<uint64_t, 6>, 2> pieces;
+    std::array<uint64_t, 2> color_pieces;
+    uint64_t all_pieces;
+    PositionalScore positional_score;
+    MaterialScore material_score;
+    int half_moves;
+    int move_count;
 };
 // Board class
 class Board{
@@ -46,7 +63,9 @@ class Board{
         int get_material_score() const;
         double get_positional_score() const;
         double get_game_phase() const;
+		int get_king_square(Color color) const;
         bool in_check() const;
+        BoardState get_board_state() const;
 
 		// Advanced Search Helpers
         CheckInfo count_attacker_on_square(const int square,const Color attacker_color,const int bound=2, const bool need_sq=true) const;
@@ -59,10 +78,13 @@ class Board{
         int en_passant_square;
         int game_phase;
         int turn;
+		int white_king_square;
+		int black_king_square; 
 
-        // BItboards 
-        uint64_t pieces[2][6] = {};
-        uint64_t color_pieces[2] = {};
+        // Bitboards
+
+        std::array<std::array<uint64_t, 6>, 2> pieces;
+        std::array<uint64_t, 2> color_pieces;
         uint64_t all_pieces = 0;
 
         //Scores and move counters
@@ -70,6 +92,7 @@ class Board{
         MaterialScore material_score;
         int half_moves;
         int move_count;
+        std::vector<BoardState> history;
 		// Private Helper Methods
 
 		// Initialization Helpers
@@ -97,4 +120,6 @@ class Board{
         void update_material_score(const Move& move,const bool undo=false);
         void update_positional_score(const Move& move,const bool undo=false);
         void update_game_phase(const Move& move, const bool undo=false);
+		void update_king_square(const Move& move, const bool undo = false);
+        void recover_board_state(const BoardState& previous_state);
 };

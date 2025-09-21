@@ -6,7 +6,8 @@
 #include <array>
 #include "attack_rays.h"
 #include "constants.h"
-
+#include "rook_tables.h"
+#include "bishop_tables.h"
 MoveGenerator::MoveGenerator()
 {
     
@@ -17,7 +18,7 @@ std::vector<Move> MoveGenerator::generate_moves(const Board& board,bool captures
 	move_list.reserve(256);
     Color own_color=board.get_turn();
     Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
-    int king_square=get_lsb(board.get_pieces(own_color,PieceType::KING));
+    int king_square=board.get_king_square(own_color);
     std::array<uint64_t,64> pinned_info=calculate_pinned_pieces(board,own_color,king_square);
     CheckInfo check_info=board.count_attacker_on_square(king_square,opponent_color);
     uint64_t own_pieces=board.get_color_pieces(own_color);
@@ -44,7 +45,6 @@ std::vector<Move> MoveGenerator::generate_moves(const Board& board,bool captures
         generate_pawn_moves(move_list,board, own_color,king_square, pinned_info, remedy_mask,captures_ony);
     }else
     {   
-        generate_king_moves(move_list,board, own_color,own_pieces, king_square,captures_ony);
         
         generate_queen_moves(move_list,board, own_color, pinned_info,BOARD_ALL_SET,captures_ony);
 
@@ -55,6 +55,8 @@ std::vector<Move> MoveGenerator::generate_moves(const Board& board,bool captures
         generate_knight_moves(move_list,board, own_color, pinned_info,BOARD_ALL_SET,captures_ony);
 
         generate_pawn_moves(move_list,board, own_color,king_square, pinned_info,BOARD_ALL_SET,captures_ony);
+
+        generate_king_moves(move_list, board, own_color, own_pieces, king_square, captures_ony);
     }
     return move_list;
 }
@@ -142,19 +144,86 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
 }
 
 void MoveGenerator::generate_queen_moves(std::vector<Move>& moves,const Board& board, Color own_color,const std::array<uint64_t,64>& pinned_info,const uint64_t& remedy_mask, bool captures_only) {
-    return generate_sliding_moves(moves,PieceType::QUEEN,board,own_color,pinned_info,remedy_mask,captures_only);
+    //return generate_sliding_moves(moves,PieceType::QUEEN,board,own_color,pinned_info,remedy_mask,captures_only);
+    uint64_t queens = board.get_pieces(own_color, PieceType::QUEEN);
+    uint64_t occupied = board.get_all_pieces();
+    uint64_t own_pieces = board.get_color_pieces(own_color);
+    while (queens) {
+        int from_square = get_lsb(queens);
+        uint64_t bishop_attacks = 0;
+        uint64_t bishop_blockers = BISHOP_BLOCKER_MASK[from_square] & occupied;
+        uint64_t index = (bishop_blockers * MAGIC_BISHOP_NUMBER[from_square]) >> BISHOP_SHIFT_NUMBERS[from_square];
+        bishop_attacks = BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index];
+        uint64_t rook_attacks = 0;
+        uint64_t rook_blockers = ROOK_BLOCKER_MASK[from_square] & occupied;
+        index = (rook_blockers * MAGIC_ROOK_NUMBER[from_square]) >> ROOK_SHIFT_NUMBERS[from_square];
+        rook_attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index];
+        uint64_t attacks = bishop_attacks | rook_attacks;
+        attacks&= ~own_pieces & remedy_mask & pinned_info[from_square];
+        if (captures_only) attacks &= board.get_color_pieces(own_color == Color::WHITE ? Color::BLACK : Color::WHITE);
+        while (attacks) {
+            int to_square = get_lsb(attacks);
+            moves.emplace_back(from_square, to_square, PieceType::QUEEN, own_color, board.get_piece_on_square(to_square), board.get_castle_rights(), board.get_en_passant_rights());
+            attacks &= attacks - 1;
+
+        }
+        queens &= queens - 1;
+
+    }
 }
 
 void MoveGenerator::generate_rook_moves(std::vector<Move>& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, const uint64_t& remedy_mask,bool captures_only) {
-    return generate_sliding_moves(moves,PieceType::ROOK,board,own_color,pinned_info,remedy_mask,captures_only);
+    //return generate_sliding_moves(moves,PieceType::ROOK,board,own_color,pinned_info,remedy_mask,captures_only);
+    uint64_t rooks = board.get_pieces(own_color, PieceType::ROOK);
+    uint64_t occupied = board.get_all_pieces();
+    uint64_t own_pieces = board.get_color_pieces(own_color);
+    while (rooks) {
+        int from_square = get_lsb(rooks);
+        uint64_t attacks=0;
+        uint64_t blockers = ROOK_BLOCKER_MASK[from_square] & occupied;
+        uint64_t index = (blockers * MAGIC_ROOK_NUMBER[from_square]) >> ROOK_SHIFT_NUMBERS[from_square];
+        attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index] & ~ own_pieces & remedy_mask & pinned_info[from_square];
+        if (captures_only) attacks &= board.get_color_pieces(own_color == Color::WHITE ? Color::BLACK : Color::WHITE);
+        while (attacks) {
+            int to_square = get_lsb(attacks);
+            moves.emplace_back(from_square, to_square, PieceType::ROOK, own_color, board.get_piece_on_square(to_square), board.get_castle_rights(), board.get_en_passant_rights());
+            attacks &= attacks - 1;
+
+        }
+        rooks &= rooks - 1;
+
+    }
+
 }
 
 void MoveGenerator::generate_bishop_moves(std::vector<Move>& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, const uint64_t& remedy_mask,bool captures_only) {
-    return generate_sliding_moves(moves,PieceType::BISHOP,board,own_color,pinned_info,remedy_mask,captures_only);
+    //return generate_sliding_moves(moves,PieceType::BISHOP,board,own_color,pinned_info,remedy_mask,captures_only);
+    uint64_t bishops = board.get_pieces(own_color, PieceType::BISHOP);
+    uint64_t occupied = board.get_all_pieces();
+    uint64_t own_pieces = board.get_color_pieces(own_color);
+    while (bishops) {
+        int from_square = get_lsb(bishops);
+        uint64_t attacks = 0;
+        uint64_t blockers = BISHOP_BLOCKER_MASK[from_square] & occupied;
+        uint64_t index = (blockers * MAGIC_BISHOP_NUMBER[from_square]) >> BISHOP_SHIFT_NUMBERS[from_square];
+        attacks = BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index] & ~own_pieces & remedy_mask & pinned_info[from_square];
+        if (captures_only) attacks &= board.get_color_pieces(own_color == Color::WHITE ? Color::BLACK : Color::WHITE);
+        while (attacks) {
+            int to_square = get_lsb(attacks);
+            moves.emplace_back(from_square, to_square, PieceType::BISHOP, own_color, board.get_piece_on_square(to_square), board.get_castle_rights(), board.get_en_passant_rights());
+            attacks &= attacks - 1;
+
+        }
+        bishops &= bishops - 1;
+
+    }
+
 }
 
 void MoveGenerator::generate_knight_moves(std::vector<Move>& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, const uint64_t& remedy_mask, bool captures_only) {
     uint64_t knight_bitboard=board.get_pieces(own_color,PieceType::KNIGHT);
+    uint64_t own_pieces = board.get_color_pieces(own_color);
+   
     while (knight_bitboard)
     {
         int from_square=get_lsb(knight_bitboard);
@@ -163,7 +232,7 @@ void MoveGenerator::generate_knight_moves(std::vector<Move>& moves,const Board& 
             knight_bitboard&=knight_bitboard-1;
             continue;
         }
-        uint64_t possible_moves=KNIGHT_ATTACKS[from_square]&~board.get_color_pieces(own_color)&remedy_mask;
+        uint64_t possible_moves=KNIGHT_ATTACKS[from_square]&~own_pieces&remedy_mask;
         if (captures_only){
             Color other_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
             possible_moves &= board.get_color_pieces(other_color);
