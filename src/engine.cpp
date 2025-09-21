@@ -10,10 +10,7 @@
 #include "utils.h"
 #include <fstream>
 Move Engine::search(const Board& position, int max_depth, int time_limit_seconds) {
-    this->transposition_table.clear();
-    std::memset(this->killer_moves, 0, sizeof(this->killer_moves));
-
-    std::memset(this->history_scores, 0, sizeof(this->history_scores));
+   
 
     // Set the time control member variables for this search
     this->start_time = std::chrono::steady_clock::now();
@@ -66,6 +63,10 @@ Move Engine::search(const Board& position, int max_depth, int time_limit_seconds
                 break;
             }
         }
+        this->transposition_table.clear();
+        std::memset(this->killer_moves, 0, sizeof(this->killer_moves));
+		std::cout << "hi" << std::endl;
+        std::memset(this->history_scores, 0, sizeof(this->history_scores));
 
     // CORRECTED: Add the missing return statement
     return best_move_so_far;
@@ -182,10 +183,6 @@ std::pair<double,Move> Engine::negamax(Board& board, int depth, double alpha, do
         board.make_move(move);
         auto [evaluation, returned_move]=negamax(board,depth-1-reduction,-beta,-alpha,ply+1);
         evaluation=-evaluation;
-        if (board.get_turn()==Color::WHITE && evaluation>0)
-        {
-            special_boards.push_back(board);
-        }
         
         if (reduction>0 && evaluation>alpha)
         {

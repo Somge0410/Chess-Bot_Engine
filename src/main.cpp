@@ -36,11 +36,11 @@ int main(){
     
     // // std::cout << board.get_positional_score() << std::endl;
     
-     for (size_t i = 5; i < 6 ; ++i) 
+     for (size_t i = 0; i < 8 ; ++i) 
       {
          engine.perft_test(board,i);
      }
-     return 0;
+     //return 0;
     // std::cout << engine.special_boards[0].get_material_score() << std::endl;
     // engine.special_boards[0].display();
     std::cout << "Choose a color, w for white, b for black" << std::endl;

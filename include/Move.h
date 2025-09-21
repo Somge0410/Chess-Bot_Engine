@@ -10,8 +10,8 @@ struct Move{
     PieceType promotion_piece;
     bool is_castle;
     bool is_en_passant;
-    uint8_t old_castling_rights;
-    int old_en_passant_square;
+	uint8_t old_castling_rights;
+	int en_passant_square;
     Color move_color;
     Move()
         : from_square(-1),
@@ -21,12 +21,10 @@ struct Move{
           piece_captured(PieceType::NONE),
           promotion_piece(PieceType::NONE),
           is_castle(false),
-          is_en_passant(false),
-          old_castling_rights(0),
-          old_en_passant_square(-1)
+          is_en_passant(false)
     {
     }
-    Move(int from, int to, PieceType moved,Color color, PieceType captured=PieceType::NONE, uint8_t old_castling=0, int old_ente_passente=-1,PieceType promo=PieceType::NONE,bool castle=false, bool ente_passente=false):
+    Move(int from, int to, PieceType moved,Color color, PieceType captured=PieceType::NONE,PieceType promo=PieceType::NONE,bool castle=false, bool ente_passente=false):
          from_square(from),
          to_square(to),
          piece_moved(moved),
@@ -34,9 +32,7 @@ struct Move{
          piece_captured(captured),
          promotion_piece(promo),
          is_castle(castle),
-         is_en_passant(ente_passente),
-         old_castling_rights(old_castling),
-         old_en_passant_square(old_ente_passente)
+         is_en_passant(ente_passente)
     {
          }
     bool is_double_pawn_move() const {

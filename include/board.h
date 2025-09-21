@@ -66,7 +66,8 @@ class Board{
 		int get_king_square(Color color) const;
         bool in_check() const;
         BoardState get_board_state() const;
-
+        bool is_repetition_draw() const;
+		bool is_fifty_move_rule_draw() const;
 		// Advanced Search Helpers
         CheckInfo count_attacker_on_square(const int square,const Color attacker_color,const int bound=2, const bool need_sq=true) const;
         bool has_enough_material_for_nmp() const;
@@ -113,13 +114,13 @@ class Board{
 
 		//Inceremental Update Helpers
         void update_pieces(const Move& move);
-        void update_turn_rights();
-        void update_castle_rights(const Move& move, const bool undo = false);
-        void update_en_passsant_rights(const Move& move, const bool undo = false);
+        void update_turn_rights(const Move& move);
+        void update_castle_rights(const Move& move);
+        void update_en_passsant_rights(const Move& move);
         void update_pieces_hash(const Move& move);
-        void update_material_score(const Move& move,const bool undo=false);
-        void update_positional_score(const Move& move,const bool undo=false);
-        void update_game_phase(const Move& move, const bool undo=false);
-		void update_king_square(const Move& move, const bool undo = false);
+        void update_material_score(const Move& move);
+        void update_positional_score(const Move& move);
+        void update_game_phase(const Move& move);
+		void update_king_square(const Move& move);
         void recover_board_state(const BoardState& previous_state);
 };

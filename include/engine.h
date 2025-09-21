@@ -29,8 +29,6 @@ class Engine {
         int ep_count;
         int capture_count;
         int checkmate_count;
-        std::vector<Board> special_boards;
-
     private:
         bool stop_search;
         std::pair<double,Move> negamax(Board & board, int depth, double alpha, double beta, int ply);

@@ -49,7 +49,7 @@ void Board::parse_fen(const std::string& fen){
 }
 
 void Board::parse_fen_pieces(const std::string& piece_data){
- 
+    std::cout << piece_data << std::endl;
     int rank=7;
     int file=0;
     for(char c : piece_data){
@@ -226,35 +226,33 @@ void Board::make_move(const Move& move){
     update_king_square(move);
     update_pieces(move);
     update_pieces_hash(move);
-    update_turn_rights();
+    update_turn_rights(move);
 }
 void Board::undo_move(const Move& move){
     recover_board_state(history.back());
     history.pop_back();
 
 }
-void Board::update_material_score(const Move& move, const bool undo){
-    int weight=undo ? 1:-1;
+void Board::update_material_score(const Move& move){
     if (move.piece_captured!=PieceType::NONE){
-        material_score.score+=weight*get_piece_values(move.get_capture_color(),move.piece_captured);
+        material_score.score-=get_piece_values(move.get_capture_color(),move.piece_captured);
     }
     if (move.promotion_piece!=PieceType::NONE){
-        material_score.score-=weight*get_piece_values(move.move_color,move.promotion_piece);
-        material_score.score+=weight*get_piece_values(move.move_color,PieceType::PAWN);
+        material_score.score+=get_piece_values(move.move_color,move.promotion_piece);
+        material_score.score-=get_piece_values(move.move_color,PieceType::PAWN);
     }
 }
-void Board::update_positional_score(const Move& move, const bool undo){
-    int weight=undo ? -1:1;
+void Board::update_positional_score(const Move& move){
     PieceType piece_moved=move.piece_moved;
     PieceType piece_reached=move.promotion_piece==PieceType::NONE ? move.piece_moved:move.promotion_piece;
-    positional_score.mg-=weight*get_mg_pos_score(move.move_color,piece_moved,move.from_square);
-    positional_score.mg+=weight*get_mg_pos_score(move.move_color,piece_reached,move.to_square);
+    positional_score.mg-=get_mg_pos_score(move.move_color,piece_moved,move.from_square);
+    positional_score.mg+=get_mg_pos_score(move.move_color,piece_reached,move.to_square);
     
-    positional_score.eg-=weight*get_eg_pos_score(move.move_color,piece_moved,move.from_square);
-    positional_score.eg+=weight*get_eg_pos_score(move.move_color,piece_reached,move.to_square);
+    positional_score.eg-=get_eg_pos_score(move.move_color,piece_moved,move.from_square);
+    positional_score.eg+=get_eg_pos_score(move.move_color,piece_reached,move.to_square);
     if (move.piece_captured!=PieceType::NONE){
-        positional_score.mg-=weight*get_mg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
-        positional_score.eg-=weight*get_eg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
+        positional_score.mg-=get_mg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
+        positional_score.eg-=get_eg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
     }
     if (move.is_castle)
     {
@@ -262,32 +260,41 @@ void Board::update_positional_score(const Move& move, const bool undo){
         int old_rook_square=king_side ? move.to_square+1:move.to_square-2;
         int new_rook_square=king_side ? move.to_square-1:move.to_square+1;
 
-        positional_score.mg-=weight*get_mg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
-        positional_score.mg+=weight*get_mg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
+        positional_score.mg-=get_mg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
+        positional_score.mg+=get_mg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
 
         
-        positional_score.eg-=weight*get_eg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
-        positional_score.eg+=weight*get_eg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
+        positional_score.eg-=get_eg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
+        positional_score.eg+=get_eg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
 
     }
     
 }
-void Board::update_turn_rights(){
+void Board::update_turn_rights(const Move& move){
         turn=turn==0 ? 1:0;
         zobrist_hash^=Zobrist::black_to_move_key;
+        if (move.piece_moved == PieceType::PAWN || move.piece_captured != PieceType::NONE) {
+            half_moves = 0;
+		}
+		else {
+            half_moves++;
+        }
+        if (turn == to_int(Color::WHITE)) {
+            move_count++;
+        }
+
 }
-void Board::update_game_phase(const Move& move,const bool undo){
-    int w=undo ? 1:-1;
+void Board::update_game_phase(const Move& move){
     if (move.piece_captured!=PieceType::NONE){
         int piece_weight=PHASE_WEIGHTS[to_int(move.piece_captured)];
-        game_phase+=w*piece_weight;
+        game_phase-=piece_weight;
     }
     if (move.promotion_piece!=PieceType::NONE){
         int piece_weight=PHASE_WEIGHTS[to_int(move.promotion_piece)];
-        game_phase-=w*piece_weight;
+        game_phase+=piece_weight;
     }
 }
-void Board::update_castle_rights(const Move& move,const bool undo){
+void Board::update_castle_rights(const Move& move){
     this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Remove old rights from hash
 
         // if King moves
@@ -320,7 +327,7 @@ void Board::update_castle_rights(const Move& move,const bool undo){
 
 	this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Add new rights to hash
 }
-void Board::update_en_passsant_rights(const Move& move,const bool undo){
+void Board::update_en_passsant_rights(const Move& move){
     
         if (en_passant_square != -1) {
             zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
@@ -362,9 +369,8 @@ void Board::update_pieces_hash(const Move& move){
     
     
 }
-void Board::update_king_square(const Move& move,const bool undo){
-    if (!undo)
-    {
+void Board::update_king_square(const Move& move){
+    
         if (move.piece_moved==PieceType::KING)
         {
             if (move.move_color==Color::WHITE)
@@ -376,20 +382,7 @@ void Board::update_king_square(const Move& move,const bool undo){
             }
             
         }
-    }else
-    {
-        if (move.piece_moved==PieceType::KING)
-        {
-            if (move.move_color==Color::WHITE)
-            {
-                white_king_square=move.from_square;
-            }else
-            {
-                black_king_square=move.from_square;
-            }
-            
-        }
-    }
+    
     
 }
 void Board::update_pieces(const Move& move){
@@ -445,9 +438,9 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     uint64_t knights=pieces[to_int(attacker_color)][to_int(PieceType::KNIGHT)];
     attack_squares=KNIGHT_ATTACKS[square];
     number=popcount(knights & attack_squares);
+    
     if (number>0 && need_square) info.attacker_square=get_lsb(knights & attack_squares);
     info.count+=number;
-    
     if (info.count>=bound) return info;
 
     //Check for Bishop or Queen attack
@@ -616,4 +609,18 @@ void Board::recover_board_state(const BoardState& previous_state) {
     this->material_score = previous_state.material_score;
     this->half_moves = previous_state.half_moves;
     this->move_count = previous_state.move_count;
+}
+bool Board::is_repetition_draw() const {
+    int repetition_count = 0;
+    for (int i = history.size()-2; i >=0 &&i>=(int)history.size()-half_moves; i-=2)
+    {
+        if (history[i].zobrist_hash == this->zobrist_hash) {
+            repetition_count++;
+			if (repetition_count >= 2) return true;
+        }
+    }
+	return false;
+}
+bool Board::is_fifty_move_rule_draw() const {
+    return half_moves >= 100;
 }

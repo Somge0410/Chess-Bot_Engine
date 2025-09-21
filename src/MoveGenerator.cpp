@@ -16,6 +16,7 @@ MoveGenerator::MoveGenerator()
 std::vector<Move> MoveGenerator::generate_moves(const Board& board,bool captures_ony){
     std::vector<Move> move_list;
 	move_list.reserve(256);
+	if (board.is_fifty_move_rule_draw() || board.is_repetition_draw()) return move_list;
     Color own_color=board.get_turn();
     Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
     int king_square=board.get_king_square(own_color);
@@ -103,7 +104,7 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
                 continue;
             }
             moves.emplace_back(king_square,to_square,PieceType::KING,own_color,
-                board.get_piece_on_square(to_square),board.get_castle_rights(),board.get_en_passant_rights());
+                board.get_piece_on_square(to_square));
             possible_moves&=possible_moves-1;
         }
         if (board.count_attacker_on_square(king_square,other_color,1,false).count>0) return;
@@ -120,7 +121,7 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
                 if (board.count_attacker_on_square(king_square+1,other_color,1,false).count==0 && board.count_attacker_on_square(king_square+2,other_color,1,false).count==0)
                 {
                     moves.emplace_back(king_square,king_square+2,PieceType::KING,own_color,
-                        PieceType::NONE,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::NONE,true);
+                        PieceType::NONE,PieceType::NONE,true);
                 }
                 
             }
@@ -134,7 +135,7 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
                 if (board.count_attacker_on_square(king_square-1,other_color,1,false).count==0 && board.count_attacker_on_square(king_square-2,other_color,1,false).count==0)
                 {
                     moves.emplace_back(king_square,king_square-2,PieceType::KING,own_color,
-                        PieceType::NONE,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::NONE,true);
+                        PieceType::NONE,PieceType::NONE,true);
                 }
                 
             }
@@ -163,7 +164,7 @@ void MoveGenerator::generate_queen_moves(std::vector<Move>& moves,const Board& b
         if (captures_only) attacks &= board.get_color_pieces(own_color == Color::WHITE ? Color::BLACK : Color::WHITE);
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.emplace_back(from_square, to_square, PieceType::QUEEN, own_color, board.get_piece_on_square(to_square), board.get_castle_rights(), board.get_en_passant_rights());
+            moves.emplace_back(from_square, to_square, PieceType::QUEEN, own_color, board.get_piece_on_square(to_square));
             attacks &= attacks - 1;
 
         }
@@ -186,7 +187,7 @@ void MoveGenerator::generate_rook_moves(std::vector<Move>& moves,const Board& bo
         if (captures_only) attacks &= board.get_color_pieces(own_color == Color::WHITE ? Color::BLACK : Color::WHITE);
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.emplace_back(from_square, to_square, PieceType::ROOK, own_color, board.get_piece_on_square(to_square), board.get_castle_rights(), board.get_en_passant_rights());
+            moves.emplace_back(from_square, to_square, PieceType::ROOK, own_color, board.get_piece_on_square(to_square));
             attacks &= attacks - 1;
 
         }
@@ -210,7 +211,7 @@ void MoveGenerator::generate_bishop_moves(std::vector<Move>& moves,const Board& 
         if (captures_only) attacks &= board.get_color_pieces(own_color == Color::WHITE ? Color::BLACK : Color::WHITE);
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.emplace_back(from_square, to_square, PieceType::BISHOP, own_color, board.get_piece_on_square(to_square), board.get_castle_rights(), board.get_en_passant_rights());
+            moves.emplace_back(from_square, to_square, PieceType::BISHOP, own_color, board.get_piece_on_square(to_square));
             attacks &= attacks - 1;
 
         }
@@ -240,7 +241,7 @@ void MoveGenerator::generate_knight_moves(std::vector<Move>& moves,const Board& 
         while (possible_moves)
         {
             int to_square=get_lsb(possible_moves);
-            moves.emplace_back(from_square,to_square,PieceType::KNIGHT,own_color,board.get_piece_on_square(to_square),board.get_castle_rights(),board.get_en_passant_rights());
+            moves.emplace_back(from_square,to_square,PieceType::KNIGHT,own_color,board.get_piece_on_square(to_square));
             possible_moves&=possible_moves-1;
         }
         knight_bitboard&=knight_bitboard-1; 
@@ -299,7 +300,7 @@ void MoveGenerator::generate_sliding_moves(
         while (possible_moves)
         {
             int to_square=get_lsb(possible_moves);
-            moves.emplace_back(from_square,to_square,piece,own_color,board.get_piece_on_square(to_square),board.get_castle_rights(),board.get_en_passant_rights());
+            moves.emplace_back(from_square,to_square,piece,own_color,board.get_piece_on_square(to_square));
             possible_moves&=possible_moves-1;
         }
         piece_bitboard&=piece_bitboard-1;
@@ -333,13 +334,13 @@ void MoveGenerator::generate_pawn_pushes(std::vector<Move>& moves,const Board& b
                         if (is_promotion)
                         {
                             
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE, castle_rights, en_passant_square,PieceType::QUEEN);
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE, castle_rights, en_passant_square,PieceType::ROOK);
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE, castle_rights, en_passant_square,PieceType::BISHOP);
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE, castle_rights, en_passant_square,PieceType::KNIGHT);
+                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::QUEEN);
+                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::ROOK);
+                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::BISHOP);
+                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::KNIGHT);
                         }else
                         {
-                            moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,PieceType::NONE,castle_rights,en_passant_square);
+                            moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,PieceType::NONE);
                         }
                     }
 
@@ -350,7 +351,7 @@ void MoveGenerator::generate_pawn_pushes(std::vector<Move>& moves,const Board& b
                         {
                             if (pinned_info[from_square] &(1ULL<<to_square2)& remedy_mask)
                             {
-                                moves.emplace_back(from_square,to_square2,PieceType::PAWN,own_color,PieceType::NONE,castle_rights,en_passant_square);
+                                moves.emplace_back(from_square,to_square2,PieceType::PAWN,own_color,PieceType::NONE);
                             }
                             
                         }
@@ -393,12 +394,12 @@ void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board&
                 if (is_promotion
                 )
                 {
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::QUEEN);
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::ROOK);
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::BISHOP);
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::KNIGHT);
+                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::QUEEN);
+                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::ROOK);
+                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::BISHOP);
+                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::KNIGHT);
                 }else{
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,board.get_castle_rights(),board.get_en_passant_rights());
+                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece);
                 }
                 capture_bb&=capture_bb-1;
             }
@@ -410,7 +411,7 @@ void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board&
                 {       
                     if (king_square /8 != from_square /8)
                     {
-                        moves.emplace_back(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::NONE,false,true);
+                        moves.emplace_back(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true);
                     }else
                     {   
                         int dir_index= (king_square>from_square) ? 7:3;
@@ -423,7 +424,7 @@ void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board&
                         
                         if ((next_piece_square==-1) | (opponent_rook_queen & (1ULL<<next_piece_square)) == 0)
                         {
-                            moves.emplace_back(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,board.get_castle_rights(),board.get_en_passant_rights(),PieceType::NONE,false,true);
+                            moves.emplace_back(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true);
                         }else{
                             own_pawns&=own_pawns-1;
                             continue;
