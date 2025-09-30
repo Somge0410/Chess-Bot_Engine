@@ -22,6 +22,7 @@ Move Engine::search(const Board& position, int max_depth, int time_limit_seconds
     // --- The Fix for the const Board ---
     // Create a mutable copy of the board for the search to use
     Board board = position;
+    // Reserve space for history to avoid reallocations during search
 
         // The iterative deepening loop
         for (int current_depth = 1; current_depth <= max_depth; ++current_depth) {
@@ -35,8 +36,9 @@ Move Engine::search(const Board& position, int max_depth, int time_limit_seconds
             if (stop_search)
             {
                 std::cout << "\nTime limit of " << time_limit_seconds << "s reached! Search is canceled." << std::endl;
-                if (best_move_so_far.from_square!=-1)
+                if (move_this_iteration.from_square!=-1)
                 {   
+                    best_move_so_far = move_this_iteration;
                     std::vector<Move> legal_moves = MoveGenerator::generate_moves(position);
                         std::cout <<"Final Decision:"
                                   << to_san(best_move_so_far, legal_moves) 
@@ -146,7 +148,15 @@ std::pair<double,Move> Engine::negamax(Board& board, int depth, double alpha, do
     Move best_move;
     if (moves.empty())
     {
-        if (king_is_in_check) return {-MATE_SCORE,Move()};
+        if (king_is_in_check) {
+            if(board.is_fifty_move_rule_draw() || board.is_repetition_draw()) {
+                return {0, Move()}; // Stalemate due to 50-move rule or repetition
+            }
+            else {
+
+                return { -MATE_SCORE,Move() };
+            }
+        }
         else return {0,Move()};
     }
     
@@ -179,9 +189,13 @@ std::pair<double,Move> Engine::negamax(Board& board, int depth, double alpha, do
         if (!is_special_move && depth>=3 && moves_searched>3) reduction=2;
         
 
-
+        int extension = 0;
         board.make_move(move);
-        auto [evaluation, returned_move]=negamax(board,depth-1-reduction,-beta,-alpha,ply+1);
+        if (board.in_check() && ply<64)
+        {
+            extension=1;
+		}
+        auto [evaluation, returned_move]=negamax(board,depth-1-reduction+extension,-beta,-alpha,ply+1);
         evaluation=-evaluation;
         
         if (reduction>0 && evaluation>alpha)
@@ -308,11 +322,13 @@ double Engine::quiescence_search(Board& board,double alpha, double beta,int ply)
     if (stand_pat_score>=beta) return stand_pat_score;
     double original_alpha=alpha;
     alpha=std::max(alpha,stand_pat_score);
-    std::vector<Move> captures=MoveGenerator::generate_captures(board);
-    sort_moves(captures,board,ply);
+    std::vector<Move> moves_to_search;
+    
+	moves_to_search = MoveGenerator::generate_captures(board);
+    sort_moves(moves_to_search,board,ply);
     double best_score=stand_pat_score;
     Move best_move;
-    for (const Move& move : captures)
+    for (const Move& move : moves_to_search)
     {
         int capture_value=PIECE_VALUES[0][to_int(move.piece_captured)];
         if (stand_pat_score+capture_value+DELTA_MARGIN<alpha) continue;

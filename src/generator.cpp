@@ -65,52 +65,6 @@ void print_2d_int_array(const std::string& name, const std::vector<std::vector<i
     std::cout << "};" << std::endl << std::endl;
 
 }
-std::array<std::vector<uint64_t>,64> rook_blocker_combinations;
-generate_blocker_subsets(int square,uint64_t blocker_mask) {
-	rook_blocker_combinations[square].push_back(0);
-	uint64_t subset = blocker_mask;
-    while (subset > 0) {
-                rook_blocker_combinations[square].push_back(subset);
-				subset = (subset - 1) & blocker_mask;
-    }
-}
-uint64_t calculate_rook_blocker_mask(int square) {
-    uint64_t mask = 0;
-    int rank = square / 8;
-    int file = square % 8;
-    // Horizontal (rank)
-    for (int f = file + 1; f <= 6; ++f) mask |= (1ULL << (rank * 8 + f));
-    for (int f = file - 1; f >= 1; --f) mask |= (1ULL << (rank * 8 + f));
-    // Vertical (file)
-    for (int r = rank + 1; r <= 6; ++r) mask |= (1ULL << (r * 8 + file));
-    for (int r = rank - 1; r >= 1; --r) mask |= (1ULL << (r * 8 + file));
-    return mask;
-}
-void find_all_combinations() {
-    for (int square = 0; square < 64; ++square) {
-        uint64_t blocker_mask = calculate_rook_blocker_mask(square);
-        generate_blocker_subsets(square, blocker_mask);
-    }
-}
-bool is_magic_number(uint64_t magic,int square) {
-	uint64_t calculate_rook_blocker_mask(int square);
-    int relevant_bits = popcount(calculate_rook_blocker_mask(square));
-    int combinations = 1 << relevant_bits;
-    std::vector<uint64_t> used_attacks(combinations, 0);
-    for (uint64_t blockers : rook_blocker_combinations[square]) {
-        uint64_t index = (blockers * magic) >> (64 - relevant_bits);
-        if (used_attacks[index] == 0) {
-            used_attacks[index] = 1;
-        } else if (used_attacks[index] != 0) {
-            return false; // Collision detected
-        }
-    }
-	return true; // No collisions, valid magic number
-}
-std::array<uint64_t> magic_rook_number;
-for(int square=0;square<64;++square){
-    
-}
 
 int main(){
     // Knight Attacks
@@ -455,6 +409,26 @@ int main(){
         passed_pawn_mask[1][square]=backward_ranks & files;
         
     }
+    std::vector<std::vector<uint64_t>> outpost_mask(2, std::vector<uint64_t>(64, 0));
+
+    for (size_t square = 0; square < 64; ++square)
+    {
+        uint64_t files = adjacend_file_mask[square % 8];
+        uint64_t forward_ranks = 0;
+        uint64_t backward_ranks = 0;
+
+        for (size_t row = square / 8 + 1; row < 8; ++row)
+        {
+            forward_ranks |= rank_mask[row];
+        }
+        for (size_t row = 0; row < square / 8; ++row)
+        {
+            backward_ranks |= rank_mask[row];
+        }
+        outpost_mask[0][square] = forward_ranks & files;
+        outpost_mask[1][square] = backward_ranks & files;
+
+    }
 	std::vector<std::vector<int>> distance_bonus(64, std::vector<int>(64, 0));
     for (int king_square = 0; king_square < 64; ++king_square) {
         for (int att_sq = 0; att_sq < 64; ++att_sq) {
@@ -483,7 +457,9 @@ int main(){
     //print_array("RANK_MASK",rank_mask);
     //print_array("ADJACENT_FILE_MASK",adjacend_file_mask);
     //print_2d_array("PASSED_PAWN_MASK",passed_pawn_mask);
-	print_2d_int_array("DISTANCE_BONUS", distance_bonus);
+
+    print_2d_array("OUTPOST_MASK",outpost_mask);
+	//print_2d_int_array("DISTANCE_BONUS", distance_bonus);
     return 0;
     
 }

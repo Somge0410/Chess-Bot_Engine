@@ -7,8 +7,11 @@
 #include "pst.h"
 #include "Move.h"
 #include "notation_utils.h"
+#include "bishop_tables.h"
+#include "rook_tables.h"
 #if defined(_MSC_VER)
 #include <intrin.h>
+#include "attack_rays.h"
 #endif
 
 inline int get_lsb(uint64_t bitboard) {
@@ -107,4 +110,34 @@ inline Move parse_move(const std::string& move_str, std::vector<Move> move_list)
     }
     return Move();
     
+}
+inline uint64_t get_knight_attacks(int square) {
+    return KNIGHT_ATTACKS[square];
+}
+inline uint64_t get_king_attacks(int square) {
+    return KING_ATTACKS[square];
+}
+inline uint64_t get_bishop_attacks(int from_square, uint64_t occupied) {
+
+    uint64_t bishop_blockers = BISHOP_BLOCKER_MASK[from_square] & occupied;
+    uint64_t index = (bishop_blockers * MAGIC_BISHOP_NUMBER[from_square]) >> BISHOP_SHIFT_NUMBERS[from_square];
+    return BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index];
+}
+inline uint64_t get_rook_attacks(int from_square, uint64_t occupied) {
+
+    uint64_t rook_blockers = ROOK_BLOCKER_MASK[from_square] & occupied;
+    uint64_t index = (rook_blockers * MAGIC_ROOK_NUMBER[from_square]) >> ROOK_SHIFT_NUMBERS[from_square];
+    return ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index];
+}
+inline uint64_t get_queen_attacks(int from_square, uint64_t occupied) {
+    return get_bishop_attacks(from_square, occupied) | get_rook_attacks(from_square, occupied);
+}
+inline uint64_t get_pawn_attacks(uint64_t pawns, Color color) {
+    if (Color::WHITE == color) {
+        return ((pawns & NOT_FILE_A) << 7) | ((pawns & NOT_FILE_H) << 9);
+	}
+    else {
+		return ((pawns & NOT_FILE_H) >> 7) | ((pawns & NOT_FILE_A) >> 9);
+    
+    }
 }

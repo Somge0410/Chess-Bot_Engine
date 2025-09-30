@@ -40,6 +40,8 @@ class Board{
 		// Constructor and Setup 
         Board(const std::string& fen=STARTING_FEN);
         void display() const;
+		void reserve_history(size_t size);
+        Board(const Board& other);
 
 		// Core State Manipulation
         void make_move(const Move& move);
@@ -54,6 +56,13 @@ class Board{
         PieceType get_piece_on_square(int square)const;
         Color get_color_on_square(int square) const;
         char get_char_on_square(int square) const;
+		uint64_t get_pawn_attacks_for_color(Color color) const;
+		uint64_t get_knight_attacks_for_color(Color color) const;
+		uint64_t get_king_attacks_for_color(Color color) const;
+		uint64_t get_bishop_attacks_for_color(Color color) const;
+		uint64_t get_rook_attacks_for_color(Color color) const;
+		uint64_t get_queen_attacks_for_color(Color color) const;
+        uint64_t get_attacks_for_color(Color color) const;
 
 		// Getters for Game State
         Color get_turn() const;
@@ -71,7 +80,6 @@ class Board{
 		// Advanced Search Helpers
         CheckInfo count_attacker_on_square(const int square,const Color attacker_color,const int bound=2, const bool need_sq=true) const;
         bool has_enough_material_for_nmp() const;
-
     private:
 		// Member Variables
         uint64_t zobrist_hash;

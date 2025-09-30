@@ -23,8 +23,6 @@ class Engine {
     public:
         Move search(const Board& board, int depth,int time_limit=100);
         void perft_test(Board& board, int depth);
-        bool load_tt(const std::string& filename);
-        bool save_tt(const std::string& filename) const;
         int checks_count;
         int ep_count;
         int capture_count;
@@ -33,7 +31,7 @@ class Engine {
         bool stop_search;
         std::pair<double,Move> negamax(Board & board, int depth, double alpha, double beta, int ply);
         double quiescence_search(Board& board, double alpha, double beta, int ply);
-
+        Move best_move_this_iteration;
         std::map<uint64_t,TTEntry> transposition_table;
         Move killer_moves[128][2];
         int history_scores[2][6][64]={};

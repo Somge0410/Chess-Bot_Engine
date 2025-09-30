@@ -216,8 +216,8 @@ PositionalScore Board::initialize_positional_score()const {
         return {score_mg,score_eg};
 }
 void Board::make_move(const Move& move){
-
-    history.push_back(get_board_state());
+	BoardState current_state = get_board_state();
+    history.push_back(current_state);
     update_material_score(move);
     update_positional_score(move);
     update_game_phase(move);
@@ -429,46 +429,58 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     CheckInfo info={0,-1};
     int other_color=attacker_color==Color::BLACK ? to_int(Color::WHITE):to_int(Color::BLACK);
     // Check if PAWNS Attack the square
-    uint64_t pawns=pieces[to_int(attacker_color)][to_int(PieceType::PAWN)];
-    uint64_t attack_squares=PAWN_ATTACKS[other_color][square];
+    uint64_t pawns = pieces[to_int(attacker_color)][to_int(PieceType::PAWN)];
+    uint64_t attack_squares = PAWN_ATTACKS[other_color][square];
     int number=popcount(pawns & attack_squares);
-    info.count+=number;
-    if (number>0 && need_square) info.attacker_square=get_lsb(pawns & attack_squares);
+    if (number > 0) {
+
+        info.count += number;
+		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(pawns & attack_squares);
+    }
     if (info.count>=bound) return info;
+
+	// Check if KNIGHTS Attack the square
     uint64_t knights=pieces[to_int(attacker_color)][to_int(PieceType::KNIGHT)];
     attack_squares=KNIGHT_ATTACKS[square];
     number=popcount(knights & attack_squares);
+    if (number > 0) {
+		info.count += number;
+		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(knights & attack_squares);
+    }
+    if (info.count >= bound) return info;
+	// Check if KING Attacks the square
+	uint64_t kings = pieces[to_int(attacker_color)][to_int(PieceType::KING)];
+	number = popcount(kings & KING_ATTACKS[square]);
+    if (number > 0) {
+        info.count += number;
+		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(kings & KING_ATTACKS[square]);
+    }
+	if (info.count>=bound) return info;
     
-    if (number>0 && need_square) info.attacker_square=get_lsb(knights & attack_squares);
-    info.count+=number;
-    if (info.count>=bound) return info;
-
+	uint64_t occupancy = all_pieces ^ (pieces[other_color][to_int(PieceType::KING)]);
+    uint64_t attackers = 0;
     //Check for Bishop or Queen attack
-    for (int dir_index = 0; dir_index < 8; dir_index+=2)
-    {
-        uint64_t possible_atackers=pieces[to_int(attacker_color)][to_int(PieceType::QUEEN)]| pieces[to_int(attacker_color)][to_int(PieceType::BISHOP)];
-        int blocker_sq=get_first_blocker_sq(RAY_MASK[dir_index][square],all_pieces^(pieces[other_color][to_int(PieceType::KING)]),dir_index<4);
-        if (blocker_sq==-1) continue;
-        if (possible_atackers & (1ULL << blocker_sq)){
-            info.count+=1;
-            info.attacker_square=blocker_sq;
-        }
-        if (info.count>=bound) return info;
+	uint64_t bishops_queens = pieces[to_int(attacker_color)][to_int(PieceType::BISHOP)] | pieces[to_int(attacker_color)][to_int(PieceType::QUEEN)];
+	attack_squares = get_bishop_attacks(square, occupancy);
+	attackers = attack_squares & bishops_queens;
+	number = popcount(attackers);
+    if (number > 0) {
+        info.count += number;
+		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(attackers);
     }
-    //Check for ROOk or Queen attack
-    for (int dir_index = 1; dir_index < 8; dir_index+=2)
-    {   
+	if (info.count >= bound) return info;
+	//Check for Rook or Queen attack
+	uint64_t rooks_queens = pieces[to_int(attacker_color)][to_int(PieceType::ROOK)] | pieces[to_int(attacker_color)][to_int(PieceType::QUEEN)];
+	attack_squares = get_rook_attacks(square, occupancy);
+	attackers = attack_squares & rooks_queens;
+	number = popcount(attackers);
+    if (number > 0) {
+		info.count += number;
+		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(attackers);
+    }
+	return info;
+
     
-        uint64_t possible_atackers=pieces[to_int(attacker_color)][to_int(PieceType::QUEEN)]| pieces[to_int(attacker_color)][to_int(PieceType::ROOK)];
-        int blocker_sq=get_first_blocker_sq(RAY_MASK[dir_index][square],all_pieces^(pieces[other_color][to_int(PieceType::KING)]),dir_index<4);
-        if (blocker_sq==-1) continue;
-        if (possible_atackers & (1ULL << blocker_sq)){
-            info.count+=1;
-            info.attacker_square=blocker_sq;
-        }
-        if (info.count>=bound) return info;
-    }
-    return info;
 
 }
 Color Board::get_turn() const {
@@ -570,11 +582,31 @@ bool Board::has_enough_material_for_nmp() const {
     // NMP is generally safe if there is at least one piece other than pawns or the king
     return (pieces != 0);
 }
-bool Board::in_check() const{
-    Color color=turn==0 ? Color::WHITE:Color::BLACK;
-    Color attacker_color=turn== 0 ? Color::BLACK:Color::WHITE;
-    int king_sq=color==Color::WHITE ? white_king_square : black_king_square;
-    return count_attacker_on_square(king_sq,attacker_color,1,false).count>=1;
+bool Board::in_check() const {
+    int color = turn == 0 ? to_int(Color::WHITE) : to_int(Color::BLACK);
+    int attacker_color = turn == 0 ? to_int(Color::BLACK) : to_int(Color::WHITE);
+    int king_sq = color == to_int(Color::WHITE) ? white_king_square : black_king_square;
+    // Check for pawn attacks
+
+    uint64_t pawns = pieces[attacker_color][to_int(PieceType::PAWN)];
+    uint64_t attack_squares = PAWN_ATTACKS[color][king_sq];
+    if (pawns & attack_squares) return true;
+    // Check for knight attacks
+    uint64_t knights = pieces[attacker_color][to_int(PieceType::KNIGHT)];
+    if (knights & KNIGHT_ATTACKS[king_sq]) return true;
+    // Check for Bishop attacks
+    uint64_t bishops = pieces[attacker_color][to_int(PieceType::BISHOP)];
+    uint64_t bishop_attacks = get_bishop_attacks(king_sq, all_pieces);
+    if (bishops & bishop_attacks) return true;
+    // Check for Rook attacks
+    uint64_t rooks = pieces[attacker_color][to_int(PieceType::ROOK)];
+    uint64_t rook_attacks = get_rook_attacks(king_sq, all_pieces);
+    if (rooks & rook_attacks) return true;
+    // Check for Queen attacks
+    uint64_t queens = pieces[attacker_color][to_int(PieceType::QUEEN)];
+    uint64_t queen_attacks = get_queen_attacks(king_sq, all_pieces);
+    if (queens & queen_attacks) return true;
+    return false;
 }
 int Board::make_null_move(){
     int original_ep_square=en_passant_square;
@@ -623,4 +655,98 @@ bool Board::is_repetition_draw() const {
 }
 bool Board::is_fifty_move_rule_draw() const {
     return half_moves >= 100;
+}
+void Board::reserve_history(size_t size){
+    history.reserve(size);
+}
+// In your board.cpp file
+uint64_t Board::get_pawn_attacks_for_color(Color color) const {
+    uint64_t pawns = pieces[to_int(color)][to_int(PieceType::PAWN)];
+    uint64_t attacks = 0;
+    if(Color::WHITE == color) {
+        attacks |= (pawns << 7) & NOT_FILE_H; // Capture to the left
+        attacks |= (pawns << 9) & NOT_FILE_A; // Capture to the right
+    } else {
+        attacks |= (pawns >> 9) & NOT_FILE_H; // Capture to the left
+        attacks |= (pawns >> 7) & NOT_FILE_A; // Capture to the right
+	}
+    return attacks;
+}
+uint64_t Board::get_knight_attacks_for_color(Color color) const {
+    uint64_t knights = pieces[to_int(color)][to_int(PieceType::KNIGHT)];
+    uint64_t attacks = 0;
+    while (knights) {
+        int square = get_lsb(knights);
+        attacks |= KNIGHT_ATTACKS[square];
+        knights &= knights - 1; // Clear the least significant bit
+    }
+    return attacks;
+}
+uint64_t Board::get_king_attacks_for_color(Color color) const {
+    uint64_t kings = pieces[to_int(color)][to_int(PieceType::KING)];
+    uint64_t attacks = 0;
+    while (kings) {
+        int square = get_lsb(kings);
+        attacks |= KING_ATTACKS[square];
+        kings &= kings - 1; // Clear the least significant bit
+    }
+    return attacks;
+}
+uint64_t Board::get_bishop_attacks_for_color(Color color) const {
+    uint64_t bishops = pieces[to_int(color)][to_int(PieceType::BISHOP)];
+    uint64_t attacks = 0;
+    while (bishops) {
+        int square = get_lsb(bishops);
+        attacks |= get_bishop_attacks(square, all_pieces);
+        bishops &= bishops - 1; // Clear the least significant bit
+    }
+    return attacks;
+}
+uint64_t Board::get_rook_attacks_for_color(Color color) const {
+    uint64_t rooks = pieces[to_int(color)][to_int(PieceType::ROOK)];
+    uint64_t attacks = 0;
+    while (rooks) {
+        int square = get_lsb(rooks);
+        attacks |= get_rook_attacks(square, all_pieces);
+        rooks &= rooks - 1; // Clear the least significant bit
+    }
+    return attacks;
+}
+uint64_t Board::get_queen_attacks_for_color(Color color) const {
+    uint64_t queens = pieces[to_int(color)][to_int(PieceType::QUEEN)];
+    uint64_t attacks = 0;
+    while (queens) {
+        int square = get_lsb(queens);
+        attacks |= get_queen_attacks(square, all_pieces);
+        queens &= queens - 1; // Clear the least significant bit
+    }
+    return attacks;
+}
+uint64_t Board::get_attacks_for_color(Color color) const {
+    return get_pawn_attacks_for_color(color) |
+           get_knight_attacks_for_color(color) |
+           get_bishop_attacks_for_color(color) |
+           get_rook_attacks_for_color(color) |
+           get_queen_attacks_for_color(color) |
+           get_king_attacks_for_color(color);
+}
+Board::Board(const Board& other)
+    : zobrist_hash(other.zobrist_hash),
+    castling_rights(other.castling_rights),
+	en_passant_square(other.en_passant_square),
+	game_phase(other.game_phase),
+	turn(other.turn),
+	white_king_square(other.white_king_square),
+	black_king_square(other.black_king_square),
+	pieces(other.pieces),
+	color_pieces(other.color_pieces),
+	all_pieces(other.all_pieces),
+	positional_score(other.positional_score),
+	material_score(other.material_score),
+	half_moves(other.half_moves),
+	move_count(other.move_count),
+    history(other.history) // This copies the vector's elements
+{
+    // The critical part: reserve extra capacity on the new vector
+    history.reserve(256);
 }
