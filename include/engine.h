@@ -18,11 +18,32 @@ struct TTEntry{
     TTFlag flag;
     Move best_move;
 };
-
+struct PawnEvalEntry {
+    uint64_t key;
+	int pawn_structure_score;
+    int king_safety_white;
+    int king_safety_black;
+    bool valid;
+};
+struct PerftRes {
+    double duration;
+    uint64_t nodes;
+};
+struct SearchLimits {
+    int depth = -1;
+    int movetime = -1;
+    int wtime = -1;
+	int btime = -1;
+    int winc = 0;
+    int binc = 0;
+    int nodes = -1;
+	int mate = -1;
+    bool infinite = false;
+};
 class Engine {
     public:
-        Move search(const Board& board, int depth,int time_limit=100);
-        void perft_test(Board& board, int depth);
+        Move search(const Board& board, const SearchLimits& limits);
+        PerftRes perft_test(Board& board, int depth);
         int checks_count;
         int ep_count;
         int capture_count;

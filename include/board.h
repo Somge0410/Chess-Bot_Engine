@@ -5,6 +5,7 @@
 #include <cstdint>
 #include "Move.h"
 #include <array>
+#include "utils.h"
 
 //helper Structs
 struct PositionalScore {
@@ -20,6 +21,7 @@ struct CheckInfo{
 };
 struct BoardState {
     uint64_t zobrist_hash;
+    uint64_t pawn_key;
     uint8_t castling_rights;
     int en_passant_square;
     int game_phase;
@@ -50,9 +52,15 @@ class Board{
         void undo_null_move(int en_passant_square);
 
 		// Getters for Board State
-        uint64_t get_pieces(Color color, PieceType piece_type) const;
-        uint64_t get_color_pieces(const Color color) const;
-        uint64_t get_all_pieces() const;
+        inline uint64_t get_pieces(Color color, PieceType piece_type) const {
+			return pieces[to_int(color)][to_int(piece_type)];
+        }
+        inline uint64_t get_color_pieces(const Color color) const {
+			return color_pieces[to_int(color)];
+        }
+        inline uint64_t get_all_pieces() const {
+            return all_pieces;
+        }
         PieceType get_piece_on_square(int square)const;
         Color get_color_on_square(int square) const;
         char get_char_on_square(int square) const;
@@ -63,6 +71,10 @@ class Board{
 		uint64_t get_rook_attacks_for_color(Color color) const;
 		uint64_t get_queen_attacks_for_color(Color color) const;
         uint64_t get_attacks_for_color(Color color) const;
+        std::vector<BoardState> get_history() const;
+		int get_half_moves() const;
+		int get_move_count() const;
+		int get_position_repeat_count() const;
 
 		// Getters for Game State
         Color get_turn() const;
@@ -70,19 +82,22 @@ class Board{
         uint8_t get_castle_rights() const;
         uint64_t get_hash() const;
         int get_material_score() const;
-        double get_positional_score() const;
-        double get_game_phase() const;
+        int get_positional_score() const;
+        int get_game_phase() const;
 		int get_king_square(Color color) const;
         bool in_check() const;
         BoardState get_board_state() const;
         bool is_repetition_draw() const;
 		bool is_fifty_move_rule_draw() const;
+		uint64_t get_zobrist_hash() const;
+        uint64_t get_pawn_key() const;
 		// Advanced Search Helpers
         CheckInfo count_attacker_on_square(const int square,const Color attacker_color,const int bound=2, const bool need_sq=true) const;
         bool has_enough_material_for_nmp() const;
     private:
 		// Member Variables
         uint64_t zobrist_hash;
+        uint64_t pawn_key;
         uint8_t castling_rights;
         int en_passant_square;
         int game_phase;
@@ -108,8 +123,10 @@ class Board{
         void initialize_board();
         void initialize_game_phase();
         uint64_t initialize_hash() const;
+		uint64_t initialize_pawn_key() const;
         MaterialScore initialize_material_score() const;
         PositionalScore initialize_positional_score() const;
+        void debug_check_pawn_key() const;
 
 		// FEN Parsing Helpers
         void parse_fen(const std::string& fen);

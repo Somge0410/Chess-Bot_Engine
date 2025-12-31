@@ -33,7 +33,7 @@ const int MAX_PLY=128;
 const int MATE_THRESHOLD=MATE_SCORE-MAX_PLY;
 const int PIECE_VALUES[2][6] = {
     {100,320,320,500,900,20000},
-    {-100,-320,-330,-500,-900,-20000}
+    {-100,-320,-320,-500,-900,-20000}
 };
 const int PHASE_WEIGHTS[7]={0,1,1,2,4,0,0};
 const int DOUBLED_PAWN_PENALTY=-12;

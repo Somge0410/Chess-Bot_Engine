@@ -19,7 +19,7 @@ add_executable(Chess-Bot_Engine
     src/MoveGenerator.cpp
     src/notation_utils.cpp
     src/zobrist.cpp
-      "include/rook_tables.h")
+      "include/rook_tables.h" "include/prepare_data.h" "include/uci_helpers.h" "src/uci.cpp" "include/uci.h")
 
 # Tells the compiler where to find your .h header files
 target_include_directories(Chess-Bot_Engine PUBLIC include)

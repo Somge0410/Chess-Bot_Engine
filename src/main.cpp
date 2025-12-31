@@ -12,46 +12,31 @@
 #include "rook_tables.h"
 #include "bishop_tables.h"
 #include <chrono>
+#include "prepare_data.h"
+#include <vector>
+#include <iostream>
+#include "uci.h"
 int main(){
-	
     Zobrist::initialize_keys();
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+    uci_loop();
+    return 0;
     Engine engine;
     // }
-    Board board("8/8/8/3k4/8/8/2P5/K7 w - - 0 1");
-    /*int limit = 100000000;
-    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    for(size_t i=0; i<limit; ++i){
-        board.in_check();
-	}
-	std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> duration1 = end_time - start_time;
-	start_time = std::chrono::steady_clock::now();
-    for (size_t i = 0; i < limit; ++i) {
-        board.in_check2();
-    }
-	end_time = std::chrono::steady_clock::now();    
-    std::chrono::duration<double> duration2 = end_time - start_time;
-    std::cout << "in_check() time: " << duration1.count() << " seconds" << std::endl;
-    std::cout << "in_check2() time: " << duration2.count() << " seconds" << std::endl;
-	std::cout << "in_check2() is " << duration1.count() / duration2.count() << " times faster than in_check()" << std::endl;
-	std::cout << board.in_check() << " " << board.in_check2() << std::endl;
-    return 0;*/
-    board.display();
-    std::vector<Move> captures = MoveGenerator::generate_captures(board);
-    for(Move move : captures) {
-		board.make_move(move);
-		board.display();
-		board.undo_move(move);
-        board.display();
-	}
-   std::cout << captures.size() << std::endl;
-   std::cout << MoveGenerator::generate_captures_with_checks(board).size() << std::endl;
-   return 0;
-     for (size_t i = 0; i < 7 ; ++i) 
-      {
-         engine.perft_test(board,i);
+    Board board;
+	
+    double duration = 0;
+    uint64_t nodes = 0;
+     for (size_t i = 4; i < 5 ; ++i) 
+      {     
+         PerftRes x=engine.perft_test(board,5);
+         duration += x.duration;
+         nodes += x.nodes;
      }
-     return 0;
+	 std::cout << "Average duration for depth 5 over 100 runs: " << duration / 100 << " ms" << std::endl;
+	 std::cout << "Nodes per second:" << nodes / duration << std::endl;
+     //return 0;
     std::cout << "Choose a color, w for white, b for black" << std::endl;
     char color_choice;
     std::cin >> color_choice;
@@ -135,7 +120,9 @@ int main(){
         }else
         {
             std::cout << "\nComputer is thinking..." << std::endl;
-            Move best_move = engine.search(board,25,15);
+            SearchLimits limits;
+			limits.movetime = 15000;
+            Move best_move = engine.search(board,limits);
             if (best_move.from_square !=-1)
             {
                 std::cout << "Computer plays:" << to_san(best_move, legal_moves) << std::endl;

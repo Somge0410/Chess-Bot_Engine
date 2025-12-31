@@ -5,11 +5,16 @@
 #include "bitboard_masks.h"
 #include "Evaluation_data.h"
 #include "attack_rays.h"
+
+
+
+
+
 // --- Forward Declarations for static helper functions ---
 static int evaluate_material(const Board& board);
 static int evaluate_positional(const Board& board);
 static int evaluate_pawn_structure_score(const Board& board,const uint64_t& white_pawns, const uint64_t& black_pawns);
-static int eval_king_safety_score(const Board& board, const uint64_t& white_pawns, const uint64_t& black_pawns);
+static KingSafetyScore eval_king_safety_score(const Board& board, const uint64_t& white_pawns, const uint64_t& black_pawns);
 static int eval_iso_passed_pawns(const Board& board, Color color,const uint64_t& my_pawns,const uint64_t& opponent_pawns);
 static KingSafetyScore eval_king_safety_by_color(const Board& board, int king_sq, Color color, const uint64_t& friendly_pawns);
 
@@ -17,7 +22,7 @@ static int evaluate_material(const Board& board){
     return board.get_material_score();
 }
 static int evaluate_positional(const Board& board){
-    return board.get_positional_score();
+    return board.get_positional_score()/24;
 }
 
 static int eval_iso_passed_pawns(const Board& board, const Color color, const uint64_t& my_pawns, const uint64_t& op_pawns){
@@ -66,7 +71,7 @@ static int evaluate_pawn_structure_score(const Board& board, const uint64_t& whi
     return score;
     
 }
-static int eval_king_safety_score(const Board& board, const uint64_t& white_pawns, const uint64_t& black_pawns,const int& game_phase){
+static KingSafetyScore eval_king_safety_score(const Board& board, const uint64_t& white_pawns, const uint64_t& black_pawns){
     int score=0;
     int white_king_square=board.get_king_square(Color::WHITE);
 	int black_king_square = board.get_king_square(Color::BLACK);
@@ -74,9 +79,8 @@ static int eval_king_safety_score(const Board& board, const uint64_t& white_pawn
     KingSafetyScore black_ks=eval_king_safety_by_color(board,black_king_square,Color::BLACK,black_pawns);
 	int mg_king_safety = white_ks.mg_score - black_ks.mg_score;
 	int eg_king_safety = white_ks.eg_score - black_ks.eg_score;
-    int king_safety_score = (mg_king_safety * game_phase + eg_king_safety * (24 - game_phase)) / 24;
 
-    return king_safety_score;
+    return { mg_king_safety,eg_king_safety };
 }
 static KingSafetyScore eval_king_safety_by_color(const Board& board,int king_sq,Color color,const uint64_t& friendly_pawns){
     if (king_sq == -1) return { 0,0 };
@@ -325,32 +329,130 @@ static int evaluate_outpost(const uint64_t& white_knights, const uint64_t& black
     return score;
 }
 
-int evaluate(const Board& board){
-	uint64_t white_pawns = board.get_pieces(Color::WHITE, PieceType::PAWN);
-	uint64_t black_pawns = board.get_pieces(Color::BLACK, PieceType::PAWN);
-	uint64_t white_knights = board.get_pieces(Color::WHITE, PieceType::KNIGHT);
-	uint64_t black_knights = board.get_pieces(Color::BLACK, PieceType::KNIGHT);
-	uint64_t white_bishops = board.get_pieces(Color::WHITE, PieceType::BISHOP);
-	uint64_t black_bishops = board.get_pieces(Color::BLACK, PieceType::BISHOP);
-	uint64_t white_rooks = board.get_pieces(Color::WHITE, PieceType::ROOK);
-	uint64_t black_rooks = board.get_pieces(Color::BLACK, PieceType::ROOK);
-	uint64_t white_queens = board.get_pieces(Color::WHITE, PieceType::QUEEN);
-	uint64_t black_queens = board.get_pieces(Color::BLACK, PieceType::QUEEN);
-	uint64_t white_pieces = board.get_color_pieces(Color::WHITE);
-	uint64_t black_pieces = board.get_color_pieces(Color::BLACK);
-    int game_phase = board.get_game_phase();
-	uint64_t all_pieces = white_pieces | black_pieces;
-    int material_score=evaluate_material(board);
-    int positional_score=evaluate_positional(board);
-    int pawn_struct_score=evaluate_pawn_structure_score(board,white_pawns,black_pawns);
-    int king_safety_score=eval_king_safety_score(board,white_pawns,black_pawns,game_phase);
-	int rook_activity_score = evaluate_rook_activity(board,white_pawns,black_pawns,white_rooks,black_rooks);
-	int bishop_pair_score = evaluate_bishop_pair(board,white_bishops,black_bishops);
-    int mobility_score= evaluate_mobility(white_knights,black_knights,white_bishops,black_bishops,
-		white_rooks, black_rooks, white_queens, black_queens, white_pieces, black_pieces, all_pieces,game_phase);
+int evaluate(const Board& board, uint8_t terms_mask){
+    
     //int outpost_score = evaluate_outpost(white_knights, black_knights, white_bishops, black_bishops, white_pawns, black_pawns);
-    int final_score = material_score + positional_score + pawn_struct_score + king_safety_score
-        + rook_activity_score + bishop_pair_score + mobility_score;// +outpost_score;
+    int score = 0;
+    if (terms_mask & EVAL_MATERIAL) {
+        score += evaluate_material(board);
+	}
+	if (terms_mask & EVAL_POSITIONAL) {
+		score += evaluate_positional(board);
+	}
+    bool game_phase_loaded = false;
+    bool pawns_loaded = false;
+	bool knights_loaded = false;
+	bool bishops_loaded = false;
+	bool rooks_loaded = false;
+	bool queens_loaded = false;
+	bool colors_loaded = false;
+	bool all_loaded = false;
+    uint64_t wp, bp,wn,bn,wb,bb,wr,br,wq,bq,w,b,all;
+    int game_phase;
+    auto load_phase =[&]() {
+        if (!game_phase_loaded) {
+            game_phase = board.get_game_phase();
+            game_phase_loaded = true;
+        }
+		};
+    auto load_pawns = [&]() {
+        if (!pawns_loaded) {
+            wp = board.get_pieces(Color::WHITE, PieceType::PAWN);
+            bp = board.get_pieces(Color::BLACK, PieceType::PAWN);
+            pawns_loaded = true;
+        }
+        };
+    auto load_knights = [&]() {
+        if (!knights_loaded) {
+            wn = board.get_pieces(Color::WHITE, PieceType::KNIGHT);
+            bn = board.get_pieces(Color::BLACK, PieceType::KNIGHT);
+            knights_loaded = true;
+        }
+		};
+    auto load_bishops = [&]() {
+        if (!bishops_loaded) {
+            wb = board.get_pieces(Color::WHITE, PieceType::BISHOP);
+            bb = board.get_pieces(Color::BLACK, PieceType::BISHOP);
+            bishops_loaded = true;
+		}
+		};  
+    auto load_rooks = [&]() {
+        if (!rooks_loaded) {
+            wr = board.get_pieces(Color::WHITE, PieceType::ROOK);
+            br = board.get_pieces(Color::BLACK, PieceType::ROOK);
+			rooks_loaded = true;
+		}
+		};
+    auto load_queens = [&]() {
+        if (!queens_loaded) {
+            wq = board.get_pieces(Color::WHITE, PieceType::QUEEN);
+            bq = board.get_pieces(Color::BLACK, PieceType::QUEEN);
+			queens_loaded = true;
+		}   
+		};
+    auto load_colors = [&]() {
+        if (!colors_loaded) {
+            w = board.get_color_pieces(Color::WHITE);
+			b = board.get_color_pieces(Color::BLACK);
+			colors_loaded = true;    
+		}
+		};
+    auto load_all = [&]() {
+        if (!all_loaded) {
+			load_colors();
+            all = w | b;
+			all_loaded = true;
+		}
+		};
 
-    return final_score;
+    if (terms_mask & (EVAL_PAWN_STRUCTURE | EVAL_KING_SAFETY)) {
+        uint64_t pawn_key = board.get_pawn_key();
+        int idx = pawn_key & (PAWN_HASH_SIZE - 1);
+        PawnEvalEntry& entry = pawn_evaluation_table[idx];
+        int pawn_struct_score;
+        int mg_king_safety;
+        int eg_king_safety;
+        int king_safety_score;
+		load_phase();
+        if (entry.valid && entry.key == pawn_key) {
+            pawn_struct_score = entry.pawn_structure_score;
+            mg_king_safety = entry.mg_king_safety;
+            eg_king_safety = entry.eg_king_safety;;
+            king_safety_score = (mg_king_safety * game_phase + eg_king_safety * (24 - game_phase))/24;
+        }
+        else {
+            load_pawns();
+            pawn_struct_score = evaluate_pawn_structure_score(board, wp, bp);
+            KingSafetyScore king_safety = eval_king_safety_score(board, wp, bp);
+            entry.key = pawn_key;
+            entry.pawn_structure_score = pawn_struct_score;
+            entry.mg_king_safety = king_safety.mg_score;
+            entry.eg_king_safety = king_safety.eg_score;
+            entry.valid = true;
+            king_safety_score = (king_safety.mg_score * game_phase + king_safety.eg_score * (24 - game_phase))/24;
+        }
+		if (terms_mask & EVAL_PAWN_STRUCTURE) score += pawn_struct_score;
+		if (terms_mask & EVAL_KING_SAFETY) score += king_safety_score;
+	}
+	if (terms_mask & EVAL_MOBILITY) {
+        load_knights();
+        load_bishops();
+        load_rooks();
+        load_queens();
+        load_colors();
+        load_all();
+        load_phase();
+		score += evaluate_mobility(wn, bn, wb, bb, wr, br, wq, bq, w, b, all, game_phase);
+	}
+	if (terms_mask & EVAL_ROOK_ACTIVITY) {
+        load_pawns();
+		load_rooks();
+		score += evaluate_rook_activity(board, wp, bp, wr, br);
+	}
+	if (terms_mask & EVAL_BISHOP_PAIR) {
+		load_bishops();
+		score += evaluate_bishop_pair(board,wb,bb);
+	}
+    return score;
 }
+

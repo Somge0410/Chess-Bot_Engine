@@ -9,68 +9,99 @@
 #include "exceptions.h"
 #include "utils.h"
 #include <fstream>
-Move Engine::search(const Board& position, int max_depth, int time_limit_seconds) {
-   
+Move Engine::search(const Board& position, const SearchLimits& limits) {
+    // Decide thinking time and max depth
+    //position.display();
+    int time_ms = -1;
+    int max_depth = (limits.depth > 0) ? limits.depth : 64; // some upper bound
 
-    // Set the time control member variables for this search
+    // Case A: movetime
+    if (limits.movetime > 0) {
+        time_ms = limits.movetime;
+    }
+    // Case B: wtime/btime (tournament time control)
+    else if (limits.wtime > 0 || limits.btime > 0) {
+        int time_left = (position.get_turn() == Color::WHITE)
+            ? limits.wtime
+            : limits.btime;
+        int inc = (position.get_turn() == Color::WHITE)
+            ? limits.winc
+            : limits.binc;
+
+        // simple rule-of-thumb
+        time_ms = time_left / 40 + inc;
+
+        // safety caps
+        if (time_ms > time_left / 2)
+            time_ms = time_left / 2;
+
+    }
+    // Case C: fixed depth only
+    else if (limits.depth > 0) {
+        time_ms = 100000000; // effectively "infinite" for practical purposes
+        max_depth = limits.depth;
+    }
+    // Case D: infinite analysis
+    else if (limits.infinite) {
+        time_ms = 100000000; // very large
+        // max_depth stays large, you'll rely on stop_search
+    }
+    // Fallback default if nothing else was set
+    if (time_ms < 0) {
+        time_ms = 10000; // 10 seconds default
+    }
+
+    // Set engine timers
     this->start_time = std::chrono::steady_clock::now();
-    this->time_limit = std::chrono::seconds(time_limit_seconds);
-    this->stop_search=false;
-    Move best_move_so_far;
+    this->time_limit = std::chrono::milliseconds(time_ms);
+    this->stop_search = false;
+
+    Move   best_move_so_far;
     double best_score_so_far = 0;
 
-    // --- The Fix for the const Board ---
-    // Create a mutable copy of the board for the search to use
+    // Mutable copy of the board
     Board board = position;
-    // Reserve space for history to avoid reallocations during search
 
-        // The iterative deepening loop
-        for (int current_depth = 1; current_depth <= max_depth; ++current_depth) {
-            std::cout << "Searching with depth " << current_depth << std::endl;
+    for (int current_depth = 1; current_depth <= max_depth; ++current_depth) {
+        if (this->stop_search)
+            break; // in case some external flag already asked us to stop
 
-            // CORRECTED: Call negamax with 'this->' and the 'ply' argument
-            auto [eval_score, move_this_iteration] = this->negamax(board, current_depth, -MATE_SCORE, MATE_SCORE, 0);
-            
-            auto end_time = std::chrono::steady_clock::now();
-            std::chrono::duration<double> duration = end_time - this->start_time;
-            if (stop_search)
-            {
-                std::cout << "\nTime limit of " << time_limit_seconds << "s reached! Search is canceled." << std::endl;
-                if (move_this_iteration.from_square!=-1)
-                {   
-                    best_move_so_far = move_this_iteration;
-                    std::vector<Move> legal_moves = MoveGenerator::generate_moves(position);
-                        std::cout <<"Final Decision:"
-                                  << to_san(best_move_so_far, legal_moves) 
-                                    << ", Score: " << best_score_so_far << std::endl;
-                    break;
-                }
-            }
-            
+        auto [eval_score, move_this_iteration] =
+            this->negamax(board, current_depth, -MATE_SCORE, MATE_SCORE, 0);
 
-            if (move_this_iteration.from_square != -1) { // Check if a valid move was found
-                best_move_so_far = move_this_iteration;
-                best_score_so_far = eval_score;
-                
-                // For printing, we need the legal moves. It's slow but okay for logging.
-                std::vector<Move> legal_moves = MoveGenerator::generate_moves(board);
-                std::cout << "Depth " << current_depth << " ended. Best move so far: " 
-                          << to_san(best_move_so_far, legal_moves) 
-                          << ", Score: " << eval_score
-                          << ", Time: " << duration.count() << "s" << std::endl; // CORRECTED: use .count()
-            }
+        auto now = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed = now - this->start_time;
 
-            if (abs(best_score_so_far) >= MATE_SCORE) {
-                std::cout << "Mate found, end search." << std::endl;
-                break;
-            }
+        // Check time inside the loop too (negamax should also check a stop flag)
+        if (elapsed >= std::chrono::duration<double, std::milli>(time_ms) || stop_search) {
+            std::cerr << "\nTime limit of " << (time_ms / 1000.0)
+                << "s reached! Search is canceled.\n";
+            break;
         }
-        this->transposition_table.clear();
-        std::memset(this->killer_moves, 0, sizeof(this->killer_moves));
-		std::cout << "hi" << std::endl;
-        std::memset(this->history_scores, 0, sizeof(this->history_scores));
 
-    // CORRECTED: Add the missing return statement
+        if (move_this_iteration.from_square != -1) {
+            best_move_so_far = move_this_iteration;
+            best_score_so_far = eval_score;
+
+            // For logging: legal moves from root position
+            std::vector<Move> legal_moves = MoveGenerator::generate_moves(position);
+            std::cerr << "Depth " << current_depth << " ended. Best move so far: "
+                << to_san(best_move_so_far, legal_moves)
+                << ", Score: " << eval_score
+                << ", Time: " << elapsed.count() << "s\n";
+        }
+
+        if (std::abs(best_score_so_far) >= MATE_SCORE) {
+            std::cerr << "Mate found, end search.\n";
+            break;
+        }
+    }
+
+    // Optional: clear heuristics between moves
+    this->transposition_table.clear();
+    std::memset(this->killer_moves, 0, sizeof(this->killer_moves));
+    std::memset(this->history_scores, 0, sizeof(this->history_scores));
+
     return best_move_so_far;
 }
 std::pair<double,Move> Engine::negamax(Board& board, int depth, double alpha, double beta, int ply){
@@ -166,7 +197,7 @@ std::pair<double,Move> Engine::negamax(Board& board, int depth, double alpha, do
     if (depth<=2)
     {
         int weight= board.get_turn()==Color::WHITE? 1:-1;
-        current_eval=evaluate(board)*weight;
+        current_eval=evaluate(board,EVAL_MATERIAL|EVAL_POSITIONAL|EVAL_PAWN_STRUCTURE)*weight;
     }
     
 
@@ -323,15 +354,18 @@ double Engine::quiescence_search(Board& board,double alpha, double beta,int ply)
     double original_alpha=alpha;
     alpha=std::max(alpha,stand_pat_score);
     std::vector<Move> moves_to_search;
-    
-	moves_to_search = MoveGenerator::generate_captures(board);
+    if(ply==0) moves_to_search=MoveGenerator::generate_captures_with_checks(board);
+	else moves_to_search = MoveGenerator::generate_captures(board);
     sort_moves(moves_to_search,board,ply);
     double best_score=stand_pat_score;
     Move best_move;
     for (const Move& move : moves_to_search)
-    {
-        int capture_value=PIECE_VALUES[0][to_int(move.piece_captured)];
-        if (stand_pat_score+capture_value+DELTA_MARGIN<alpha) continue;
+    {   
+        if (move.piece_captured != PieceType::NONE) {
+
+            int capture_value = PIECE_VALUES[0][to_int(move.piece_captured)];
+            if (stand_pat_score + capture_value + DELTA_MARGIN < alpha) continue;
+        }
         board.make_move(move);
         double score=quiescence_search(board,-beta,-alpha,ply+1);
         score=-score;
@@ -395,7 +429,9 @@ uint64_t Engine::perft_driver(Board& board, int depth, int original_depth){
         // if(board.in_check()){
         //     checks_count+=1;
         // }
-		//evaluate(board);
+        
+		evaluate(board);
+     
         new_nodes=perft_driver(board,depth-1,original_depth);
         nodes+=new_nodes;
         board.undo_move(move);
@@ -409,7 +445,7 @@ uint64_t Engine::perft_driver(Board& board, int depth, int original_depth){
     return nodes;  
 }
 
-void Engine::perft_test(Board& board, int depth) {
+PerftRes Engine::perft_test(Board& board, int depth) {
     std::cout << "Starting perft test to depth " << depth << std::endl;
     
     // Record the starting hash and time
@@ -429,7 +465,7 @@ void Engine::perft_test(Board& board, int depth) {
     std::cout << "Perft test complete." << std::endl;
     std::cout << "Depth: " << depth << std::endl;
     std::cout << "Nodes found: " << nodes_found << std::endl;
-    std::cout << "Time elapsed: " << duration.count() << "s" << std::endl;
+    std::cout << "Time elapsed: " << duration.count() << "s" << std::endl; 
     if (duration.count() > 0) {
         std::cout << "Nodes per second: " << static_cast<uint64_t>(nodes_found / duration.count()) << std::endl;
     }
@@ -442,4 +478,5 @@ void Engine::perft_test(Board& board, int depth) {
         std::cout << "Start Hash: " << start_hash << ", End Hash: " << end_hash << std::endl;
     }
     std::cout << "--------------------" << std::endl;
+    return { duration.count(), nodes_found };
 }

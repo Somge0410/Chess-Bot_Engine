@@ -15,11 +15,28 @@
 #include "bitboard_masks.h"
 
 Board::Board(const std:: string& fen){
-
+    for (int c = 0; c < 2; ++c) {
+        for (int p = 0; p < 6; ++p) {
+            pieces[c][p] = 0;
+            color_pieces[c] = 0;
+        }
+     }
+    all_pieces = 0;
+    castling_rights = 0;
+    en_passant_square = -1;
+    game_phase = 0;
+    turn = to_int(Color::WHITE);
+    white_king_square = -1;
+    black_king_square = -1;
+    material_score = { 0 };
+    positional_score = { 0,0 };
+    half_moves = 0;
+    move_count = 1;
      parse_fen(fen);
      initialize_board();
      initialize_game_phase();
      zobrist_hash=initialize_hash();
+     pawn_key = initialize_pawn_key();
      material_score=initialize_material_score();
      positional_score=initialize_positional_score();
      history.reserve(256);
@@ -49,7 +66,6 @@ void Board::parse_fen(const std::string& fen){
 }
 
 void Board::parse_fen_pieces(const std::string& piece_data){
-    std::cout << piece_data << std::endl;
     int rank=7;
     int file=0;
     for(char c : piece_data){
@@ -188,6 +204,20 @@ uint64_t Board::initialize_hash() const {
 
     return h;
 }
+uint64_t Board::initialize_pawn_key() const {
+    uint64_t pawn_key = 0;
+    for (int color = 0; color < 2; ++color) {
+        uint64_t pawn_bitboard = pieces[color][to_int(PieceType::PAWN)];
+        while (pawn_bitboard) {
+            int square_index = get_lsb(pawn_bitboard);
+            pawn_key ^= Zobrist::piece_keys[color][to_int(PieceType::PAWN)][square_index];
+            pawn_bitboard &= pawn_bitboard - 1;
+        }
+    }
+	pawn_key ^= Zobrist::piece_keys[to_int(Color::WHITE)][to_int(PieceType::KING)][white_king_square];
+	pawn_key ^= Zobrist::piece_keys[to_int(Color::BLACK)][to_int(PieceType::KING)][black_king_square];
+    return pawn_key;
+}
 MaterialScore Board::initialize_material_score()const {
     int score=0;
     for (int color=0;color<2;++color){
@@ -227,11 +257,12 @@ void Board::make_move(const Move& move){
     update_pieces(move);
     update_pieces_hash(move);
     update_turn_rights(move);
+    debug_check_pawn_key();
 }
 void Board::undo_move(const Move& move){
     recover_board_state(history.back());
     history.pop_back();
-
+	debug_check_pawn_key();
 }
 void Board::update_material_score(const Move& move){
     if (move.piece_captured!=PieceType::NONE){
@@ -350,11 +381,21 @@ void Board::update_pieces_hash(const Move& move){
     int move_color=to_int(move.move_color);
     zobrist_hash^=Zobrist::piece_keys[move_color][to_int(move.piece_moved)][move.from_square];
     zobrist_hash^=Zobrist::piece_keys[move_color][to_int(piece_reached)][move.to_square];
+    if(move.piece_moved==PieceType::PAWN || move.piece_moved==PieceType::KING){
+        pawn_key^=Zobrist::piece_keys[move_color][to_int(move.piece_moved)][move.from_square];
+	}
+    if (piece_reached == PieceType::PAWN|| piece_reached==PieceType::KING) {
+        pawn_key ^= Zobrist::piece_keys[move_color][to_int(piece_reached)][move.to_square];
+    }
+
     if (move.piece_captured!=PieceType::NONE)
     {
         int other_color=to_int(move.get_capture_color());
         int capture_square=move.is_en_passant ? (move.move_color==Color::WHITE ? move.to_square-8:move.to_square+8):move.to_square;
         zobrist_hash^=Zobrist::piece_keys[other_color][to_int(move.piece_captured)][capture_square];
+        if (move.piece_captured==PieceType::PAWN){
+            pawn_key^=Zobrist::piece_keys[other_color][to_int(move.piece_captured)][capture_square];
+		}
     }
     if (move.is_castle)
     {
@@ -486,15 +527,6 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
 Color Board::get_turn() const {
         return static_cast<Color>(this->turn);
 }
-uint64_t Board::get_pieces(const Color color, const PieceType piece) const {
-    return pieces[to_int(color)][to_int(piece)];
-}
-uint64_t Board::get_color_pieces(const Color color) const {
-    return color_pieces[to_int(color)];
-}
-uint64_t Board::get_all_pieces() const{
-    return all_pieces;
-}
 PieceType Board::get_piece_on_square(int square) const {
 	PieceType piece_type = PieceType::NONE;
     if ((all_pieces & (1ULL << square)) == 0) {
@@ -545,11 +577,11 @@ uint64_t Board::get_hash() const{
 int Board::get_material_score() const{
     return material_score.score;
 }
-double Board::get_positional_score() const{
-    return (positional_score.mg*game_phase+positional_score.eg*(1-game_phase))/24.0;
+int Board::get_positional_score() const{
+    return (positional_score.mg*game_phase+positional_score.eg*(24-game_phase));
 }
-double Board::get_game_phase() const{
-    return game_phase/24.0;
+int Board::get_game_phase() const{
+    return game_phase;
 }
 int Board::get_king_square(Color color) const{
     return color==Color::WHITE ? white_king_square:black_king_square;
@@ -557,6 +589,7 @@ int Board::get_king_square(Color color) const{
 BoardState Board::get_board_state() const {
     BoardState current_state;
     current_state.zobrist_hash=this->zobrist_hash;
+    current_state.pawn_key = this->pawn_key;
     current_state.castling_rights=this->castling_rights;
     current_state.en_passant_square = this->en_passant_square;
     current_state.game_phase = this->game_phase;
@@ -628,6 +661,7 @@ void Board::undo_null_move(int original_ep_square){
 void Board::recover_board_state(const BoardState& previous_state) {
 
     this->zobrist_hash = previous_state.zobrist_hash;
+	this->pawn_key = previous_state.pawn_key;
     this->castling_rights = previous_state.castling_rights;
     this->en_passant_square = previous_state.en_passant_square;
     this->game_phase = previous_state.game_phase;
@@ -652,6 +686,15 @@ bool Board::is_repetition_draw() const {
         }
     }
 	return false;
+}
+int Board::get_position_repeat_count() const {
+    int repetition_count = 0;
+    for (int i = history.size() - 2; i >= 0 && i >= (int)history.size() - half_moves; i -= 2) {
+        if (history[i].zobrist_hash == this->zobrist_hash) {
+            repetition_count++;
+        }
+    }
+    return repetition_count;
 }
 bool Board::is_fifty_move_rule_draw() const {
     return half_moves >= 100;
@@ -731,7 +774,8 @@ uint64_t Board::get_attacks_for_color(Color color) const {
            get_king_attacks_for_color(color);
 }
 Board::Board(const Board& other)
-    : zobrist_hash(other.zobrist_hash),
+    : zobrist_hash(other.zobrist_hash), 
+	pawn_key(other.pawn_key),
     castling_rights(other.castling_rights),
 	en_passant_square(other.en_passant_square),
 	game_phase(other.game_phase),
@@ -749,4 +793,28 @@ Board::Board(const Board& other)
 {
     // The critical part: reserve extra capacity on the new vector
     history.reserve(256);
+}
+std::vector<BoardState> Board::get_history() const {
+    return history;
+}
+int Board::get_half_moves() const {
+    return half_moves;
+}
+int Board::get_move_count() const {
+    return move_count;
+}
+uint64_t Board::get_zobrist_hash() const {
+    return zobrist_hash;
+}
+uint64_t Board::get_pawn_key() const {
+    return pawn_key;
+}
+void Board::debug_check_pawn_key() const {
+#ifdef _DEBUG
+    uint64_t full_pawn_key = initialize_pawn_key();
+    if (full_pawn_key != pawn_key) {
+        std::cerr << "Pawn key mismatch!\n";
+        std::abort();
+    }
+#endif
 }
