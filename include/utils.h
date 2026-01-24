@@ -66,7 +66,7 @@ inline int to_int(Color color){
 }
 
 inline int to_int(PieceType piece_type){
-    return static_cast<int>(piece_type);
+    return static_cast<int8_t>(piece_type);
 }
 
 inline void remove_castling_right(std::string& rights, char right_to_remove){
