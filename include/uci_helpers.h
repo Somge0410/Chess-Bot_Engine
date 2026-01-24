@@ -62,9 +62,9 @@ inline Move parse_uci_move(const Board& board, const std::string& s) {
         }
     }
 
-    std::vector<Move> moves;
+    MoveList moves;
     MoveGenerator gen;
-    moves=gen.generate_moves(board);   // use your legal move gen here
+    gen.generate_moves(board,moves);   // use your legal move gen here
 
     for (const Move& m : moves) {
         if (m.from_square == from_sq && m.to_square == to_sq) {

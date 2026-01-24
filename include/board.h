@@ -19,6 +19,72 @@ struct CheckInfo{
     int count;
     int attacker_square;
 };
+
+#include <unordered_map>
+#include <cstdint>
+#include <vector>
+
+struct RepetitionTracker {
+
+    static constexpr int CAP = 101;
+    std::array<uint64_t, CAP> keys{};
+	std::array<uint8_t, CAP> vals{};
+    int sz = 0;
+    int twofold_positions = 0;
+
+    void clear() {
+          sz = 0;
+		  twofold_positions = 0;
+    }
+    uint8_t count(uint64_t h) const {
+        for (int i = 0; i < sz; ++i) {
+            if (keys[i] == h) {
+                return vals[i];
+            }
+        }
+        return 0;
+	}
+	bool has_any_twofold() const {
+        return twofold_positions > 0; }
+    bool has_any_threefold() const {
+        for (int i = 0; i < sz; ++i) {
+            if (vals[i] >= 3) return true;
+        }
+        return false;
+	}
+    void push(uint64_t h) {
+        // find existing
+        for(int i=0;i<sz;++i){
+            if (keys[i]==h){
+                if (vals[i]==1) twofold_positions++;
+                vals[i]++;
+                return;
+            }
+        }
+		keys[sz] = h;
+		vals[sz] = 1;
+        sz++;
+    }
+    void pop(uint64_t h) {
+        for (int i = 0; i < sz; ++i) {
+            if (keys[i] == h) {
+                if (vals[i] == 2) twofold_positions--;
+                if (--vals[i] == 0) {
+                    // Remove entry by swapping with last
+                    keys[i] = keys[sz - 1];
+                    vals[i] = vals[sz - 1];
+                    sz--;
+                }
+                return;
+            }
+        }
+	}
+
+    void reset(uint64_t h) {
+        clear();
+        push(h);
+    }
+};
 struct BoardState {
     uint64_t zobrist_hash;
     uint64_t pawn_key;
@@ -35,6 +101,7 @@ struct BoardState {
     MaterialScore material_score;
     int half_moves;
     int move_count;
+    RepetitionTracker repetition_tracker;
 };
 // Board class
 class Board{
@@ -78,6 +145,7 @@ class Board{
 
 		// Getters for Game State
         Color get_turn() const;
+		bool is_white_to_move() const;
         int get_en_passant_rights() const;
         uint8_t get_castle_rights() const;
         uint64_t get_hash() const;
@@ -87,13 +155,16 @@ class Board{
 		int get_king_square(Color color) const;
         bool in_check() const;
         BoardState get_board_state() const;
-        bool is_repetition_draw() const;
+        bool is_repetition_draw(int repeat=3) const;
 		bool is_fifty_move_rule_draw() const;
+		bool any_appeared_more_than(int count) const;
 		uint64_t get_zobrist_hash() const;
         uint64_t get_pawn_key() const;
+		bool is_free_file(const int square, const Color pawn_color) const;
 		// Advanced Search Helpers
         CheckInfo count_attacker_on_square(const int square,const Color attacker_color,const int bound=2, const bool need_sq=true) const;
         bool has_enough_material_for_nmp() const;
+        //other
     private:
 		// Member Variables
         uint64_t zobrist_hash;
@@ -117,6 +188,7 @@ class Board{
         int half_moves;
         int move_count;
         std::vector<BoardState> history;
+		RepetitionTracker repetition_tracker;
 		// Private Helper Methods
 
 		// Initialization Helpers
@@ -148,4 +220,6 @@ class Board{
         void update_game_phase(const Move& move);
 		void update_king_square(const Move& move);
         void recover_board_state(const BoardState& previous_state);
+		void update_move_count(const Move& move);
+        void update_repetition_tracker();
 };

@@ -7,16 +7,18 @@
 #include "attack_rays.h"
 
 
-
+PawnEvalEntry pawn_evaluation_table[PAWN_HASH_SIZE] = {};
 
 
 // --- Forward Declarations for static helper functions ---
 static int evaluate_material(const Board& board);
 static int evaluate_positional(const Board& board);
 static int evaluate_pawn_structure_score(const Board& board,const uint64_t& white_pawns, const uint64_t& black_pawns);
-static KingSafetyScore eval_king_safety_score(const Board& board, const uint64_t& white_pawns, const uint64_t& black_pawns);
+static KingSafetyScore eval_king_safety_score(const Board& board, const uint64_t& wp, const uint64_t& bp,
+    const uint64_t& wn, const uint64_t& bn, const uint64_t& wb, const uint64_t& bb, const uint64_t& wr, const uint64_t& br, const uint64_t& wq, const uint64_t& bq, const uint64_t& w, const uint64_t& b, const uint64_t& all);
 static int eval_iso_passed_pawns(const Board& board, Color color,const uint64_t& my_pawns,const uint64_t& opponent_pawns);
-static KingSafetyScore eval_king_safety_by_color(const Board& board, int king_sq, Color color, const uint64_t& friendly_pawns);
+static KingSafetyScore eval_king_safety_by_color(int king_sq, Color color, const uint64_t& fp, const uint64_t& ep, const uint64_t& en, const uint64_t& eb, const uint64_t& er,
+    const uint64_t& eq, const uint64_t& ek);
 
 static int evaluate_material(const Board& board){
     return board.get_material_score();
@@ -71,36 +73,53 @@ static int evaluate_pawn_structure_score(const Board& board, const uint64_t& whi
     return score;
     
 }
-static KingSafetyScore eval_king_safety_score(const Board& board, const uint64_t& white_pawns, const uint64_t& black_pawns){
+static KingSafetyScore eval_king_safety_score(const Board& board, const uint64_t& wp, const uint64_t& bp,
+    const uint64_t& wn,const uint64_t& bn,const uint64_t& wb, const uint64_t& bb, const uint64_t& wr, const uint64_t& br, const uint64_t& wq, const uint64_t& bq, const uint64_t& w, const uint64_t& b, const uint64_t& all){
     int score=0;
     int white_king_square=board.get_king_square(Color::WHITE);
 	int black_king_square = board.get_king_square(Color::BLACK);
-    KingSafetyScore white_ks=eval_king_safety_by_color(board, white_king_square,Color::WHITE,white_pawns);
-    KingSafetyScore black_ks=eval_king_safety_by_color(board,black_king_square,Color::BLACK,black_pawns);
+    KingSafetyScore white_ks=eval_king_safety_by_color(white_king_square,Color::WHITE,wp,bp,bn,bb,br,bq,1ULL<<black_king_square);
+    KingSafetyScore black_ks=eval_king_safety_by_color(black_king_square,Color::BLACK,bp,wp,wn,wb,wr,wq,1ULL<<white_king_square);
 	int mg_king_safety = white_ks.mg_score - black_ks.mg_score;
 	int eg_king_safety = white_ks.eg_score - black_ks.eg_score;
 
     return { mg_king_safety,eg_king_safety };
 }
-static KingSafetyScore eval_king_safety_by_color(const Board& board,int king_sq,Color color,const uint64_t& friendly_pawns){
+static KingSafetyScore eval_king_safety_by_color(int king_sq,Color color,const uint64_t& fp, const uint64_t& ep, const uint64_t& en, const uint64_t& eb, const uint64_t& er,
+    const uint64_t& eq, const uint64_t& ek){
     if (king_sq == -1) return { 0,0 };
         int score=0;
         uint64_t shield_mask=KING_SHIELD[to_int(color)][king_sq];
-        int shield_pawns_count=popcount(friendly_pawns & shield_mask);
+        int shield_pawns_count=popcount(fp & shield_mask);
         int safety_score= shield_pawns_count*PAWN_SHIELD_BONUS;
 
-        uint64_t zone_mask=KING_ZONE[king_sq];
-        uint64_t enemy_pieces=board.get_color_pieces(color==Color::WHITE ? Color::BLACK : Color::WHITE);
-        uint64_t attacker_in_zone=zone_mask & enemy_pieces;
+        //uint64_t zone_mask=KING_ZONE[king_sq];
+        //uint64_t enemy_pieces=board.get_color_pieces(color==Color::WHITE ? Color::BLACK : Color::WHITE);
+        //uint64_t attacker_in_zone=zone_mask & enemy_pieces;
         int attacker_score=0;
+		uint64_t king_zone = KING_ZONE[king_sq];
+        auto add = [&](uint64_t ebb,PieceType pt) {
+			ebb &= king_zone;
+            while (ebb) {
+                int sq = get_lsb(ebb);
+                attacker_score += (ATTACKER_WEIGHTS[to_int(pt)] * DISTANCE_BONUS[king_sq][sq]) >> 1;
+                ebb &= ebb - 1;
+            }
+        };
+		add(ep,PieceType::PAWN);
+		add(ek,PieceType::KNIGHT);
+		add(eb,PieceType::BISHOP);
+		add(er,PieceType::ROOK);
+		add(eq,PieceType::QUEEN);
+		add(ek,PieceType::KING);
 
-        while (attacker_in_zone)
+       /* while (attacker_in_zone)
         {   
             int att_sq=get_lsb(attacker_in_zone);
             int piece=to_int(board.get_piece_on_square(att_sq));
             attacker_score+=(ATTACKER_WEIGHTS[piece]*DISTANCE_BONUS[king_sq][att_sq]) >> 1;
             attacker_in_zone &=attacker_in_zone-1;
-        }
+        }*/
         return { safety_score - attacker_score,-(attacker_score) / 2 };
         
 
@@ -423,7 +442,13 @@ int evaluate(const Board& board, uint8_t terms_mask){
         else {
             load_pawns();
             pawn_struct_score = evaluate_pawn_structure_score(board, wp, bp);
-            KingSafetyScore king_safety = eval_king_safety_score(board, wp, bp);
+            load_knights();
+            load_bishops();
+            load_rooks();
+            load_queens();
+            load_colors();
+            load_all();
+            KingSafetyScore king_safety = eval_king_safety_score(board, wp, bp, wn, bn, wb, bb, wr, br, wq, bq, w, b, all);
             entry.key = pawn_key;
             entry.pawn_structure_score = pawn_struct_score;
             entry.mg_king_safety = king_safety.mg_score;

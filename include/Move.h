@@ -5,14 +5,14 @@
 struct Move{
     int from_square;
     int to_square;
+
     PieceType piece_moved;
     PieceType piece_captured;
     PieceType promotion_piece;
+    Color move_color;
+
     bool is_castle;
     bool is_en_passant;
-	uint8_t old_castling_rights;
-	int en_passant_square;
-    Color move_color;
     Move()
         : from_square(-1),
           to_square(-1),
@@ -57,4 +57,26 @@ struct Move{
         to_square == other.to_square &&
         promotion_piece == other.promotion_piece;
     }
+    uint16_t get_int() const {
+        uint16_t move = 0;
+        if (from_square == -1 || to_square == -1) return 1u <<15;
+        move |= from_square;
+        move |= to_square << 6;
+        move |= uint16_t((static_cast<uint16_t>(promotion_piece) & 0x0F) << 12);
+        return move;
+    }
+};
+struct MoveList {
+    Move moves[256]; int count = 0;
+    void push_back(const Move& m) { moves[count++] = m; }
+    Move* begin() { return moves; } Move* end() { return moves + count; } const Move* begin() const { return moves; } const Move* end() const { return moves + count; }
+    Move& operator[](int index) { return moves[index]; }
+    const Move& operator[](int index) const { return moves[index]; }
+    size_t size() const { return count; }
+    bool empty() const { return count == 0; }
+    void clear() { count = 0; }
+    void swap_items(int i, int j) {
+		std::swap(moves[i], moves[j]);
+    }
+   
 };

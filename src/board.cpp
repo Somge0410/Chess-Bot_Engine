@@ -41,6 +41,7 @@ Board::Board(const std:: string& fen){
      positional_score=initialize_positional_score();
      history.reserve(256);
      history.push_back(get_board_state());
+     repetition_tracker.push(zobrist_hash);
 
 }
 void Board::parse_fen(const std::string& fen){
@@ -258,6 +259,8 @@ void Board::make_move(const Move& move){
     update_pieces_hash(move);
     update_turn_rights(move);
     debug_check_pawn_key();
+	update_move_count(move);
+    update_repetition_tracker();
 }
 void Board::undo_move(const Move& move){
     recover_board_state(history.back());
@@ -304,12 +307,6 @@ void Board::update_positional_score(const Move& move){
 void Board::update_turn_rights(const Move& move){
         turn=turn==0 ? 1:0;
         zobrist_hash^=Zobrist::black_to_move_key;
-        if (move.piece_moved == PieceType::PAWN || move.piece_captured != PieceType::NONE) {
-            half_moves = 0;
-		}
-		else {
-            half_moves++;
-        }
         if (turn == to_int(Color::WHITE)) {
             move_count++;
         }
@@ -466,6 +463,23 @@ void Board::update_pieces(const Move& move){
 
 
 }
+void Board::update_move_count(const Move& move){
+    if (turn==to_int(Color::BLACK)){
+        move_count++;
+    }
+    if (move.piece_captured != PieceType::NONE || move.piece_moved == PieceType::PAWN || move.is_castle) {
+        half_moves = 0;
+    }
+    else
+    {
+		half_moves = std::min(100, half_moves + 1);
+    }
+}
+void Board::update_repetition_tracker() {
+
+    if (half_moves == 0) repetition_tracker.reset(zobrist_hash);
+    else repetition_tracker.push(zobrist_hash);
+}
 CheckInfo Board::count_attacker_on_square(const int square, const Color attacker_color,const int bound,const bool need_square)const {
     CheckInfo info={0,-1};
     int other_color=attacker_color==Color::BLACK ? to_int(Color::WHITE):to_int(Color::BLACK);
@@ -603,6 +617,7 @@ BoardState Board::get_board_state() const {
     current_state.material_score = this->material_score;
     current_state.half_moves = this->half_moves;
     current_state.move_count = this->move_count;
+	current_state.repetition_tracker = this->repetition_tracker;
     return current_state;
 }
 bool Board::has_enough_material_for_nmp() const {
@@ -675,26 +690,20 @@ void Board::recover_board_state(const BoardState& previous_state) {
     this->material_score = previous_state.material_score;
     this->half_moves = previous_state.half_moves;
     this->move_count = previous_state.move_count;
+	this->repetition_tracker = previous_state.repetition_tracker;
 }
-bool Board::is_repetition_draw() const {
-    int repetition_count = 0;
-    for (int i = history.size()-2; i >=0 &&i>=(int)history.size()-half_moves; i-=2)
-    {
-        if (history[i].zobrist_hash == this->zobrist_hash) {
-            repetition_count++;
-			if (repetition_count >= 2) return true;
-        }
-    }
-	return false;
+bool Board::is_repetition_draw(int repeat) const {
+	return repetition_tracker.count(zobrist_hash) >= repeat;
 }
 int Board::get_position_repeat_count() const {
-    int repetition_count = 0;
-    for (int i = history.size() - 2; i >= 0 && i >= (int)history.size() - half_moves; i -= 2) {
-        if (history[i].zobrist_hash == this->zobrist_hash) {
-            repetition_count++;
-        }
-    }
-    return repetition_count;
+	return repetition_tracker.count(zobrist_hash);
+}
+bool Board::any_appeared_more_than(int count) const {
+        if (count==2) {
+			return repetition_tracker.has_any_twofold();
+		}
+		else if (count == 3) return repetition_tracker.has_any_threefold();
+		else return false;
 }
 bool Board::is_fifty_move_rule_draw() const {
     return half_moves >= 100;
@@ -789,7 +798,8 @@ Board::Board(const Board& other)
 	material_score(other.material_score),
 	half_moves(other.half_moves),
 	move_count(other.move_count),
-    history(other.history) // This copies the vector's elements
+    history(other.history), // This copies the vector's elements
+	repetition_tracker(other.repetition_tracker)
 {
     // The critical part: reserve extra capacity on the new vector
     history.reserve(256);
@@ -818,3 +828,11 @@ void Board::debug_check_pawn_key() const {
     }
 #endif
 }
+bool Board::is_white_to_move() const {
+    return turn == to_int(Color::WHITE);
+}
+bool Board::is_free_file(const int square, const Color color) const {
+    uint64_t pawns = pieces[to_int(flip_color(color))][to_int(PieceType::PAWN)];
+	return (pawns&& PASSED_PAWN_MASK[to_int(color)][square])==0;
+}
+

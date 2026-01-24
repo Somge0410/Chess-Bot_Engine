@@ -8,17 +8,15 @@ struct PawnStructureScore {
 	int mg_score;
 	int eg_score;
 };
-namespace {
-	struct PawnEvalEntry {
+struct PawnEvalEntry {
 		uint64_t key;
 		int pawn_structure_score;
 		int mg_king_safety;
 		int eg_king_safety;
 		bool valid;
-	};
-	constexpr int PAWN_HASH_SIZE = 1 << 16;
-	PawnEvalEntry pawn_evaluation_table[PAWN_HASH_SIZE] = {};
-}
+};
+constexpr int PAWN_HASH_SIZE = 1 << 16;
+extern PawnEvalEntry pawn_evaluation_table[PAWN_HASH_SIZE];
 enum EvalTerms : uint8_t {
 	EVAL_MATERIAL = 1<<0,
 	EVAL_POSITIONAL = 1 << 1,

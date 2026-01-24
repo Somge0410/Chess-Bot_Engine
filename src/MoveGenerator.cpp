@@ -13,10 +13,8 @@ MoveGenerator::MoveGenerator()
     
 }
 
-std::vector<Move> MoveGenerator::generate_moves(const Board& board,bool captures_ony,bool with_checks){
-    std::vector<Move> move_list;
-	move_list.reserve(256);
-	if (board.is_fifty_move_rule_draw() || board.is_repetition_draw()) return move_list;
+void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool captures_ony,bool with_checks){
+	//if (board.is_fifty_move_rule_draw() || board.is_repetition_draw()) return move_list;
     Color own_color=board.get_turn();
     Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
     int king_square=board.get_king_square(own_color);
@@ -44,21 +42,21 @@ std::vector<Move> MoveGenerator::generate_moves(const Board& board,bool captures
         
         if (board.get_en_passant_rights() !=-1 && checker == PieceType::PAWN) remedy_mask|=1ULL<<board.get_en_passant_rights();
         generate_pawn_moves(move_list,board, own_color,king_square, pinned_info, remedy_mask,captures_ony,with_checks);
-    }else
-    {   
-        generate_queen_moves(move_list,board, own_color, pinned_info,BOARD_ALL_SET,captures_ony,with_checks);
+    }
+    else
+    {
+        generate_queen_moves(move_list, board, own_color, pinned_info, BOARD_ALL_SET, captures_ony, with_checks);
 
-        generate_rook_moves(move_list,board, own_color, pinned_info,BOARD_ALL_SET,captures_ony,with_checks);
+        generate_rook_moves(move_list, board, own_color, pinned_info, BOARD_ALL_SET, captures_ony, with_checks);
 
-        generate_bishop_moves(move_list,board, own_color, pinned_info,BOARD_ALL_SET,captures_ony,with_checks);
-        
-        generate_knight_moves(move_list,board, own_color, pinned_info,BOARD_ALL_SET,captures_ony,with_checks);
+        generate_bishop_moves(move_list, board, own_color, pinned_info, BOARD_ALL_SET, captures_ony, with_checks);
 
-        generate_pawn_moves(move_list,board, own_color,king_square, pinned_info,BOARD_ALL_SET,captures_ony,with_checks);
+        generate_knight_moves(move_list, board, own_color, pinned_info, BOARD_ALL_SET, captures_ony, with_checks);
+
+        generate_pawn_moves(move_list, board, own_color, king_square, pinned_info, BOARD_ALL_SET, captures_ony, with_checks);
 
         generate_king_moves(move_list, board, own_color, own_pieces, king_square, captures_ony);
     }
-    return move_list;
 }
 std::array<uint64_t,64> MoveGenerator::calculate_pinned_pieces(const Board& board,const Color friendly_color, const int king_square){
     Color opponent_color=friendly_color==Color::WHITE ? Color::BLACK:Color::WHITE;
@@ -90,7 +88,7 @@ std::array<uint64_t,64> MoveGenerator::calculate_pinned_pieces(const Board& boar
     }
     return pinned_info;
 }
-void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& board,const Color own_color, const uint64_t own_pieces, int king_square, bool captures_only){
+void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const Color own_color, const uint64_t own_pieces, int king_square, bool captures_only){
         uint64_t possible_moves=KING_ATTACKS[king_square]&~own_pieces;
         Color other_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
         if (captures_only) possible_moves&=board.get_color_pieces(other_color);
@@ -102,8 +100,8 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
                 possible_moves&=possible_moves-1;
                 continue;
             }
-            moves.emplace_back(king_square,to_square,PieceType::KING,own_color,
-                board.get_piece_on_square(to_square));
+            moves.push_back(Move(king_square,to_square,PieceType::KING,own_color,
+                board.get_piece_on_square(to_square)));
             possible_moves&=possible_moves-1;
         }
         if (board.count_attacker_on_square(king_square,other_color,1,false).count>0) return;
@@ -119,8 +117,8 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
                 
                 if (board.count_attacker_on_square(king_square+1,other_color,1,false).count==0 && board.count_attacker_on_square(king_square+2,other_color,1,false).count==0)
                 {
-                    moves.emplace_back(king_square,king_square+2,PieceType::KING,own_color,
-                        PieceType::NONE,PieceType::NONE,true);
+                    moves.push_back(Move(king_square,king_square+2,PieceType::KING,own_color,
+                        PieceType::NONE,PieceType::NONE,true));
                 }
                 
             }
@@ -133,8 +131,8 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
             {
                 if (board.count_attacker_on_square(king_square-1,other_color,1,false).count==0 && board.count_attacker_on_square(king_square-2,other_color,1,false).count==0)
                 {
-                    moves.emplace_back(king_square,king_square-2,PieceType::KING,own_color,
-                        PieceType::NONE,PieceType::NONE,true);
+                    moves.push_back(Move(king_square,king_square-2,PieceType::KING,own_color,
+                        PieceType::NONE,PieceType::NONE,true));
                 }
                 
             }
@@ -143,7 +141,7 @@ void MoveGenerator::generate_king_moves(std::vector<Move>& moves,const Board& bo
     return;
 }
 
-void MoveGenerator::generate_queen_moves(std::vector<Move>& moves,const Board& board, Color own_color,const std::array<uint64_t,64>& pinned_info,uint64_t remedy_mask, bool captures_only,bool with_checks) {
+void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Color own_color,const std::array<uint64_t,64>& pinned_info,uint64_t remedy_mask, bool captures_only,bool with_checks) {
     //return generate_sliding_moves(moves,PieceType::QUEEN,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t queens = board.get_pieces(own_color, PieceType::QUEEN);
     uint64_t occupied = board.get_all_pieces();
@@ -171,7 +169,7 @@ void MoveGenerator::generate_queen_moves(std::vector<Move>& moves,const Board& b
         attacks&= ~own_pieces & remedy_mask & pinned_info[from_square];
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.emplace_back(from_square, to_square, PieceType::QUEEN, own_color, board.get_piece_on_square(to_square));
+            moves.push_back(Move(from_square, to_square, PieceType::QUEEN, own_color, board.get_piece_on_square(to_square)));
             attacks &= attacks - 1;
 
         }
@@ -180,7 +178,7 @@ void MoveGenerator::generate_queen_moves(std::vector<Move>& moves,const Board& b
     }
 }
 
-void MoveGenerator::generate_rook_moves(std::vector<Move>& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info,uint64_t remedy_mask,bool captures_only,bool with_checks) {
+void MoveGenerator::generate_rook_moves(MoveList& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info,uint64_t remedy_mask,bool captures_only,bool with_checks) {
     //return generate_sliding_moves(moves,PieceType::ROOK,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t rooks = board.get_pieces(own_color, PieceType::ROOK);
     uint64_t occupied = board.get_all_pieces();
@@ -202,7 +200,7 @@ void MoveGenerator::generate_rook_moves(std::vector<Move>& moves,const Board& bo
         attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index] & ~ own_pieces & remedy_mask & pinned_info[from_square];
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.emplace_back(from_square, to_square, PieceType::ROOK, own_color, board.get_piece_on_square(to_square));
+            moves.push_back(Move(from_square, to_square, PieceType::ROOK, own_color, board.get_piece_on_square(to_square)));
             attacks &= attacks - 1;
 
         }
@@ -212,7 +210,7 @@ void MoveGenerator::generate_rook_moves(std::vector<Move>& moves,const Board& bo
 
 }
 
-void MoveGenerator::generate_bishop_moves(std::vector<Move>& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, uint64_t remedy_mask,bool captures_only,bool with_checks) {
+void MoveGenerator::generate_bishop_moves(MoveList& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, uint64_t remedy_mask,bool captures_only,bool with_checks) {
     //return generate_sliding_moves(moves,PieceType::BISHOP,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t bishops = board.get_pieces(own_color, PieceType::BISHOP);
     uint64_t occupied = board.get_all_pieces();
@@ -234,7 +232,7 @@ void MoveGenerator::generate_bishop_moves(std::vector<Move>& moves,const Board& 
         attacks = BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index] & ~own_pieces & remedy_mask & pinned_info[from_square]; 
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.emplace_back(from_square, to_square, PieceType::BISHOP, own_color, board.get_piece_on_square(to_square));
+            moves.push_back(Move(from_square, to_square, PieceType::BISHOP, own_color, board.get_piece_on_square(to_square)));
             attacks &= attacks - 1;
 
         }
@@ -244,7 +242,7 @@ void MoveGenerator::generate_bishop_moves(std::vector<Move>& moves,const Board& 
 
 }
 
-void MoveGenerator::generate_knight_moves(std::vector<Move>& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, uint64_t remedy_mask, bool captures_only,bool with_checks) {
+void MoveGenerator::generate_knight_moves(MoveList& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, uint64_t remedy_mask, bool captures_only,bool with_checks) {
     uint64_t knight_bitboard=board.get_pieces(own_color,PieceType::KNIGHT);
     uint64_t own_pieces = board.get_color_pieces(own_color);
     if (captures_only) {
@@ -268,7 +266,7 @@ void MoveGenerator::generate_knight_moves(std::vector<Move>& moves,const Board& 
         while (possible_moves)
         {
             int to_square=get_lsb(possible_moves);
-            moves.emplace_back(from_square,to_square,PieceType::KNIGHT,own_color,board.get_piece_on_square(to_square));
+            moves.push_back(Move(from_square,to_square,PieceType::KNIGHT,own_color,board.get_piece_on_square(to_square)));
             possible_moves&=possible_moves-1;
         }
         knight_bitboard&=knight_bitboard-1; 
@@ -276,7 +274,7 @@ void MoveGenerator::generate_knight_moves(std::vector<Move>& moves,const Board& 
     return;
 }
 
-void MoveGenerator::generate_pawn_moves(std::vector<Move>& moves,const Board& board, Color own_color,const int king_square, const std::array<uint64_t, 64>& pinned_info, const uint64_t& remedy_mask, bool captures_only,bool with_checks) {
+void MoveGenerator::generate_pawn_moves(MoveList& moves,const Board& board, Color own_color,const int king_square, const std::array<uint64_t, 64>& pinned_info, const uint64_t& remedy_mask, bool captures_only,bool with_checks) {
     
     if (!captures_only || (captures_only&&with_checks))
     {
@@ -288,7 +286,7 @@ void MoveGenerator::generate_pawn_moves(std::vector<Move>& moves,const Board& bo
 }
 
 void MoveGenerator::generate_sliding_moves(
-    std::vector<Move>& moves,
+    MoveList& moves,
     PieceType piece,
     const Board& board,
     Color own_color,
@@ -327,7 +325,7 @@ void MoveGenerator::generate_sliding_moves(
         while (possible_moves)
         {
             int to_square=get_lsb(possible_moves);
-            moves.emplace_back(from_square,to_square,piece,own_color,board.get_piece_on_square(to_square));
+            moves.push_back(Move(from_square,to_square,piece,own_color,board.get_piece_on_square(to_square)));
             possible_moves&=possible_moves-1;
         }
         piece_bitboard&=piece_bitboard-1;
@@ -335,7 +333,7 @@ void MoveGenerator::generate_sliding_moves(
     return;
 }
 
-void MoveGenerator::generate_pawn_pushes(std::vector<Move>& moves,const Board& board,Color own_color,const std::array<uint64_t,64>&pinned_info,uint64_t remedy_mask,bool with_checks){
+void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Board& board,Color own_color,const std::array<uint64_t,64>&pinned_info,uint64_t remedy_mask,bool with_checks){
 
         uint64_t own_pawns=board.get_pieces(own_color,PieceType::PAWN);
         uint64_t all_pieces=board.get_all_pieces();
@@ -364,13 +362,13 @@ void MoveGenerator::generate_pawn_pushes(std::vector<Move>& moves,const Board& b
                         if (is_promotion)
                         {
                             
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::QUEEN);
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::ROOK);
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::BISHOP);
-                        moves.emplace_back(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::KNIGHT);
+                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::QUEEN));
+                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::ROOK));
+                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::BISHOP));
+                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::KNIGHT));
                         }else
                         {
-                            moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,PieceType::NONE);
+                            moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,PieceType::NONE));
                         }
                     }
 
@@ -381,7 +379,7 @@ void MoveGenerator::generate_pawn_pushes(std::vector<Move>& moves,const Board& b
                         {
                             if (pinned_info[from_square] &(1ULL<<to_square2)& remedy_mask)
                             {
-                                moves.emplace_back(from_square,to_square2,PieceType::PAWN,own_color,PieceType::NONE);
+                                moves.push_back(Move(from_square,to_square2,PieceType::PAWN,own_color,PieceType::NONE));
                             }
                             
                         }
@@ -396,7 +394,7 @@ void MoveGenerator::generate_pawn_pushes(std::vector<Move>& moves,const Board& b
         }
         return;
 }
-void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board& board, Color own_color,const int king_square,const std::array<uint64_t,64>& pinned_info,const uint64_t& remedy_mask){
+void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, Color own_color,const int king_square,const std::array<uint64_t,64>& pinned_info,const uint64_t& remedy_mask){
 
         uint64_t own_pawns=board.get_pieces(own_color,PieceType::PAWN);
         Color opponent_color =(own_color==Color::WHITE) ? Color::BLACK:Color::WHITE;
@@ -424,12 +422,12 @@ void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board&
                 if (is_promotion
                 )
                 {
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::QUEEN);
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::ROOK);
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::BISHOP);
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::KNIGHT);
+                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::QUEEN));
+                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::ROOK));
+                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::BISHOP));
+                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::KNIGHT));
                 }else{
-                    moves.emplace_back(from_square,to_square,PieceType::PAWN,own_color,captured_piece);
+                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece));
                 }
                 capture_bb&=capture_bb-1;
             }
@@ -441,7 +439,7 @@ void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board&
                 {       
                     if (king_square /8 != from_square /8)
                     {
-                        moves.emplace_back(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true);
+                        moves.push_back(Move(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true));
                     }else
                     {   
                         int dir_index= (king_square>from_square) ? 7:3;
@@ -454,7 +452,7 @@ void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board&
                         
                         if ((next_piece_square==-1) | (opponent_rook_queen & (1ULL<<next_piece_square)) == 0)
                         {
-                            moves.emplace_back(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true);
+                            moves.push_back(Move(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true));
                         }else{
                             own_pawns&=own_pawns-1;
                             continue;
@@ -473,9 +471,9 @@ void MoveGenerator::generate_pawn_captures(std::vector<Move>& moves,const Board&
         return;
         
 }
-std::vector<Move> MoveGenerator::generate_captures(const Board& board){
-    return generate_moves(board,true);
+void MoveGenerator::generate_captures(const Board& board, MoveList& moves){
+    return generate_moves(board,moves,true);
 }
-std::vector<Move> MoveGenerator::generate_captures_with_checks(const Board& board){
-    return generate_moves(board,true,true);
+void MoveGenerator::generate_captures_with_checks(const Board& board,MoveList& moves){
+    return generate_moves(board,moves,true,true);
 }

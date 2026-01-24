@@ -2,6 +2,7 @@
 #include "constants.h"
 #include <vector>
 #include "utils.h"
+#include "MoveGenerator.h"
 // Helper function
 
 std::string square_to_algebraic(int square){
@@ -10,7 +11,7 @@ std::string square_to_algebraic(int square){
     return {file,rank};
 }
 
-std::string to_san(const Move& move, const std:: vector<Move>& all_legal_moves){
+std::string to_san(const Move& move,const MoveList& all_legal_moves){
     if (move.is_castle){
         return (move.to_square%8 ==6) ? "O-O" : "O-O-O";
     }

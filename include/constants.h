@@ -4,11 +4,14 @@
 #include <cstdint>
 #include <vector>
 
-
+//Adjustable parameters for engine:
+constexpr int MAX_QUIET_PLY = 7;
+constexpr size_t MAX_MEMORY_TT_MB = 256; // in MB
+constexpr int DEFAULT_SEARCH_WINDOW = 50;
 
 //color and piece constants
-enum class Color { WHITE, BLACK, NONE };
-enum class PieceType { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
+enum class Color: uint8_t { WHITE, BLACK, NONE };
+enum class PieceType: uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
 inline const uint8_t WHITE_KING_CASTLE = 1U << 3;
 inline const uint8_t WHITE_QUEEN_CASTLE = 1U << 2;
 inline const uint8_t BLACK_KING_CASTLE = 1U << 1;
@@ -25,15 +28,19 @@ const std::map<char, PieceType> PIECE_TYPE_MAP = {
 };
 const std::string PIECE_CHAR_LIST="PNBRQK.";
 
-
+// constants for Engine
+constexpr int INFINITE_DEPTH = 64;
+constexpr int INFINITE_TIME_MS = 3600000;
+constexpr int DEFAULT_TIME_MS = 20000;
+constexpr int NEG_SEE_SCORE = -100000;
 
 // constants for evaluation
-const int MATE_SCORE=10000000;
+const int MATE_SCORE=32000;
 const int MAX_PLY=128;
 const int MATE_THRESHOLD=MATE_SCORE-MAX_PLY;
-const int PIECE_VALUES[2][6] = {
-    {100,320,320,500,900,20000},
-    {-100,-320,-320,-500,-900,-20000}
+const int PIECE_VALUES[2][7] = {
+    {100,320,320,500,900,20000,0},
+    {-100,-320,-320,-500,-900,-20000,0}
 };
 const int PHASE_WEIGHTS[7]={0,1,1,2,4,0,0};
 const int DOUBLED_PAWN_PENALTY=-12;
