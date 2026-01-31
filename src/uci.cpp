@@ -104,7 +104,7 @@ void uci_loop() {
                 limits.wtime == -1 && !limits.infinite) {
                 limits.depth = 6; // or 8, or whatever you like
             }
-            Move best = engine.search(board, limits);
+            Move best = engine.search_new(board, limits);
 
             std::string best_uci = move_to_uci(best);
             std::cout << "bestmove " << best_uci << "\n";

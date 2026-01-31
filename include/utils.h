@@ -187,6 +187,12 @@ static inline int pick_best(MoveList& moves, int* scores, int start, int* see_sc
         }
         return start;
 }
+static inline uint64_t splitmix64(uint64_t& seed) {
+    uint64_t z = (seed += 0x9E3779B97F4A7C15ULL);
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+    return z ^ (z >> 31);
+}
 static inline bool pick_least_attacker(int tosq,Color side,int& outFromSq,PieceType& outPT, uint64_t occ, uint64_t piecesLocal[2][6]) {
     uint64_t bb = get_pawn_attackers(tosq, side, piecesLocal[to_int(side)][to_int(PieceType::PAWN)]);
     if (bb) { outPT = PieceType::PAWN; outFromSq = get_lsb(bb); return true; }

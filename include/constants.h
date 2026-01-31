@@ -6,7 +6,7 @@
 
 //Adjustable parameters for engine:
 constexpr int MAX_QUIET_PLY = 7;
-constexpr size_t MAX_MEMORY_TT_MB = 256; // in MB
+constexpr size_t MAX_MEMORY_TT_MB = 512; // in MB
 constexpr int DEFAULT_SEARCH_WINDOW = 50;
 
 //color and piece constants
