@@ -65,6 +65,8 @@ else()
             # Raspberry Pi 5 CPU (useful if cross-compiling)
             list(APPEND RELEASE_FLAGS -mcpu=cortex-a76)
         endif()
+         # Fix AArch64 TLS relocation overflow with thread_local + LTO
+        list(APPEND RELEASE_FLAGS -mtls-size=32)
     else()
         if(USE_NATIVE_ARCH)
             list(APPEND RELEASE_FLAGS -march=native)
