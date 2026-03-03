@@ -27,7 +27,7 @@ void ThreadLocalData::flush_counters(Engine* engine) {
     }
 }
 static thread_local ThreadLocalData tls_data;
-constexpr int PIECE_VALUES_QU[6] = {100,320,320,500,900,10000};
+constexpr int PIECE_VALUES_QU[7] = {100,320,320,500,900,10000,0};
 
 Engine::Engine(size_t tt_size_mb){
     init_tt(tt_size_mb);
