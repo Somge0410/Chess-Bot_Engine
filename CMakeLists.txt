@@ -86,3 +86,5 @@ endif()
 set_target_properties(Chess-Bot_Engine PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
 )
+
+install(TARGETS Chess-Bot_Engine RUNTIME DESTINATION bin)

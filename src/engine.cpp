@@ -49,7 +49,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		else tls->nodes++;
 		tls->flush_counters(this);
     }
-    if (tls->nodes % 4069 == 0) {
+    if ((tls->nodes & 4095) == 0) {
 
         if (std::chrono::steady_clock::now() - start_time >= time_limit)
         {
@@ -82,7 +82,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         
         return {q_score,Move()};
     }
-	nodes.fetch_add(1, std::memory_order_relaxed);
     // NULL Move Pruning Here
     int nmp_score;
 	bool king_is_in_check = board.in_check();
@@ -138,7 +137,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         // Late Move Reduction
 		int reduction = late_move_reduction(depth, moves_searched, move, ply,tls);
         moves_searched++;
-        uint64_t compare2 = board.get_all_pieces();
         //Now make the move
         board.make_move(move);
 
@@ -241,7 +239,6 @@ int Engine::quiescence_search(Board& board,int alpha, int beta,int ply, ThreadLo
     if (probe_tt(hash, 0 , alpha, beta, tt_score, tt_move,depth_0,TTMode::Quiescence)) {
         return tt_score;
     }
-	qnodes.fetch_add(1, std::memory_order_relaxed);
 	int stand_pat_score = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     if (stand_pat_score >= beta) {
         Move move;
