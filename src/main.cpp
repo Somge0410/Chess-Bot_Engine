@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Board.h"
+#include "board.h"
 #include "utils.h"    
 #include "constants.h" 
 #include "zobrist.h"

@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "move.h"
+#include "Move.h"
 
 std::string to_san(const Move & move,const MoveList& all_legal_moves);
