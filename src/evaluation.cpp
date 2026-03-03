@@ -54,7 +54,16 @@ namespace {
     }
 }
 
-static thread_local PawnEvalEntry pawn_evaluation_table[PAWN_HASH_SIZE] = {};
+// Zei  le ~12: Ersetze die thread_local Array-Deklaration
+static thread_local std::unique_ptr<std::array<PawnEvalEntry, PAWN_HASH_SIZE>> pawn_evaluation_table;
+
+// Helper-Funktion zum Lazy Init
+static PawnEvalEntry& get_pawn_entry(size_t idx) {
+    if (!pawn_evaluation_table) {
+        pawn_evaluation_table = std::make_unique<std::array<PawnEvalEntry, PAWN_HASH_SIZE>>();
+    }
+    return (*pawn_evaluation_table)[idx];
+}
 
 EvalContext::EvalContext(const Board& b)
     : board(b),
@@ -928,7 +937,7 @@ static EvaluationResult evaluate_pawns(EvalContext& ctx) {
     EvaluationResult score = { 0,0 };
     uint64_t pawn_key = ctx.board.get_pawn_key();
     int idx = pawn_key & (PAWN_HASH_SIZE - 1);
-    PawnEvalEntry& entry = pawn_evaluation_table[idx];
+    PawnEvalEntry& entry = get_pawn_entry(idx);  // Geändert
     if (!(entry.valid && entry.key == pawn_key)) {
         entry = compute_pawn_eval_entry(ctx);
     }
@@ -937,12 +946,12 @@ static EvaluationResult evaluate_pawns(EvalContext& ctx) {
         ctx.isolated_pawns[1] = entry.isolated_pawns[1];
         ctx.passed_pawns[0] = entry.passed_pawns[0];
         ctx.passed_pawns[1] = entry.passed_pawns[1];
-		ctx.backward_pawns[0] = entry.backward_pawns[0];
-		ctx.backward_pawns[1] = entry.backward_pawns[1];
+        ctx.backward_pawns[0] = entry.backward_pawns[0];
+        ctx.backward_pawns[1] = entry.backward_pawns[1];
     }
 
-	score += entry.isolated_passed_score + entry.backward_score + entry.doubled_score;
-	return score;
+    score += entry.isolated_passed_score + entry.backward_score + entry.doubled_score;
+    return score;
 }
 static int tapered(EvaluationResult score, int game_phase) {
     return (score.mg_score * game_phase + score.eg_score * (24 - game_phase)) / 24;
