@@ -1,5 +1,7 @@
 #include <iostream>
 #include <mutex>
+#include <memory>
+#include <array>
 #include "evaluation.h"
 #include "constants.h"
 #include "pst.h"
