@@ -1,6 +1,6 @@
 #pragma once
 #include "board.h"
-
+const int PIECE_VALUES[6] = { 100,320,330,500,900,10000 };
 static int see_capture(
     const Board& board,
     int from_sq,
@@ -27,9 +27,9 @@ static int see_capture(
     int gain[32];
     int d = 0;
 
-    gain[0] = PIECE_VALUES[0][to_int(capturedPT)];
+    gain[0] = PIECE_VALUES[to_int(capturedPT)];
 
-    int victimValue = PIECE_VALUES[0][to_int(movingPT)];
+    int victimValue = PIECE_VALUES[to_int(movingPT)];
 
     Color side = flip_color(stm);
 
@@ -45,7 +45,7 @@ static int see_capture(
         piecesLocal[to_int(side)][to_int(attPT)] &= ~bit64(attFrom);
         occ &= ~bit64(attFrom);
 
-        victimValue = PIECE_VALUES[0][to_int(attPT)];
+        victimValue = PIECE_VALUES[to_int(attPT)];
         side = flip_color(side);
 
     }

@@ -314,7 +314,8 @@ int main(){
     
     // king zone mask
     std::vector<uint64_t> king_zone(64,0);
-    int direction[]={-18,-17,-16,-15,-14,-10,-9,-8,-7,-6,-5,-2,-1,1,2,6,7,8,9,10,14,15,16,17,18};
+    //int direction[]={-18,-17,-16,-15,-14,-10,-9,-8,-7,-6,-5,-2,-1,1,2,6,7,8,9,10,14,15,16,17,18};
+	int direction[] = {-9,-8,-7,-1,1,7,8,9}; //this one for small King zone
     for (int square = 0; square < 64; ++square)
     {
         uint64_t zone=0;
@@ -409,6 +410,22 @@ int main(){
         passed_pawn_mask[1][square]=backward_ranks & files;
         
     }
+	std::vector<std::vector<uint64_t>> forward_way_mask(2, std::vector<uint64_t>(64, 0));
+
+    for(size_t square=0; square<64; ++square){
+        uint64_t forward_mask=0;
+        for(size_t row=square/8+1; row<8; ++row){
+            forward_mask|=rank_mask[row]& file_mask[square%8];
+        }
+        forward_way_mask[0][square]=forward_mask;
+        uint64_t backward_mask=0;
+        for(size_t row=0; row<square/8; ++row){
+            backward_mask|=rank_mask[row]&file_mask[square%8];
+        }
+        forward_way_mask[1][square]=backward_mask;
+	}
+
+
     std::vector<std::vector<uint64_t>> outpost_mask(2, std::vector<uint64_t>(64, 0));
 
     for (size_t square = 0; square < 64; ++square)
@@ -451,14 +468,15 @@ int main(){
     //print_2d_array("PAWN_ATTACKS",pawn_attacks);
     //print_2d_array("LINE_BETWEEN",line_between);
     //print_2d_array("KING_SHIELD",king_shield_mask);
-    //print_array("KING_ZONE",king_zone);
+    //print_array("SMALL_KING_ZONE",king_zone);
     //print_2d_array("RAY_MASK",ray_mask);
     //print_array("FILE_MASK", file_mask);
     //print_array("RANK_MASK",rank_mask);
     //print_array("ADJACENT_FILE_MASK",adjacend_file_mask);
     //print_2d_array("PASSED_PAWN_MASK",passed_pawn_mask);
+	print_2d_array("FORWARD_WAY_MASK", forward_way_mask);
 
-    print_2d_array("OUTPOST_MASK",outpost_mask);
+    //print_2d_array("OUTPOST_MASK",outpost_mask);
 	//print_2d_int_array("DISTANCE_BONUS", distance_bonus);
     return 0;
     

@@ -10,6 +10,9 @@
 #include "constants.h"
 #include <atomic>
 #include <mutex>
+#include <thread>
+#include <cstring>
+#include <condition_variable>
 enum TTFlag {
     EXACT,
     LOWERBOUND,
@@ -114,7 +117,8 @@ class Engine {
     public:
 		Engine(size_t tt_size_mb = MAX_MEMORY_TT_MB);
         void set_threads(int n);
-        Move search(const Board& board, const SearchLimits& limits);
+    ~Engine();
+        void shutdown();
         PerftRes perft_test(Board& board, int depth);
         int checks_count;
         int ep_count;
@@ -157,7 +161,7 @@ class Engine {
         }
 
 
-        Move search_new(const Board& position, const SearchLimits& limits);
+        Move search(const Board& position, const SearchLimits& limits);
 
 
     private:

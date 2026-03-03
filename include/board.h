@@ -14,6 +14,7 @@ struct PositionalScore {
 };
 struct MaterialScore{
     int score;
+    int piece_count[2][6];
 };
 struct CheckInfo{
     int count;
@@ -97,8 +98,8 @@ struct BoardState {
     std::array<std::array<uint64_t, 6>, 2> pieces;
     std::array<uint64_t, 2> color_pieces;
     uint64_t all_pieces;
-    PositionalScore positional_score;
-    MaterialScore material_score;
+    EvaluationResult positional_score;
+    EvaluationResult material_score;
     int half_moves;
     int move_count;
     RepetitionTracker repetition_tracker;
@@ -122,6 +123,9 @@ class Board{
         inline uint64_t get_pieces(Color color, PieceType piece_type) const {
 			return pieces[to_int(color)][to_int(piece_type)];
         }
+        inline const std::array<std::array<uint64_t,6>,2>& get_pieces_table() const {
+            return pieces;
+		}
         inline uint64_t get_color_pieces(const Color color) const {
 			return color_pieces[to_int(color)];
         }
@@ -149,8 +153,8 @@ class Board{
         int get_en_passant_rights() const;
         uint8_t get_castle_rights() const;
         uint64_t get_hash() const;
-        int get_material_score() const;
-        int get_positional_score() const;
+        EvaluationResult get_material_score() const;
+        EvaluationResult get_positional_score() const;
         int get_game_phase() const;
 		int get_king_square(Color color) const;
         bool in_check() const;
@@ -183,8 +187,8 @@ class Board{
         uint64_t all_pieces = 0;
 
         //Scores and move counters
-        PositionalScore positional_score;
-        MaterialScore material_score;
+        EvaluationResult positional_score;
+        EvaluationResult material_score;
         int half_moves;
         int move_count;
         std::vector<BoardState> history;
@@ -196,8 +200,8 @@ class Board{
         void initialize_game_phase();
         uint64_t initialize_hash() const;
 		uint64_t initialize_pawn_key() const;
-        MaterialScore initialize_material_score() const;
-        PositionalScore initialize_positional_score() const;
+        EvaluationResult initialize_material_score() const;
+        EvaluationResult initialize_positional_score() const;
         void debug_check_pawn_key() const;
 
 		// FEN Parsing Helpers
