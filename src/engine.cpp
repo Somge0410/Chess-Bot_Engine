@@ -14,6 +14,8 @@
 #include <atomic>
 #include <mutex>
 #include <algorithm>
+#include "adjustable_parameters.h"
+#include "uci_helpers.h"
 void ThreadLocalData::flush_counters(Engine* engine) {
     if (nodes > 10000) {
         engine->nodes.fetch_add(nodes, std::memory_order_relaxed);
@@ -25,11 +27,13 @@ void ThreadLocalData::flush_counters(Engine* engine) {
     }
 }
 static thread_local ThreadLocalData tls_data;
-
+constexpr int PIECE_VALUES_QU[7] = {100,320,320,500,900,10000,0};
 
 Engine::Engine(size_t tt_size_mb){
     init_tt(tt_size_mb);
-	start_thread_pool(std::thread::hardware_concurrency());
+	int thread_count = std::thread::hardware_concurrency();
+    start_thread_pool(thread_count);
+	//start_thread_pool(12);
 	std::cerr << "Engine initialized with threads=" << std::thread::hardware_concurrency()
 		<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
 	stop_search.store(false, std::memory_order_relaxed);
@@ -45,10 +49,13 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		else tls->nodes++;
 		tls->flush_counters(this);
     }
-    if (std::chrono::steady_clock::now()-start_time>=time_limit)
-    {
-        stop_search.store(true,std::memory_order_relaxed);
-        return {.score=0,.best_move=Move(),.is_tempered=true};
+    if ((tls->nodes & 4095) == 0) {
+
+        if (std::chrono::steady_clock::now() - start_time >= time_limit)
+        {
+            stop_search.store(true, std::memory_order_relaxed);
+            return { .score = 0,.best_move = Move(),.is_tempered = true };
+        }
     }
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
@@ -75,7 +82,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         
         return {q_score,Move()};
     }
-	nodes.fetch_add(1, std::memory_order_relaxed);
     // NULL Move Pruning Here
     int nmp_score;
 	bool king_is_in_check = board.in_check();
@@ -131,7 +137,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         // Late Move Reduction
 		int reduction = late_move_reduction(depth, moves_searched, move, ply,tls);
         moves_searched++;
-        uint64_t compare2 = board.get_all_pieces();
         //Now make the move
         board.make_move(move);
 
@@ -197,13 +202,13 @@ int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_
 
     if (move == tt_move && !depth_0) { stage = 6; sub = 0; }
     else if (move.promotion_piece != PieceType::NONE) {
-        stage = 5; sub = PIECE_VALUES[to_int(Color::WHITE)][to_int(move.promotion_piece)] - PIECE_VALUES[to_int(Color::WHITE)][to_int(move.piece_captured)];
+        stage = 5; sub = PIECE_VALUES_MG[to_int(move.promotion_piece)] - PIECE_VALUES_MG[to_int(move.piece_captured)];
     }
     else if (move.piece_captured != PieceType::NONE) {
         int see = see_move(board, move);
 
-        int attacker_val = PIECE_VALUES[to_int(Color::WHITE)][to_int(move.piece_moved)];
-        int victim_val = PIECE_VALUES[to_int(Color::WHITE)][to_int(move.piece_captured)];
+        int attacker_val = PIECE_VALUES_MG[to_int(move.piece_moved)];
+        int victim_val = PIECE_VALUES_MG[to_int(move.piece_captured)];
         int tiebreak = (victim_val - attacker_val) / 16;
         if(see>=0) { stage = 4; sub = see+tiebreak; }
 		else { stage = 1; sub = see; }
@@ -234,7 +239,6 @@ int Engine::quiescence_search(Board& board,int alpha, int beta,int ply, ThreadLo
     if (probe_tt(hash, 0 , alpha, beta, tt_score, tt_move,depth_0,TTMode::Quiescence)) {
         return tt_score;
     }
-	qnodes.fetch_add(1, std::memory_order_relaxed);
 	int stand_pat_score = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     if (stand_pat_score >= beta) {
         Move move;
@@ -274,9 +278,9 @@ int Engine::quiescence_search(Board& board,int alpha, int beta,int ply, ThreadLo
         Move move = moves_to_search[i];
         if (!evade_check) {
         int gain = 0;
-        gain += PIECE_VALUES[0][to_int(move.piece_captured)];
+        gain += PIECE_VALUES_QU[to_int(move.piece_captured)];
         if (move.promotion_piece != PieceType::NONE)
-            gain += PIECE_VALUES[0][to_int(move.promotion_piece)] - PIECE_VALUES[0][to_int(PieceType::PAWN)];
+            gain += PIECE_VALUES_QU[to_int(move.promotion_piece)] - PIECE_VALUES_QU[to_int(PieceType::PAWN)];
         if (stand_pat_score + gain + DELTA_MARGIN < alpha) continue;
         }
         board.make_move(move);
@@ -664,8 +668,8 @@ void Engine::score_quiet_moves(const MoveList& moves, int* scores,const Board& b
             scores[i] += see;
         }
         
-        int victim = PIECE_VALUES[0][to_int(m.piece_captured)]/100;
-        int attacker = PIECE_VALUES[0][to_int(m.piece_moved)]/100;
+        int victim = PIECE_VALUES_QU[to_int(m.piece_captured)]/100;
+        int attacker = PIECE_VALUES_QU[to_int(m.piece_moved)]/100;
         scores[i]+= victim - attacker;
     }
 }
@@ -831,20 +835,32 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             break;
         }
 
+        // --- UCI info output (nur Master-Thread, auf stdout) ---
         if (is_master) {
-            std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - start_time;
-            double nps = (nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed)) / elapsed.count();
-            std::cerr << "Thread " << thread_id << " Depth " << current_depth << " ended. Best move so far: "
-                << to_san(best_move, root_moves)
-                << ", Score: " << best_score
-                << ", Time: " << elapsed.count() << "s\n"
-                << " Nodes: " << this->nodes.load(std::memory_order_relaxed) << ", NPS: " << nps << "\n"
-                << "Nodes per second" << nps << "\n";
-            if (std::abs(best_score) >= MATE_SCORE) {
-                std::cerr << "Mate found, end search.\n";
-                this->stop_search.store(true, std::memory_order_relaxed);
-                break;
+            auto elapsed = std::chrono::steady_clock::now() - start_time;
+            uint64_t elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+            uint64_t total_nodes = nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
+            uint64_t nps = (elapsed_ms > 0) ? (total_nodes * 1000 / elapsed_ms) : 0;
+
+            std::string best_uci = move_to_uci(best_move);
+
+            // Score: matt oder centipawns
+            bool is_mate = std::abs(best_score) >= MATE_THRESHOLD;
+            std::cout << "info depth " << current_depth;
+            if (is_mate) {
+                int mate_in = (best_score > 0)
+                    ? (MATE_SCORE - best_score + 1) / 2
+                    : -(MATE_SCORE + best_score + 1) / 2;
+                std::cout << " score mate " << mate_in;
+            } else {
+                std::cout << " score cp " << best_score;
             }
+            std::cout << " time " << elapsed_ms
+                      << " nodes " << total_nodes
+                      << " nps " << nps
+                      << " pv " << best_uci
+                      << "\n";
+            std::cout.flush();
         }
     }
 }
@@ -920,7 +936,7 @@ void Engine::root_pvs(const Board& pos,MoveList& root_moves,
         out_best_score = best_score;
         out_best_move = best_move;
     };
-Move Engine::search_new(const Board& position, const SearchLimits& limits) {
+Move Engine::search(const Board& position, const SearchLimits& limits) {
     //decide time control
 	auto tc = decide_time_control(position, limits);
     int use_threads = thread_count;
@@ -964,4 +980,15 @@ Move Engine::search_new(const Board& position, const SearchLimits& limits) {
         cv_done.wait(lk, [&] {return active_workers == 0; });
 	}
 	return best_move_so_far;
+}
+Engine::~Engine() {
+    shutdown();
+}
+
+void Engine::shutdown() {
+    // Stop any ongoing search loops
+    stop_search.store(true, std::memory_order_relaxed);
+
+    // Terminate idle workers waiting on cv_start and join them
+    stop_thread_pool();
 }

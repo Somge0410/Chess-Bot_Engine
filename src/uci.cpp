@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "board.h"
-#include "Engine.h"
+#include "engine.h"
 #include "Move.h"
 #include "MoveGenerator.h"
 #include "constants.h"
@@ -104,7 +104,7 @@ void uci_loop() {
                 limits.wtime == -1 && !limits.infinite) {
                 limits.depth = 6; // or 8, or whatever you like
             }
-            Move best = engine.search_new(board, limits);
+            Move best = engine.search(board, limits);
 
             std::string best_uci = move_to_uci(best);
             std::cout << "bestmove " << best_uci << "\n";
@@ -117,8 +117,11 @@ void uci_loop() {
             // engine.stop_search();
         }
         else if (line == "quit") {
+            engine.shutdown();
             break;
         }
         // `setoption` etc. can be added later
     }
+    std::cerr << "leaving uci_loop() now\n";
+    engine.shutdown();
 }

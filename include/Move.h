@@ -3,8 +3,8 @@
 #include <cmath>
 #include <string>
 struct Move{
-    int from_square;
-    int to_square;
+    int8_t from_square;
+    int8_t to_square;
 
     PieceType piece_moved;
     PieceType piece_captured;

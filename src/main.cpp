@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Board.h"
+#include "board.h"
 #include "utils.h"    
 #include "constants.h" 
 #include "zobrist.h"
@@ -14,7 +14,6 @@
 #include <chrono>
 #include "prepare_data.h"
 #include <vector>
-#include <iostream>
 #include "uci.h"
 #include "see.h"
 int main(int argc, char* argv[]) {
@@ -165,8 +164,8 @@ int main(int argc, char* argv[]) {
 
     }
     /*else {
-        std::cout << "profiler";
         Engine engine(512);
+        std::cout << "profiler";
         std::string Qe3 = "r4rk1/1b3ppp/p2pp3/4n1Q1/B1p1P3/P1N4P/1qP2PP1/R4RK1 w - - 0 18"; // Best move: Qe3
         std::string a4 = "8/8/6k1/ppppp1P1/5pK1/P1PP1P2/1P6/8 b - - 0 41"; //Best move: a4
         std::string g5 = "rnb1k2r/pp4p1/8/2bQPp2/5q1p/1PN4K/PB1PBPP1/R4R2 b kq - 3 21"; //Best  move: g5
@@ -174,12 +173,17 @@ int main(int argc, char* argv[]) {
         std::string illegal = "8/8/8/2K4P/2P2Q2/p2k2P1/P7/8 b - - 0 63";
         std::string see_captures="k2r4/8/5n2/8/1N6/8/3Q4/K7 b - - 0 1";
         std::string g5debug = "rnb1k2r/pp6/8/2bQPpp1/5q1p/1PN4K/PB1PBPP1/R4R2 w kq - 0 22";
-        std::string input_fen=g5;
+        std::string tuner="rn5Q/pp3kp1/2p5/2bpr2p/7q/2P2PN1/PPB2P2/R3R1K1 b - - 0 1";
+        std::string major1 = "k7/8/8/8/8/2p5/8/K3N3 w - - 0 1";
+        std::string input_fen = major1;
         
-        Board board=Board(input_fen);
+        Board board = Board(input_fen);
+
+        std::cout << "Evaluation of position: " << see_capture(board,18,10,Color::BLACK,PieceType::PAWN,PieceType::NONE) << std::endl;
+        return 0;
         SearchLimits limits;
-        //limits.movetime=15000;
-        limits.depth = 13;
+        limits.movetime=15000;
+        //limits.depth = 13;
   	    Move best_move = engine.search(board, limits);
         return 0;
 	}*/

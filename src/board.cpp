@@ -13,6 +13,7 @@
 #include <array>
 #include "attack_rays.h"
 #include "bitboard_masks.h"
+#include "evaluation.h"
 
 Board::Board(const std:: string& fen){
     for (int c = 0; c < 2; ++c) {
@@ -28,7 +29,7 @@ Board::Board(const std:: string& fen){
     turn = to_int(Color::WHITE);
     white_king_square = -1;
     black_king_square = -1;
-    material_score = { 0 };
+    material_score = { 0,0 };
     positional_score = { 0,0 };
     half_moves = 0;
     move_count = 1;
@@ -219,29 +220,38 @@ uint64_t Board::initialize_pawn_key() const {
 	pawn_key ^= Zobrist::piece_keys[to_int(Color::BLACK)][to_int(PieceType::KING)][black_king_square];
     return pawn_key;
 }
-MaterialScore Board::initialize_material_score()const {
-    int score=0;
+EvaluationResult Board::initialize_material_score()const {
+    EvaluationResult score = { 0,0 };
     for (int color=0;color<2;++color){
         for (int piece=0;piece<6;++piece){
-            score+=popcount(pieces[color][piece]) * PIECE_VALUES[color][piece];
+			score.mg_score += color == 0 ? popcount(pieces[color][piece]) * PIECE_VALUES_MG[piece] : -popcount(pieces[color][piece]) * PIECE_VALUES_MG[piece];
+			score.eg_score += color == 0 ? popcount(pieces[color][piece]) * PIECE_VALUES_EG[piece] : -popcount(pieces[color][piece]) * PIECE_VALUES_EG[piece];
         }
     }
-    return {score};
+    return score;
 }
-PositionalScore Board::initialize_positional_score()const {
+EvaluationResult Board::initialize_positional_score()const {
         int score_mg=0;
         int score_eg=0;
+        int old_score_mg = 0;
+        int old_score_eg = 0;
         for (int color=0;color<2;++color){
             for (int piece=0;piece<6;++piece){
                 uint64_t bitboard=pieces[color][piece];
-
-                while (bitboard){
-                    int square=get_lsb(bitboard);
-                    score_mg+=MG_PST[color][piece][square];
-                    score_eg+=EG_PST[color][piece][square];
+                while (bitboard) {
+                    int square = get_lsb(bitboard);
+                    if (color == 0) {
+                    score_mg += MG_PST[piece][square];
+                    score_eg += EG_PST[piece][square];
+                    }
+                    else {
+						score_mg -= MG_PST[piece][flip_square(square)];
+						score_eg -= EG_PST[piece][flip_square(square)];
+                    }
 
                     bitboard &=bitboard-1;
                 }
+
             }
         }
         return {score_mg,score_eg};
@@ -269,24 +279,24 @@ void Board::undo_move(const Move& move){
 }
 void Board::update_material_score(const Move& move){
     if (move.piece_captured!=PieceType::NONE){
-        material_score.score-=get_piece_values(move.get_capture_color(),move.piece_captured);
+        material_score-=get_piece_values(move.get_capture_color(),move.piece_captured);
     }
     if (move.promotion_piece!=PieceType::NONE){
-        material_score.score+=get_piece_values(move.move_color,move.promotion_piece);
-        material_score.score-=get_piece_values(move.move_color,PieceType::PAWN);
+        material_score+=get_piece_values(move.move_color,move.promotion_piece);
+        material_score-=get_piece_values(move.move_color,PieceType::PAWN);
     }
 }
 void Board::update_positional_score(const Move& move){
     PieceType piece_moved=move.piece_moved;
     PieceType piece_reached=move.promotion_piece==PieceType::NONE ? move.piece_moved:move.promotion_piece;
-    positional_score.mg-=get_mg_pos_score(move.move_color,piece_moved,move.from_square);
-    positional_score.mg+=get_mg_pos_score(move.move_color,piece_reached,move.to_square);
+    positional_score.mg_score-=get_mg_pos_score(move.move_color,piece_moved,move.from_square);
+    positional_score.mg_score+=get_mg_pos_score(move.move_color,piece_reached,move.to_square);
     
-    positional_score.eg-=get_eg_pos_score(move.move_color,piece_moved,move.from_square);
-    positional_score.eg+=get_eg_pos_score(move.move_color,piece_reached,move.to_square);
+    positional_score.eg_score-=get_eg_pos_score(move.move_color,piece_moved,move.from_square);
+    positional_score.eg_score+=get_eg_pos_score(move.move_color,piece_reached,move.to_square);
     if (move.piece_captured!=PieceType::NONE){
-        positional_score.mg-=get_mg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
-        positional_score.eg-=get_eg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
+        positional_score.mg_score-=get_mg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
+        positional_score.eg_score-=get_eg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
     }
     if (move.is_castle)
     {
@@ -294,12 +304,12 @@ void Board::update_positional_score(const Move& move){
         int old_rook_square=king_side ? move.to_square+1:move.to_square-2;
         int new_rook_square=king_side ? move.to_square-1:move.to_square+1;
 
-        positional_score.mg-=get_mg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
-        positional_score.mg+=get_mg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
+        positional_score.mg_score-=get_mg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
+        positional_score.mg_score+=get_mg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
 
         
-        positional_score.eg-=get_eg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
-        positional_score.eg+=get_eg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
+        positional_score.eg_score-=get_eg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
+        positional_score.eg_score+=get_eg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
 
     }
     
@@ -588,11 +598,11 @@ uint8_t Board::get_castle_rights() const{
 uint64_t Board::get_hash() const{
     return zobrist_hash;
 }
-int Board::get_material_score() const{
-    return material_score.score;
+EvaluationResult Board::get_material_score() const{
+    return material_score;
 }
-int Board::get_positional_score() const{
-    return (positional_score.mg*game_phase+positional_score.eg*(24-game_phase));
+EvaluationResult Board::get_positional_score() const{
+	return positional_score;
 }
 int Board::get_game_phase() const{
     return game_phase;
