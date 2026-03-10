@@ -7,7 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. Hardware Optimization Toggle
 option(USE_NATIVE_ARCH "Optimize for current CPU" ON)
 
-# 2. Define the Executable
+# 2. Platform-dependent default TT size (in MB)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64|arm64")
+    set(DEFAULT_TT_MB 128)
+else()
+    set(DEFAULT_TT_MB 512)
+endif()
+set(TT_SIZE_MB ${DEFAULT_TT_MB} CACHE STRING "Transposition table size in MB")
+
+# 3. Define the Executable
 add_executable(Chess-Bot_Engine
     src/board.cpp
     src/engine.cpp
@@ -21,7 +29,10 @@ add_executable(Chess-Bot_Engine
 
 target_include_directories(Chess-Bot_Engine PUBLIC include)
 
-# 3. Apply optimization flags per compiler / platform
+# 4. Pass TT size as compile definition
+target_compile_definitions(Chess-Bot_Engine PRIVATE DEFAULT_TT_MB=${TT_SIZE_MB})
+
+# 5. Apply optimization flags per compiler / platform
 if(MSVC)
     # --- Release: maximum speed ---
     set(RELEASE_FLAGS /O2 /GL /Oi /Ot /Ob2 /DNDEBUG /Gy)

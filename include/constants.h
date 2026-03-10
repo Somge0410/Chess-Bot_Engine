@@ -5,7 +5,10 @@
 #include <vector>
 
 //Adjustable parameters for engine:
-constexpr size_t MAX_MEMORY_TT_MB = 128; // in MB
+#ifndef DEFAULT_TT_MB
+    #define DEFAULT_TT_MB 128  // fallback if not set by CMake
+#endif
+constexpr size_t MAX_MEMORY_TT_MB = DEFAULT_TT_MB; // in MB
 
 //color and piece constants
 enum class Color: uint8_t { WHITE, BLACK, NONE };
