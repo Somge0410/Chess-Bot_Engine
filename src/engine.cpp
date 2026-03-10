@@ -31,10 +31,10 @@ constexpr int PIECE_VALUES_QU[7] = {100,320,320,500,900,10000,0};
 
 Engine::Engine(size_t tt_size_mb){
     init_tt(tt_size_mb);
-	int thread_count = std::thread::hardware_concurrency();
+    int thread_count = std::thread::hardware_concurrency();
     start_thread_pool(thread_count);
 	//start_thread_pool(12);
-	std::cerr << "Engine initialized with threads=" << std::thread::hardware_concurrency()
+    std::cerr << "Engine initialized with threads=" << thread_count
 		<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
 	stop_search.store(false, std::memory_order_relaxed);
     checks_count=0;
@@ -49,14 +49,11 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		else tls->nodes++;
 		tls->flush_counters(this);
     }
-    if ((tls->nodes & 4095) == 0) {
-
         if (std::chrono::steady_clock::now() - start_time >= time_limit)
         {
             stop_search.store(true, std::memory_order_relaxed);
             return { .score = 0,.best_move = Move(),.is_tempered = true };
         }
-    }
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
@@ -68,7 +65,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_from_depth_0 = false;
     if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move,is_from_depth_0)) {
         bool is_draw = move_could_result_in_repetition(board, tt_move);
-        if(is_draw) could_result_in_rep.fetch_add(1, std::memory_order_relaxed);
         //is_draw = false;
         if (!is_draw) {
             recover_move_fully(tt_move, board);
@@ -104,7 +100,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	//If no moves available, check for checkmate or stalemate
     if (moves.empty())
     {
-		return terminal_eval(board, king_is_in_check);
+		return terminal_eval(board, king_is_in_check,ply);
     }
     
 
@@ -184,8 +180,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         if (beta<=alpha)
         {   
 			update_history_killer(move, depth, ply,tls);
-            cutoff_count.fetch_add(1, std::memory_order_relaxed);
-            moves_before_cutoff.fetch_add(moves_searched, std::memory_order_relaxed);
             break;
         }
         
@@ -397,6 +391,12 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
 
         tc.time_ms = time_left / 40 + inc;
         if (tc.time_ms > time_left / 2) tc.time_ms = time_left / 2;
+
+        // Near 50-move rule: use half of remaining time to avoid draw
+        int half_moves = position.get_half_moves();
+        if ((half_moves == 50 || half_moves == 51) && time_left > 500) {
+            tc.time_ms = time_left / 2;
+        }
     }
     else if (limits.depth > 0) {
         tc.time_ms = INFINITE_TIME_MS;
@@ -411,8 +411,6 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
     return tc;
 }
 bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move,bool depth_0,TTMode mode) {
-    if (mode == TTMode::Negamax) tt_probes_nm.fetch_add(1,std::memory_order_relaxed);
-    else tt_probes_qs.fetch_add(1, std::memory_order_relaxed);;
     TTCluster& cluster = tt[hash % tt.size()];
     bool hits = false;
     for (int i = 0; i < 4; i++) {
@@ -426,20 +424,15 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         out_move = entry.move();
         out_score = entry.score();
         if (entry.depth() < depth) {
-            if (mode == TTMode::Negamax) tt_misses_nm.fetch_add(1, std::memory_order_relaxed);
-            else tt_misses_qs.fetch_add(1, std::memory_order_relaxed);
             return false;
         }
 
         if (entry.flag() == TEMPERED) {
-            tt_tempered_flag_found.fetch_add(1, std::memory_order_relaxed);; return false;
+            return false;
         }
         int score = entry.score();
         int a = alpha, b = beta;
         if (entry.flag() == EXACT) {
-
-            if (mode == TTMode::Negamax) tt_hits_nm.fetch_add(1,std::memory_order_relaxed);
-            else tt_hits_qs.fetch_add(1, std::memory_order_relaxed);
             if (out_move.from_square == -1) return false;
             return true;
 		}
@@ -449,23 +442,12 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         if (beta - alpha > 1) {
             alpha = a;
             beta = b;
-            if (mode == TTMode::Negamax) tt_hits_nm.fetch_add(1, std::memory_order_relaxed);
-            else tt_hits_qs.fetch_add(1, std::memory_order_relaxed);
             hits = true;
         }
         if (a >= b) {
-            if (!hits) {
-                if (mode == TTMode::Negamax) tt_hits_nm.fetch_add(1, std::memory_order_relaxed);
-                else tt_hits_qs.fetch_add(1, std::memory_order_relaxed);
-            }
             if (out_move.from_square == -1) return false;
             return true;
         }
-    }
-    if (!hits) {
-
-        if (mode == TTMode::Negamax) tt_misses_nm.fetch_add(1, std::memory_order_relaxed);
-        else tt_misses_qs.fetch_add(1, std::memory_order_relaxed);
     }
     return false;
 
@@ -477,7 +459,6 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
 
     if (is_best_tempered) {
         flag_to_store = TEMPERED;
-        tt_temp_flag_stored.fetch_add(1, std::memory_order_relaxed);
         score_tempered = true;
     }
     else if (is_any_tempered) {
@@ -486,10 +467,8 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         }
         else if (best_score >= original_alpha) {
             flag_to_store = LOWERBOUND;
-            tt_temp_not_exact.fetch_add(1, std::memory_order_relaxed);
         }
         else {
-            tt_temp_flag_stored.fetch_add(1, std::memory_order_relaxed);
             flag_to_store = TEMPERED;
             // Dont set score_tempered to true because the best move is clean, it might not actually be that best move but we can guarantee at least the result.
         }
@@ -520,8 +499,6 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         if (!old.empty() && old.key() == key16) {
             if (old.depth() <= depth) {
                 tt_store(cluster.entries[i],new_entry.entry);
-                if (mode == TTMode::Negamax) tt_updates_nm.fetch_add(1, std::memory_order_relaxed);
-                else tt_updates_qs.fetch_add(1, std::memory_order_relaxed);
             }
 
             
@@ -535,9 +512,6 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         TTEntry old; old.entry = oldw;
         if (old.empty()) {
             tt_store(cluster.entries[i],new_entry.entry);
-
-            if (mode == TTMode::Negamax) tt_stores_nm.fetch_add(1, std::memory_order_relaxed);
-            else tt_stores_qs.fetch_add(1, std::memory_order_relaxed);;
 			return score_tempered;
         }
     }
@@ -562,16 +536,6 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
     }
     if (pos_index != -1) {
         tt_store(cluster.entries[pos_index],new_entry.entry);
-        if (mode == TTMode::Negamax)
-            tt_overwrites_nm.fetch_add(1, std::memory_order_relaxed);
-        else tt_overwrites_qs.fetch_add(1, std::memory_order_relaxed);
-        if (mode == TTMode::Negamax) tt_stores_nm.fetch_add(1, std::memory_order_relaxed);
-        else tt_stores_qs.fetch_add(1, std::memory_order_relaxed);
-    }
-    else {
-        if (mode == TTMode::Negamax)
-            tt_skip_same_gen_nm.fetch_add(1, std::memory_order_relaxed);
-        else tt_skip_same_gen_qs.fetch_add(1, std::memory_order_relaxed);
     }
     return score_tempered;
    
@@ -613,9 +577,9 @@ bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int dept
     }
 	return false;
 }
-SearchResult Engine::terminal_eval(const Board& board, bool king_is_in_check) {
+SearchResult Engine::terminal_eval(const Board& board, bool king_is_in_check,int ply) {
     if (king_is_in_check) {
-		return { -MATE_SCORE, Move() };
+		return { -MATE_SCORE+ply, Move() };
     }
     else return { 0,Move() };
 }
@@ -769,13 +733,6 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
     int start_depth = 1 + (thread_id & 1);
 
     for (int current_depth = start_depth; current_depth < tc.max_depth; ++current_depth) {
-        if (stop_search.load(std::memory_order_relaxed)) {
-            if (is_master) {
-                std::cerr << "\nTime limit of " << (tc.time_ms / 1000.0)
-                    << "s reached! Search is canceled.\n";
-            }
-            break;
-        }
         Board board = position;
         MoveList root_moves;
         MoveGenerator::generate_moves(board, root_moves);
@@ -785,6 +742,18 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             }
             break;
         }
+        if(root_moves.size()==1){
+            io_best_move=root_moves[0];
+            // Score: matt oder centipawns
+            std::cout << "info depth " << 0;
+            std::cout << " score cp " << 0;
+            std::cout << " time " << 0
+                << " nodes " << 0
+                << " nps " << 0
+                << " pv " << move_to_uci(io_best_move)
+                << "\n";
+            std::cout.flush();
+		}
 
         //If we dont have a valid previous best yet, seed it so ordering is stable.
 
@@ -813,7 +782,6 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             if (current_depth == 1) break; // no aspiration on depth 1
 
             if (best_score <= alpha || best_score >= beta) {
-                redo_window_search.fetch_add(1, std::memory_order_relaxed);
 
                 //WIden around the reported score and try again.
                 window = std::min(window * 2, MATE_SCORE);
@@ -950,6 +918,18 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 	MoveList root_moves;
 	MoveGenerator::generate_moves(board, root_moves);
     if (root_moves.empty()) return Move();
+    if (root_moves.size() == 1) {
+        std::cout << "info depth " << 0;
+
+        std::cout << " score cp " << 0;
+        std::cout << " time " << 0
+            << " nodes " << 0
+            << " nps " << 0
+			<< " pv " << move_to_uci(root_moves[0])
+            << "\n";
+        std::cout.flush();
+		return root_moves[0];
+    }
 	sort_moves(root_moves, board, 0, Move(), false, &tls_data);
     Move best_move_so_far = root_moves[0];
 	int best_score_so_far = -MATE_SCORE;
@@ -991,4 +971,22 @@ void Engine::shutdown() {
 
     // Terminate idle workers waiting on cv_start and join them
     stop_thread_pool();
+}
+
+void Engine::resize_tt(size_t tt_size_mb) {
+    // Stoppe alle Worker, damit kein Thread auf tt zugreift
+    stop_search.store(true, std::memory_order_relaxed);
+    int saved_threads = thread_count;
+    stop_thread_pool();
+
+    // TT neu allokieren (löscht alle alten Einträge)
+    tt.clear();
+    init_tt(tt_size_mb);
+
+    std::cerr << "info string TT resized to " << tt_size_mb
+              << " MB, entries=" << 4 * tt.size() << "\n";
+
+    // Thread-Pool mit gleicher Thread-Anzahl wieder hochfahren
+    start_thread_pool(saved_threads);
+    stop_search.store(false, std::memory_order_relaxed);
 }

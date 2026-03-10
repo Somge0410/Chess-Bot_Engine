@@ -17,7 +17,7 @@ add_executable(Chess-Bot_Engine
     src/notation_utils.cpp
     src/zobrist.cpp
     src/uci.cpp
-)
+ "include/pst.h" "include/adjustable_parameters.h")
 
 target_include_directories(Chess-Bot_Engine PUBLIC include)
 

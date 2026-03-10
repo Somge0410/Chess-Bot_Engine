@@ -5,7 +5,7 @@
 #include <vector>
 
 //Adjustable parameters for engine:
-constexpr size_t MAX_MEMORY_TT_MB = 512; // in MB
+constexpr size_t MAX_MEMORY_TT_MB = 128; // in MB
 
 //color and piece constants
 enum class Color: uint8_t { WHITE, BLACK, NONE };
