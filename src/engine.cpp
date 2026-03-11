@@ -821,12 +821,12 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                     : -(MATE_SCORE + best_score + 1) / 2;
                 std::cout << " score mate " << mate_in;
             } else {
-                std::cout << " score cp " << best_score;
+                std::cout << " score cp " << (board.get_turn() == Color::WHITE ? best_score : -best_score);
             }
             std::cout << " time " << elapsed_ms
                       << " nodes " << total_nodes
                       << " nps " << nps
-                      << " pv " << best_uci
+                      << " pv " << create_pv_string(board, best_move, current_depth)
                       << "\n";
             std::cout.flush();
         }
@@ -989,4 +989,34 @@ void Engine::resize_tt(size_t tt_size_mb) {
     // Thread-Pool mit gleicher Thread-Anzahl wieder hochfahren
     start_thread_pool(saved_threads);
     stop_search.store(false, std::memory_order_relaxed);
+}
+std::string Engine::create_pv_string(const Board& board, const Move& best_move, int depth) {
+    std::string pv = move_to_uci(best_move);
+    Board b = board;
+    b.make_move(best_move);
+
+    // Sammle bis zu depth-1 weitere Züge aus der TT
+    for (int i = 1; i < depth; ++i) {
+        uint64_t hash = b.get_hash();
+        Move tt_move;
+        int tt_score;
+        bool depth_0 = false;
+
+        // depth=0 akzeptiert jeden TT-Eintrag mit depth>=0
+        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, depth_0))
+            break;
+        if (tt_move.from_square == -1 || tt_move.to_square == -1)
+            break;
+
+        // TT speichert nur from/to/promotion — Rest muss rekonstruiert werden
+        recover_move_fully(tt_move, b);
+
+        // Prüfe ob der rekonstruierte Zug gültig ist (piece_moved darf nicht NONE sein)
+        if (tt_move.piece_moved == PieceType::NONE)
+            break;
+
+        pv += " " + move_to_uci(tt_move);
+        b.make_move(tt_move);
+    }
+    return pv;
 }
