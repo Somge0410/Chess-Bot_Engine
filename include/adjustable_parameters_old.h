@@ -1,162 +1,140 @@
-#pragma once
+pragma once
+// === PST TABLES (for pst.h) ===
 
-//evaluation scorees
-constexpr int BAD_BISHOP_BLCOKED_MG = -9; //Used in bad bishop eval
-constexpr int BAD_BISHOP_BLOCKED_EG = -16; // same
-constexpr int BAD_BISHOP_UNBLOCKED_MG = 2; // same
-constexpr int BAD_BISHOP_UNBLOCKED_EG = -3; // same
-constexpr int FIANCHETTO_BISHOP_BONUS_MG = 2; // used in fianchetto_bishop eval
-constexpr int FIANCHETTO_BISHOP_BONUS_EG = 1; // same
-constexpr int BROKEN_FIANCHETTO_PENALTY_MG = 7;// same
-constexpr int BROKEN_FIANCHETTO_PENALTY_EG = -9; // same
-constexpr int TRAPPED_BISHOP_PENALTY_MG = -125; // used in trapped minor pieces
-constexpr int TRAPPED_BISHOP_PENALTY_EG = -77; // same
-constexpr int TRAPPED_KNIGHT_PENALTY_MG = -23; // same
-constexpr int TRAPPED_KNIGHT_PENALTY_EG = -66; // same
-const int DOUBLED_PAWN_PENALTY_MG[8] = { 11,6,8,-2,-1,5,-13,-9 };// used in doubled pawn eval
-constexpr int DOUBLED_PAWN_PENALTY_EG[8] = { -28,-25,-6,-14,-7,-8,-19,-15 }; //same
-const int ISOLATED_PAWN_PENALTY_MG = -10; // used in isolated pawn eval
-constexpr int ISOLATED_PAWN_PENALTY_EG = -9; // same
-constexpr int BLOCKED_ISO_PENALTY_MG = -24;
-constexpr int BLOCKED_ISO_PENALTY_EG = -4;
+const int MG_PST[6][64] = {
+    // White Pieces (Color::WHITE)
+        // Pawns (PieceType::PAWN)
+        {    0,   0,   0,   0,   0,   0,   0,   0,
+          -37, -36, -29, -34, -19, -14, -10, -41,
+          -39, -43, -25, -26, -12, -19, -15, -25,
+          -36, -32, -17,  -5,   0,  -9, -25, -32,
+          -28, -21, -13,  -9,  16,   2, -15, -19,
+          -12, -20,  14,  20,  36,  57,  25,   4,
+           71,  93,  81, 118,  98,  81, -33, -59,
+            0,   0,   0,   0,   0,   0,   0,   0 },
+            // Knights (PieceType::KNIGHT)
+            { -121, -81, -85, -69, -65, -54, -79, -85,
+              -91, -79, -61, -45, -46, -42, -53, -60,
+              -76, -52, -39, -33, -20, -27, -27, -57,
+              -68, -53, -30, -32, -18, -24, -25, -53,
+              -59, -43, -22,   1, -13,  13, -25, -20,
+              -64, -33, -12,  -4,  38,  36,  -3, -32,
+              -83, -59, -32,  -4, -36,  33, -53, -43,
+             -177,-163,-112, -85, -42,-106,-139,-119 },
+             // Bishops (PieceType::BISHOP)
+             {    8,  23,  11,   5,  11,   3,  15,  21,
+                13,   3,  25,   9,  18,  28,  19,  22,
+                13,  26,  24,  15,  21,  29,  31,  28,
+                 1,   2,   7,  29,  25,  12,   7,  14,
+                -2,   6,  16,  22,  30,  21,  14,   1,
+                 0,  13,   9,  24,  22,  47,  37,  30,
+                -5,   2,  -1, -11,  10,  16,  -1,   5,
+               -21, -42, -36, -79, -55, -46,  -9, -48 },
+               // Rooks (PieceType::ROOK)
+               {   39,  37,  39,  47,  54,  56,  64,  51,
+                  19,  21,  32,  33,  42,  58,  71,  36,
+                  18,  18,  22,  24,  38,  50,  83,  60,
+                  15,  10,  19,  24,  28,  34,  59,  41,
+                  19,  28,  29,  33,  34,  60,  67,  59,
+                  20,  43,  37,  41,  68,  87, 129,  93,
+                  37,  35,  53,  72,  59,  99,  95, 117,
+                  56,  40,  48,  47,  60,  89,  88,  98 },
+                  // Queens (PieceType::QUEEN)
+                  {   56,  56,  63,  72,  69,  58,  69,  68,
+                     57,  64,  71,  73,  72,  82,  86,  93,
+                     60,  66,  63,  61,  65,  74,  87,  81,
+                     53,  44,  49,  56,  58,  58,  65,  74,
+                     42,  51,  50,  48,  50,  65,  66,  73,
+                     54,  51,  46,  61,  71, 104, 112, 114,
+                     50,  29,  31,  30,  33,  77,  57, 106,
+                     34,  24,  49,  80,  76,  98, 127,  65 },
+                     // Kings (PieceType::KING)
+                     {   35,  58,  53, -20,  41,   5,  45,  46,
+                        49,  18,   6, -12, -17,  -2,  23,  25,
+                       -27, -10, -58, -67, -62, -57, -33, -50,
+                       -88, -76, -93,-123,-116, -88,-102,-144,
+                       -78, -66, -90,-131,-114, -88, -93,-121,
+                      -113,  18, -35, -71, -33,  42,  25, -41,
+                       -76, -11, -39,  32, -18, -14,  30,   3,
+                        69,  81,  85, -54, -31,  32, 102, 210 }
+};
 
-constexpr int FORWARD_BLOCKED_BACKWARD_MG = -9;
-constexpr int FORWARD_BLOCKED_BACKWARD_EG = -14;
-constexpr int FREE_TO_ADVANCE_BACKWARD_MG = -4;
-constexpr int FREE_TO_ADVANCE_BACKWARD_EG = 0;
-constexpr int FORWARD_CONTROLLED_BACKWARD_PENALTY_MG = -14; // used in backward eval
-constexpr int FORWARD_CONTROLLED_BACKWARD_PENALTY_EG = -18;
-const int PASSED_PAWN_BONUS_MG[8] = { 0,10,20,35,50,75,100,0 }; // used in is_passed_pawn eval, index = how many ranks the pawn has advanced (0-7)
-constexpr int PASSED_PAWN_BONUS_EG[8] = { 0,10,20,35,50,75,100,0 }; //same
-const int CANDIDATE_PASSED_PAWN_BONUS_MG[8] = { 0,5,10,15,25,35,50,0 }; //used in candidate eval, same index as above
-constexpr int CANDIDATE_PASSED_PAWN_BONUS_EG[8] = { 0,5,10,15,25,35,50,0 };//same
-constexpr double WEAK_PIECE_DEFENCE_VALUE_SCALE_MG[8] = { 0,0.1,0.2,0.3,0.4,0.5,0.6,0.7 };//used in eval defence
-constexpr double WEAK_PIECE_DEFENCE_VALUE_SCALE_EG[8] = { 0,0.2,0.4,0.5,0.6,0.65,0.66,0.7 };//same
-const int PAWN_SHIELD_BONUS_MG = -1; //used in king_safety
-constexpr int PAWN_SHIELD_BONUS_EG = -3; //same
-const int NEXT_TO_OPEN_FILE_PENALTY_MG = -41; //used in king safets
-constexpr int NEXT_TO_OPEN_FILE_PENALTY_EG = 9; //same
-constexpr int NEXT_TO_SEMI_OPEN_FILE_PENALTY_MG = -17;
-constexpr int NEXT_TO_SEMI_OPEN_FILE_PENALTY_EG = -2;
-constexpr int NEXT_TO_OPEN_DIAGONAL_PENALTY_MG[7] = { 3,1,32,45,82,60,60 };
-constexpr int NEXT_TO_OPEN_DIAGONAL_PENALTY_EG[7] = { -29,-12,-7,-13,52,52,52 };
-constexpr int PAWN_ATTACKS_IN_KING_ZONE_BONUS_MG = 10; //used in eval attack score
-constexpr int PAWN_ATTACKS_IN_KING_ZONE_BONUS_EG = 20;
-constexpr int PAWN_ATTACKS_IN_SMALL_KING_ZONE_BONUS_MG = 15;
-constexpr int PAWN_ATTACKS_IN_SMALL_KING_ZONE_BONUS_EG = 30;
-const int ROOK_OPEN_FILE_BONUS_MG = 27;// used in eval rook activity
-const int ROOK_OPEN_FILE_BONUS_EG = -5;
-const int ROOK_SEMI_OPEN_FILE_BONUS_MG = 10;
-const int ROOK_SEMI_OPEN_FILE_BONUS_EG = -7;
-constexpr int ROOK_BEHIND_FREE_PAWN_BONUS_MG = 8; // used in eval rook activity
-constexpr int ROOK_BEHIND_FREE_PAWN_BONUS_EG = 13; // same
-constexpr int CONNECTED_ROOKS_BONUS_MG = -2; // used in eval rook activity
-constexpr int CONNECTED_ROOKS_BONUS_EG = 4; // same
-constexpr int ROOK_ATTACKING_BONUS_MG = 0; // used in eval rook activity
-constexpr int ROOK_ATTACKING_BONUS_EG = 0; // same
-constexpr int KING_TROPISM_QUEEN_BONUS_MG[8] = { 0, 60,50,40,30,20,10,10 };// used in eval attack score
-constexpr int KING_TROPISM_QUEEN_BONUS_EG[8] = { 0, 120,100,80,60,40,20,10 };
-constexpr int KING_TROPISM_OTHER_BONUS_MG[8] = { 0, 30,20,15,10,5,0,10 };
-constexpr int KING_TROPISM_OTHER_BONUS_EG[8] = { 0, 60,40,30,20,10,0,10 };
-constexpr double KING_ATTACKER_VALUE_SCALE_MG[8] = { 0,0.2,0.4,0.6,0.8,0.9,0.95,0.99 };
-constexpr double KING_ATTACKER_VALUE_SCALE_EG[8] = { 0,0.4,0.75,0.88,0.94,0.97,0.99,0.999 };
-constexpr double WEAK_PIECE_ATTACK_BONUS_MG[8] = { 0,0.2,0.4,0.6,0.8,0.9,0.95,0.99 };
-constexpr double WEAK_PIECE_ATTACK_BONUS_EG[8] = { 0,0.4,0.75,0.88,0.94,0.97,0.99,0.999 };
-constexpr int ROOK_ON_OPEN_FILE_NEXT_TO_KING_BONUS_MG = 20;
-constexpr int ROOK_ON_OPEN_FILE_NEXT_TO_KING_BONUS_EG = 40;
-constexpr int QUEEN_ON_OPEN_FILE_NEXT_TO_KING_BONUS_MG = 40;
-constexpr int QUEEN_ON_OPEN_FILE_NEXT_TO_KING_BONUS_EG = 80;
-constexpr int ROOK_ON_SEMI_OPEN_FILE_NEXT_TO_KING_BONUS_MG = 10;
-constexpr int ROOK_ON_SEMI_OPEN_FILE_NEXT_TO_KING_BONUS_EG = 20;
-constexpr int QUEEN_ON_SEMI_OPEN_FILE_NEXT_TO_KING_BONUS_MG = 20;
-constexpr int QUEEN_ON_SEMI_OPEN_FILE_NEXT_TO_KING_BONUS_EG = 40;
-const int BISHOP_PAIR_BONUS_MG = 14; //used in eval bishop pair
-const int BISHOP_PAIR_BONUS_EG = 59;
-const int PAWN_ISLAND_PENALTY_MG = -10; // used in eval pawn island
-constexpr int PAWN_ISLAND_PENALTY_EG = -20;
-const int PAWN_MAJORITY_BONUS_MG = 15; // used in eval pawn maj
-constexpr int PAWN_MAJORITY_BONUS_EG = 30;
-constexpr int UNDEFENDED_PIECE_PENALTY_MG[5] = { 0,-10,-10,-15,-25 }; // used in eval defence, index = piece type (knight, bishop, rook, queen)
-constexpr int UNDEFENDED_PIECE_PENALTY_EG[5] = { 0,-20,-20,-30,-50 };
-constexpr int HANGING_PIECE_PENALTY_MG[5] = { 0,-20,-20,-30,-50 }; // same as above
-constexpr int HANGING_PIECE_PENALTY_EG[5] = { 0,-40,-40,-60,-100 };
-/*const int PIECE_VALUES_MG[6] = {101,548,577,758,1519,20000};
-const int PIECE_VALUES_EG[6] = { 164,762,772,1312,2608,20000 };*/
-//Knight: mg = 282.54, eg = 402.088
-//Bishop: mg = 315.684, eg = 414.115
-//Rook : mg = 408.697, eg = 702.447
-////Queen : mg = 815.63, eg = 1358.21
-//Both
-const int PIECE_VALUES_MG[6] = { 100,382,418,508,1107,20000 };
-const int PIECE_VALUES_EG[6] = { 100,283,295,502,953,20000 };
-////lichess quiet
-//const int PIECE_VALUES_MG[6] = { 100,383,423,529,1135,20000 };
-//const int PIECE_VALUES_EG[6] = { 100,296,306,510,953,20000 };
-////lcihess big
-//const int PIECE_VALUES_MG[6] = { 100,383,418,500,1092,20000 };
-//const int PIECE_VALUES_EG[6] = { 100,280,293,499,947,20000 };
+const int EG_PST[6][64] = {
+    // White Pieces (Color::WHITE)
+        // Pawns (PieceType::PAWN)
+        {    0,   0,   0,   0,   0,   0,   0,   0,
+           -3,   2,   6,   7,  12,   9,  -4,  -9,
+           -5,  -1,  -2,   3,   2,   2,  -7, -13,
+            1,   2,  -1,  -2,  -4,  -1,  -2,  -7,
+           11,   4,   4,  -4,  -9,  -1,   3,   0,
+           16,  22,  11,  15,   1,   6,  31,  18,
+          103,  98,  94,  69,  66,  76,  99, 106,
+            0,   0,   0,   0,   0,   0,   0,   0 },
+            // Knights (PieceType::KNIGHT)
+            {   45,  27,  51,  49,  52,  43,  32,  33,
+               43,  52,  65,  63,  62,  59,  43,  46,
+               56,  72,  79,  85,  82,  79,  68,  56,
+               56,  70,  84,  86,  89,  80,  66,  50,
+               59,  74,  82,  84,  84,  79,  73,  47,
+               48,  63,  80,  81,  65,  57,  53,  39,
+               38,  56,  64,  61,  59,  42,  49,  23,
+               11,  40,  59,  51,  52,  34,  38,  -7 },
+               // Bishops (PieceType::BISHOP)
+               {   58,  69,  62,  69,  72,  73,  62,  41,
+                  69,  43,  62,  77,  73,  69,  40,  51,
+                  80,  86,  85,  81,  87,  84,  81,  71,
+                  74,  82,  80,  80,  77,  81,  77,  65,
+                  78,  79,  78,  82,  76,  78,  74,  74,
+                  76,  75,  76,  72,  71,  75,  68,  72,
+                  68,  68,  74,  76,  69,  66,  71,  61,
+                  70,  85,  76,  86,  78,  76,  70,  69 },
+                  // Rooks (PieceType::ROOK)
+                  {  130, 128, 133, 126, 122, 126, 117, 115,
+                    127, 130, 130, 129, 123, 115, 107, 114,
+                    134, 133, 132, 131, 125, 121, 108, 110,
+                    139, 138, 137, 135, 132, 130, 120, 122,
+                    143, 140, 143, 138, 129, 122, 125, 123,
+                    143, 140, 142, 137, 126, 121, 116, 115,
+                    145, 154, 155, 146, 147, 135, 133, 123,
+                    141, 147, 151, 149, 142, 139, 136, 135 },
+                    // Queens (PieceType::QUEEN)
+                    {   98,  98,  99, 105,  96,  96,  81,  72,
+                      106, 102,  98, 105, 108,  90,  69,  56,
+                      107, 118, 120, 115, 121, 132, 124, 113,
+                      117, 135, 122, 139, 136, 140, 138, 134,
+                      122, 124, 133, 146, 158, 151, 155, 144,
+                      110, 118, 144, 146, 159, 151, 131, 125,
+                      111, 136, 163, 173, 189, 156, 151, 135,
+                      123, 141, 151, 138, 146, 139,  99, 131 },
+                      // Kings (PieceType::KING)
+                      {  -58, -38, -25, -17, -37, -21, -34, -62,
+                        -29,  -5,   5,   8,  11,   3,  -8, -22,
+                        -14,   8,  27,  32,  32,  26,  14,   2,
+                         -3,  19,  39,  51,  49,  38,  29,  17,
+                          1,  29,  47,  58,  56,  50,  41,  18,
+                         10,  26,  42,  53,  51,  43,  39,  15,
+                         -4,  20,  32,  21,  37,  46,  34,   4,
+                        -96, -52, -34,   6,  -1,  -5, -20,-111 }
+};
 
-// --- NEU: Mobility Bonuses ---
-constexpr int MOBILITY_BONUS_MG[6] = { 0, 2, 3, 3, 0, 0 }; // Pawn, Knight, Bishop, Rook, Queen, King
-constexpr int MOBILITY_BONUS_EG[6] = { 0, 3, 2, 3, 5, 0 }; // Pawn, Knight, Bishop, Rook, Queen, King
+constexpr int passed_pawns_MG[64] = {
+           0,   0,   0,   0,   0,   0,   0,   0,
+         -16,   1, -14, -23,  -5,  -2,  25,  10,
+         -10,  -6, -24, -19, -17, -14,  -2,  10,
+          -6,  -1, -17, -10, -18, -13,  -5,  -8,
+           8,  18,  22,  14,  -1,   9,   1, -17,
+          12,  44,  24,  10,   5,   6, -12, -56,
+         -21, -35, -22, -31, -26, -43,  -3,  -7,
+           0,   0,   0,   0,   0,   0,   0,   0
+};
 
-// --- NEU: Outpost Bonuses ---
-constexpr int BISHOP_OUTPOST_BONUS_WITH_OPPOSITE_BISHOP_MG = 21;
-constexpr int BISHOP_OUTPOST_BONUS_WITH_OPPOSITE_BISHOP_EG = 12;
-constexpr int BISHOP_OUTPOST_BONUS_NO_OPPOSITE_BISHOP_MG = 32;
-constexpr int BISHOP_OUTPOST_BONUS_NO_OPPOSITE_BISHOP_EG = 3;
-constexpr int KNIGHT_OUTPOST_BONUS_WITH_OPPOSITE_BISHOP_MG = 24;
-constexpr int KNIGHT_OUTPOST_BONUS_WITH_OPPOSITE_BISHOP_EG = 14;
-constexpr int KNIGHT_OUTPOST_BONUS_NO_OPPOSITE_BISHOP_MG = 30;
-constexpr int KNIGHT_OUTPOST_BONUS_NO_OPPOSITE_BISHOP_EG = 11;
-
-
-
-// --- NEU: King Zone Attack Weights ---
-constexpr int KNIGHT_ATTACK_VALUE = 20;
-constexpr int BISHOP_ATTACK_VALUE = 20;
-constexpr int ROOK_ATTACK_VALUE = 40;
-constexpr int QUEEN_ATTACK_VALUE = 80;
-
-
-// For Pruning and search
-
-const int FUTILITY_MARGIN_D1 = 200;
-const int FUTILITY_MARGIN_D2 = 400;
-const int DELTA_MARGIN = 200;
-constexpr int DEFAULT_SEARCH_WINDOW = 50;
-constexpr int MAX_QUIET_PLY = 7;
-
-// --- NEU: Late Move Reduction (LMR) ---
-constexpr int LMR_MIN_DEPTH = 3;
-constexpr int LMR_MIN_MOVES_SEARCHED = 3;
-constexpr int LMR_REDUCTION_AMOUNT = 2;
-
-// --- NEU: Null Move Pruning (NMP) ---
-constexpr int NMP_MIN_DEPTH = 3;
-constexpr int NMP_REDUCTION = 3;
-
-// --- NEU: Move Ordering ---
-constexpr int CAPTURE_SCORE_TIEBREAK_DIVISOR = 16;
-constexpr int MVV_LVA_STAGE = 4;
-constexpr int LOSING_CAPTURE_STAGE = 1;
-constexpr int KILLER_STAGE = 3;
-constexpr int QUIET_STAGE = 2;
-constexpr int TT_STAGE = 6;
-constexpr int PROMO_STAGE = 5;
-
-// --- NEU: History Heuristic ---
-constexpr int HISTORY_BONUS_MULTIPLIER = 1;  // bonus = depth * depth * multiplier
-
-// --- NEU: Aspiration Window ---
-constexpr int ASPIRATION_WINDOW_INITIAL = 50;
-constexpr int ASPIRATION_WINDOW_MULTIPLIER = 2;
-
-// --- NEU: Time Management ---
-constexpr int TIME_ALLOCATION_DIVISOR = 40;  // time_left / divisor
-constexpr int MAX_TIME_FRACTION = 2;  // max time = time_left / divisor
-
-// --- NEU: Root Move Perturbation (Multi-Threading) ---
-constexpr int ROOT_PERTURBATION_MIN_HELPERS = 2;
-constexpr int ROOT_PERTURBATION_MIN_BAND_SIZE = 6;
-constexpr int ROOT_PERTURBATION_MAX_BAND_SIZE = 16;
+constexpr int passed_pawns_EG[64] = {
+           0,   0,   0,   0,   0,   0,   0,   0,
+           9,   8,   2,   3, -11,  -6,   2,   4,
+          10,  15,   7,  -1,   1,   2,  23,   7,
+          40,  35,  21,  12,  16,  21,  40,  35,
+          71,  68,  43,  34,  35,  40,  62,  67,
+         131, 122,  94,  59,  66,  82,  93, 121,
+          83,  79,  77,  58,  56,  67,  78,  84,
+           0,   0,   0,   0,   0,   0,   0,   0
+};

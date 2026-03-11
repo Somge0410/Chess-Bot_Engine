@@ -117,6 +117,7 @@ class Engine {
     public:
 		Engine(size_t tt_size_mb = MAX_MEMORY_TT_MB);
         void set_threads(int n);
+		void resize_tt(size_t tt_size_mb);
     ~Engine();
         void shutdown();
         PerftRes perft_test(Board& board, int depth);
@@ -126,43 +127,13 @@ class Engine {
         int checkmate_count;
         std::atomic<uint64_t> nodes{ 0 };
         std::atomic<uint64_t>  qnodes{ 0 };
-        // --- Transposition table statistics ---
-        std::atomic<uint64_t>  tt_probes_nm{ 0 };
-        std::atomic<uint64_t>  tt_hits_nm{ 0 };
-        std::atomic<uint64_t>  tt_misses_nm{ 0 };
-        std::atomic<uint64_t>  tt_stores_nm{ 0 };
-        std::atomic<uint64_t>  tt_overwrites_nm{ 0 };
-        std::atomic<uint64_t>  tt_updates_nm{ 0 };   // same key updated
-        std::atomic<uint64_t>  tt_skip_same_gen_nm{ 0 };
-        std::atomic<uint64_t>  tt_tempered_flag_found{ 0 };;
-        std::atomic<uint64_t>  tt_temp_not_exact{ 0 };
-        std::atomic<uint64_t>  tt_temp_flag_stored{ 0 };
-        std::atomic<uint64_t>  tt_filled_slots{ 0 }; // count non-empty entries at the end
-        std::atomic<uint64_t>  tt_probes_qs{ 0 };
-        std::atomic<uint64_t>  tt_hits_qs{ 0 };
-        std::atomic<uint64_t>  tt_misses_qs{ 0 };
-        std::atomic<uint64_t>  tt_stores_qs{ 0 };
-        std::atomic<uint64_t>  tt_updates_qs{ 0 };
-        std::atomic<uint64_t>  tt_overwrites_qs{ 0 };
-        std::atomic<uint64_t>  tt_skip_same_gen_qs{ 0 };
         uint64_t generation=0;
-        std::atomic<uint64_t>  redo_window_search{ 0 };
-        std::atomic<uint64_t>  could_result_in_rep{ 0 };
-        std::atomic<uint64_t>  have_to_make_move_count{ 0 };
-        std::atomic<uint64_t>  cutoff_count{ 0 };
-        std::atomic<uint64_t>  moves_before_cutoff{ 0 };
-        void compute_tt_fill_rate() {
-            tt_filled_slots = 0;
-            for (TTCluster& c : tt) {
-                for (int i = 0; i < 4; i++) {
-                    if (!TTEntry(tt_load(c.entries[i])).empty()) tt_filled_slots++;
-                }
-            }
-        }
 
 
         Move search(const Board& position, const SearchLimits& limits);
-
+        void stop_search_and_wait() {
+            stop_search.store(true, std::memory_order_release);
+        }
 
     private:
         std::atomic<bool> stop_search{ false };
@@ -201,7 +172,7 @@ class Engine {
 		bool should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move);
 		int late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls);
 		bool try_null_move_pruning(Board& board,bool is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls);
-		SearchResult terminal_eval(const Board& board, bool king_is_in_check);
+		SearchResult terminal_eval(const Board& board, bool king_is_in_check,int ply);
 		void update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls);
         void init_tt(size_t tt_size_mb = MAX_MEMORY_TT_MB);
         bool move_could_result_in_repetition(Board& board, Move& move, int count=3);

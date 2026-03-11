@@ -16,6 +16,8 @@
 #include <vector>
 #include "uci.h"
 #include "see.h"
+
+#include <iostream>
 int main(int argc, char* argv[]) {
     Zobrist::initialize_keys();
     if (argc > 1 && std::string(argv[1]) == "perft")
@@ -188,14 +190,9 @@ int main(int argc, char* argv[]) {
         return 0;
 	}*/
     else {
-        #include <iostream>
         std::ios::sync_with_stdio(false);
         std::cin.tie(nullptr);
         uci_loop();
         return 0;
     }
 }
-// position fen 8/8/8/8/7n/5k2/5b2/7K w - - 18 80 moves h1h2
-// position fen 8/8/6K1/3k1P2/8/2b2n2/8/8 b - - 11 62
-// position fen 8/8/6K1/3k1P2/8/2b2n2/8/8 b - - 11 62 moves d5e4 f5f6 f3e5 g6h7 e4f5 h7g8 f5g6 g8f8 g6f6 f8e8 c3a5 e8f8 e5f7 f8e8 f6e6 e8f8 a5c3 f8g8 e6e7 g8h7 e7f6 h7g8 c3b4 g8h7 b4a3 h7g8 f7e5 g8h7 a3f8 h7g8 f8c5 g8h7 c5f8 h7g8 f8c5 g8h7
-// position fen 8/R7/1p6/p7/4n3/4k3/1r6/6K1 b - - 7 68
