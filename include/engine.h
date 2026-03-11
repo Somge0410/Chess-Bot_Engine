@@ -125,6 +125,7 @@ class Engine {
         int ep_count;
         int capture_count;
         int checkmate_count;
+        int rev_fut_count = 0;
         std::atomic<uint64_t> nodes{ 0 };
         std::atomic<uint64_t>  qnodes{ 0 };
         uint64_t generation=0;

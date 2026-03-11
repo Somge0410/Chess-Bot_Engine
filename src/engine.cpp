@@ -78,9 +78,25 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         
         return {q_score,Move()};
     }
+
+    bool king_is_in_check = board.in_check();
+	int static_eval = -MATE_SCORE;
+    //REVERSE FUTILITY PRUNING
+    // 
+	int rfp_max_depth = 5;
+	bool is_pv_node = (beta - alpha) > 1;
+    if(!king_is_in_check && depth <= rfp_max_depth&& std::abs(beta)<MATE_THRESHOLD && !is_pv_node) {
+        static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+		int rfp_margin = 112 * depth; // This margin can be tuned
+        if (static_eval - rfp_margin >= beta) {
+            rev_fut_count++;
+            return { static_eval,Move() };
+        }
+	}
+   
+    
     // NULL Move Pruning Here
     int nmp_score;
-	bool king_is_in_check = board.in_check();
     if(try_null_move_pruning(board,king_is_in_check,depth,alpha,beta,ply,nmp_score,tls))
     {
         return {nmp_score,Move()};
@@ -107,8 +123,11 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     //Futility Purning prerequisites here Here
     int current_eval=-MATE_SCORE;
     if (depth<=2)
-    {
-        current_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+	{
+		if (static_eval != -MATE_SCORE) 
+            current_eval = static_eval;
+        else
+            current_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     
 	// Late Move Reduction prerequisites here
@@ -959,6 +978,8 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 		std::unique_lock<std::mutex> lk(pool_mtx);
         cv_done.wait(lk, [&] {return active_workers == 0; });
 	}
+
+    //std::cout << rev_fut_count;
 	return best_move_so_far;
 }
 Engine::~Engine() {
@@ -997,6 +1018,9 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
 
     // Sammle bis zu depth-1 weitere Züge aus der TT
     for (int i = 1; i < depth; ++i) {
+        if (b.is_fifty_move_rule_draw() || b.is_repetition_draw(2)) {
+            break;
+        }
         uint64_t hash = b.get_hash();
         Move tt_move;
         int tt_score;
@@ -1017,6 +1041,7 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
 
         pv += " " + move_to_uci(tt_move);
         b.make_move(tt_move);
+       
     }
     return pv;
 }

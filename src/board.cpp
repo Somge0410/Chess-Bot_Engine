@@ -843,6 +843,6 @@ bool Board::is_white_to_move() const {
 }
 bool Board::is_free_file(const int square, const Color color) const {
     uint64_t pawns = pieces[to_int(flip_color(color))][to_int(PieceType::PAWN)];
-	return (pawns&& PASSED_PAWN_MASK[to_int(color)][square])==0;
+	return (pawns& PASSED_PAWN_MASK[to_int(color)][square])==0;
 }
 

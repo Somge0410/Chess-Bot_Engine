@@ -109,7 +109,9 @@ void uci_loop() {
             if (iss >> token && token == "moves") {
                 std::string move_str;
                 while (iss >> move_str) {
+                    int c = board.get_move_count();
                     Move m = parse_uci_move(board, move_str);
+                    bool ka=board.is_repetition_draw(2);
                     board.make_move(m);
                 }
             }
@@ -160,7 +162,6 @@ void uci_loop() {
             // Launch search on a joinable thread (not detached!)
             search_thread = std::thread([&engine, board, limits]() mutable {
                 Move best = engine.search(board, limits);
-
                 std::string best_uci = move_to_uci(best);
                 std::cout << "bestmove " << best_uci << "\n";
                 std::cout.flush();
