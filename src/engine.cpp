@@ -83,11 +83,10 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	int static_eval = -MATE_SCORE;
     //REVERSE FUTILITY PRUNING
     // 
-	int rfp_max_depth = 5;
 	bool is_pv_node = (beta - alpha) > 1;
-    if(!king_is_in_check && depth <= rfp_max_depth&& std::abs(beta)<MATE_THRESHOLD && !is_pv_node) {
+    if(!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH&& std::abs(beta)<MATE_THRESHOLD && !is_pv_node) {
         static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
-		int rfp_margin = 112 * depth; // This margin can be tuned
+		int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
             rev_fut_count++;
             return { static_eval,Move() };

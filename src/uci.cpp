@@ -10,6 +10,7 @@
 #include "constants.h"
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
+#include "adjustable_parameters.h"
 
 static void wait_for_search(Engine& engine, std::thread& search_thread) {
     if (search_thread.joinable()) {
@@ -83,6 +84,11 @@ void uci_loop() {
                 engine.resize_tt(hash_mb);
                 std::cerr << "info string Hash set to " << hash_mb << " MB\n";
             }
+            else if(opt_name == "RevFut"){
+                int val=std::stoi(opt_value);
+                REVERSE_FUTILITY_MARGIN = val;
+                std::cerr << "info string RevFut set to " << val << "\n";
+			}
         }
         else if (line.rfind("position", 0) == 0) {
             std::istringstream iss(line);
