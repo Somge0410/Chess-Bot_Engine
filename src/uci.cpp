@@ -86,9 +86,30 @@ void uci_loop() {
             }
             else if(opt_name == "RevFut"){
                 int val=std::stoi(opt_value);
-                REVERSE_FUTILITY_MARGIN = val;
+                REVERSE_FUTILITY_MARGIN = std::min(0,val);
                 std::cerr << "info string RevFut set to " << val << "\n";
 			}
+            else if (opt_name == "RevFutDepth") {
+                int val = std::stoi(opt_value);
+                REVERSE_FUTILITY_MAX_DEPTH = std::min(0, val);
+                std::cerr << "info string RevFutDepth set to " << val << "\n";
+            }
+            else if(opt_name =="FutilityMarginD1"){
+                int val=std::stoi(opt_value);
+                FUTILITY_MARGIN_D1=std::max(0,val);
+                std::cerr << "info string FutilityMarginD1 set to " << val << "\n";
+            }
+            else if (opt_name == "FutilityMarginD2") {
+                int val = std::stoi(opt_value);
+                FUTILITY_MARGIN_D2 = std::max(0, val);
+                std::cerr << "info string FutilityMarginD2 set to " << val << "\n";
+			}
+            else if(opt_name == "DeltaMargin"){
+                int val=std::stoi(opt_value);
+                DELTA_MARGIN=std::max(0,val);
+                std::cerr << "info string DeltaMargin set to " << val << "\n";
+			}
+
         }
         else if (line.rfind("position", 0) == 0) {
             std::istringstream iss(line);
