@@ -125,13 +125,13 @@ inline int DELTA_MARGIN = 200;
 inline int MAX_QUIET_PLY = 7;
 
 // --- NEU: Late Move Reduction (LMR) ---
-constexpr int LMR_MIN_DEPTH = 3;
-constexpr int LMR_MIN_MOVES_SEARCHED = 3;
-constexpr int LMR_REDUCTION_AMOUNT = 2;
+inline int LMR_MIN_DEPTH = 3;
+inline int LMR_MIN_MOVES_SEARCHED = 3;
+inline int LMR_REDUCTION_AMOUNT = 2;
 
 // --- NEU: Null Move Pruning (NMP) ---
-constexpr int NMP_MIN_DEPTH = 3;
-constexpr int NMP_REDUCTION = 3;
+inline int NMP_MIN_DEPTH = 3;
+inline int NMP_REDUCTION = 3;
 // --- NEU: Reverse Futility Pruning (RFP) ---
 inline int REVERSE_FUTILITY_MAX_DEPTH = 5;
 inline int REVERSE_FUTILITY_MARGIN = 125;
@@ -145,17 +145,17 @@ constexpr int TT_STAGE = 6;
 constexpr int PROMO_STAGE = 5;
 
 // --- NEU: History Heuristic ---
-constexpr int HISTORY_BONUS_MULTIPLIER = 1;  // bonus = depth * depth * multiplier
+inline int HISTORY_BONUS_MULTIPLIER = 1;  // bonus = depth * depth * multiplier
 
 // --- NEU: Aspiration Window ---
-constexpr int ASPIRATION_WINDOW_INITIAL = 50;
-constexpr int ASPIRATION_WINDOW_MULTIPLIER = 2;
+inline int ASPIRATION_WINDOW_INITIAL = 50;
+inline int ASPIRATION_WINDOW_MULTIPLIER = 2;
 
 // --- NEU: Time Management ---
-constexpr int TIME_ALLOCATION_DIVISOR = 40;  // time_left / divisor
-constexpr int MAX_TIME_FRACTION = 2;  // max time = time_left / divisor
+inline int TIME_ALLOCATION_DIVISOR = 40;  // time_left / divisor
+inline int MAX_TIME_FRACTION = 2;  // max time = time_left / divisor
 
 // --- NEU: Root Move Perturbation (Multi-Threading) ---
 constexpr int ROOT_PERTURBATION_MIN_HELPERS = 2;
-constexpr int ROOT_PERTURBATION_MIN_BAND_SIZE = 6;
-constexpr int ROOT_PERTURBATION_MAX_BAND_SIZE = 16;
+inline int ROOT_PERTURBATION_MIN_BAND_SIZE = 6;
+inline int ROOT_PERTURBATION_MAX_BAND_SIZE = 16;
