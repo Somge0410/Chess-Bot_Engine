@@ -11,6 +11,13 @@
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
 
+#ifndef GIT_COMMIT
+#define GIT_COMMIT "unknown"
+#endif
+#ifndef GIT_BRANCH
+#define GIT_BRANCH "unknown"
+#endif
+
 static void wait_for_search(Engine& engine, std::thread& search_thread) {
     if (search_thread.joinable()) {
         engine.stop_search_and_wait();   // signal stop (non-blocking)
@@ -26,7 +33,7 @@ void uci_loop() {
     std::string line;
     while (std::getline(std::cin, line)) {
         if (line == "uci") {
-            std::cout << "id name MyEngine 0.1\n";
+            std::cout << "id name MyEngine 0.1 (" << GIT_BRANCH << " " << GIT_COMMIT << ")\n";
             std::cout << "id author Aaron\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
             std::cout << "option name Hash type spin default "
