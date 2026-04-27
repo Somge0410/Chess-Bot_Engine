@@ -121,7 +121,6 @@ constexpr int QUEEN_ATTACK_VALUE = 80;
 const int FUTILITY_MARGIN_D1 = 200;
 const int FUTILITY_MARGIN_D2 = 400;
 const int DELTA_MARGIN = 200;
-constexpr int DEFAULT_SEARCH_WINDOW = 50;
 constexpr int MAX_QUIET_PLY = 7;
 
 // --- NEU: Late Move Reduction (LMR) ---
