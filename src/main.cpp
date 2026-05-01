@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
     /*else {
         Engine engine(512);
         std::cout << "profiler";
-        std::string Qe3 = "r4rk1/1b3ppp/p2pp3/4n1Q1/B1p1P3/P1N4P/1qP2PP1/R4RK1 w - - 0 18"; // Best move: Qe3
+        std::string Qe3 = "r4rk1/1b3ppp/p2pp3/4n1Q1/B1p1P3/P1N4P/1qP2PP1/R4RK1 w - - 0 18"; // Best move: Qe3 g5e3
         std::string a4 = "8/8/6k1/ppppp1P1/5pK1/P1PP1P2/1P6/8 b - - 0 41"; //Best move: a4
         std::string g5 = "rnb1k2r/pp4p1/8/2bQPp2/5q1p/1PN4K/PB1PBPP1/R4R2 b kq - 3 21"; //Best  move: g5
         std::string draws = "1K5k/PN1p4/P1pP4/P1P5/8/8/8/8 w - - 0 1";

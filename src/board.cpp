@@ -43,7 +43,7 @@ Board::Board(const std:: string& fen){
      history.reserve(256);
      history.push_back(get_board_state());
      repetition_tracker.push(zobrist_hash);
-
+	 repetition_tracker.push(zobrist_hash);
 }
 void Board::parse_fen(const std::string& fen){
     std::stringstream ss(fen);
@@ -487,8 +487,12 @@ void Board::update_move_count(const Move& move){
 }
 void Board::update_repetition_tracker() {
 
-    if (half_moves == 0) repetition_tracker.reset(zobrist_hash);
-    else repetition_tracker.push(zobrist_hash);
+    if (half_moves == 0) {
+        repetition_tracker.reset(zobrist_hash);
+    }
+    else {
+        repetition_tracker.push(zobrist_hash);
+    }
 }
 CheckInfo Board::count_attacker_on_square(const int square, const Color attacker_color,const int bound,const bool need_square)const {
     CheckInfo info={0,-1};
@@ -627,7 +631,8 @@ BoardState Board::get_board_state() const {
     current_state.material_score = this->material_score;
     current_state.half_moves = this->half_moves;
     current_state.move_count = this->move_count;
-	current_state.repetition_tracker = this->repetition_tracker;
+    current_state.current_twofold_count = this->repetition_tracker.get_twofold();
+	current_state.current_repetition_tracker_start = this->repetition_tracker.get_start();
     return current_state;
 }
 bool Board::has_enough_material_for_nmp() const {
@@ -685,6 +690,7 @@ void Board::undo_null_move(int original_ep_square){
 }
 void Board::recover_board_state(const BoardState& previous_state) {
 
+    this->repetition_tracker.recover_from_old(zobrist_hash,previous_state.current_repetition_tracker_start, previous_state.current_twofold_count);
     this->zobrist_hash = previous_state.zobrist_hash;
 	this->pawn_key = previous_state.pawn_key;
     this->castling_rights = previous_state.castling_rights;
@@ -700,7 +706,6 @@ void Board::recover_board_state(const BoardState& previous_state) {
     this->material_score = previous_state.material_score;
     this->half_moves = previous_state.half_moves;
     this->move_count = previous_state.move_count;
-	this->repetition_tracker = previous_state.repetition_tracker;
 }
 bool Board::is_repetition_draw(int repeat) const {
 	return repetition_tracker.count(zobrist_hash) >= repeat;
@@ -712,7 +717,9 @@ bool Board::any_appeared_more_than(int count) const {
         if (count==2) {
 			return repetition_tracker.has_any_twofold();
 		}
-		else if (count == 3) return repetition_tracker.has_any_threefold();
+        else if (count == 3) {
+            return repetition_tracker.has_any_threefold();
+        }
 		else return false;
 }
 bool Board::is_fifty_move_rule_draw() const {
@@ -809,7 +816,7 @@ Board::Board(const Board& other)
 	half_moves(other.half_moves),
 	move_count(other.move_count),
     history(other.history), // This copies the vector's elements
-	repetition_tracker(other.repetition_tracker)
+    repetition_tracker(other.repetition_tracker)
 {
     // The critical part: reserve extra capacity on the new vector
     history.reserve(256);
