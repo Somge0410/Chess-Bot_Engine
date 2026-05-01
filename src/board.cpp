@@ -40,10 +40,10 @@ Board::Board(const std:: string& fen){
      pawn_key = initialize_pawn_key();
      material_score=initialize_material_score();
      positional_score=initialize_positional_score();
-     history.reserve(256);
-     history.push_back(get_board_state());
      repetition_tracker.push(zobrist_hash);
 	 repetition_tracker.push(zobrist_hash);
+     history.reserve(256);
+     push_current_state_to_history();
 }
 void Board::parse_fen(const std::string& fen){
     std::stringstream ss(fen);
@@ -257,8 +257,7 @@ EvaluationResult Board::initialize_positional_score()const {
         return {score_mg,score_eg};
 }
 void Board::make_move(const Move& move){
-	BoardState current_state = get_board_state();
-    history.push_back(current_state);
+    push_current_state_to_history();
     update_material_score(move);
     update_positional_score(move);
     update_game_phase(move);
@@ -635,6 +634,27 @@ BoardState Board::get_board_state() const {
 	current_state.current_repetition_tracker_start = this->repetition_tracker.get_start();
     return current_state;
 }
+void Board::push_current_state_to_history() {
+    history.emplace_back();
+    BoardState& current_state = history.back();
+    current_state.zobrist_hash = this->zobrist_hash;
+    current_state.pawn_key = this->pawn_key;
+    current_state.castling_rights = this->castling_rights;
+    current_state.en_passant_square = this->en_passant_square;
+    current_state.game_phase = this->game_phase;
+    current_state.turn = this->turn;
+    current_state.white_king_square = this->white_king_square;
+    current_state.black_king_square = this->black_king_square;
+    current_state.pieces = this->pieces;
+    current_state.color_pieces = this->color_pieces;
+    current_state.all_pieces = this->all_pieces;
+    current_state.positional_score = this->positional_score;
+    current_state.material_score = this->material_score;
+    current_state.half_moves = this->half_moves;
+    current_state.move_count = this->move_count;
+	current_state.current_twofold_count = this->repetition_tracker.get_twofold();
+	current_state.current_repetition_tracker_start = this->repetition_tracker.get_start();
+}
 bool Board::has_enough_material_for_nmp() const {
     // Get the bitboard of all non-pawn/king pieces for the current side to move
     uint64_t pieces = this->pieces[this->turn][to_int(PieceType::KNIGHT)] |
@@ -815,13 +835,12 @@ Board::Board(const Board& other)
 	material_score(other.material_score),
 	half_moves(other.half_moves),
 	move_count(other.move_count),
-    history(other.history), // This copies the vector's elements
     repetition_tracker(other.repetition_tracker)
 {
-    // The critical part: reserve extra capacity on the new vector
-    history.reserve(256);
+	history.reserve(std::max<size_t>(256, other.history.size()));
+    history.insert(history.end(), other.history.begin(), other.history.end());
 }
-std::vector<BoardState> Board::get_history() const {
+const std::vector<BoardState>& Board::get_history() const {
     return history;
 }
 int Board::get_half_moves() const {

@@ -171,7 +171,7 @@ class Board{
 		uint64_t get_rook_attacks_for_color(Color color) const;
 		uint64_t get_queen_attacks_for_color(Color color) const;
         uint64_t get_attacks_for_color(Color color) const;
-        std::vector<BoardState> get_history() const;
+        const std::vector<BoardState>& get_history() const;
 		int get_half_moves() const;
 		int get_move_count() const;
 		int get_position_repeat_count() const;
@@ -188,6 +188,7 @@ class Board{
 		int get_king_square(Color color) const;
         bool in_check() const;
         BoardState get_board_state() const;
+		void push_current_state_to_history();
         bool is_repetition_draw(int repeat=3) const;
 		bool is_fifty_move_rule_draw() const;
 		bool any_appeared_more_than(int count) const;
