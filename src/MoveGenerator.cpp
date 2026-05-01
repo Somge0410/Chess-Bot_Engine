@@ -40,7 +40,7 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool c
 
         generate_knight_moves(move_list,board, own_color, pinned_info, remedy_mask,captures_ony,with_checks);
         
-        if (board.get_en_passant_rights() !=-1 && checker == PieceType::PAWN) remedy_mask|=1ULL<<board.get_en_passant_rights();
+        if (board.get_en_passant_rights() !=NO_SQUARE && checker == PieceType::PAWN) remedy_mask|=1ULL<<board.get_en_passant_rights();
         generate_pawn_moves(move_list,board, own_color,king_square, pinned_info, remedy_mask,captures_ony,with_checks);
     }
     else
@@ -69,12 +69,12 @@ std::array<uint64_t,64> MoveGenerator::calculate_pinned_pieces(const Board& boar
     {
         uint64_t ray=RAY_MASK[dir_index][king_square];
         int first_block_sq=get_first_blocker_sq(ray,occupied,dir_index<4);
-        if (first_block_sq==-1) continue;
+        if (first_block_sq==NO_SQUARE) continue;
         uint64_t first_block_bb=1ULL<<first_block_sq;
         if (first_block_bb & own_pieces)
         {
             int second_block_sq=get_second_blocker_sq(ray,occupied,dir_index<4,first_block_sq);
-            if (second_block_sq==-1) continue;
+            if (second_block_sq==NO_SQUARE) continue;
             uint64_t second_block_bb=1ULL<<second_block_sq;
             PieceType rook_or_bishop= dir_index %2 == 0 ? PieceType::BISHOP:PieceType::ROOK;
             uint64_t possible_attackers= board.get_pieces(opponent_color,rook_or_bishop)| board.get_pieces(opponent_color,PieceType::QUEEN);
@@ -400,7 +400,7 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, C
         Color opponent_color =(own_color==Color::WHITE) ? Color::BLACK:Color::WHITE;
         uint64_t enemy_pieces=board.get_color_pieces(opponent_color);
         uint64_t new_remedy=remedy_mask;
-        if (board.get_en_passant_rights()!=-1) new_remedy |=(1ULL<<board.get_en_passant_rights());
+        if (board.get_en_passant_rights()!=NO_SQUARE) new_remedy |=(1ULL<<board.get_en_passant_rights());
         while (own_pawns)
         {
             int from_square=get_lsb(own_pawns);
@@ -433,7 +433,7 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, C
             }
             
             int ep_square=board.get_en_passant_rights();
-            if (ep_square!=-1)
+            if (ep_square!=NO_SQUARE)
             {  
                 if (attack_bb & (1ULL<<ep_square) & pinned_info[from_square] & remedy_mask)
                 {       

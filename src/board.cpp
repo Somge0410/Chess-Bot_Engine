@@ -24,11 +24,11 @@ Board::Board(const std:: string& fen){
      }
     all_pieces = 0;
     castling_rights = 0;
-    en_passant_square = -1;
+    en_passant_square = NO_SQUARE;
     game_phase = 0;
     turn = to_int(Color::WHITE);
-    white_king_square = -1;
-    black_king_square = -1;
+    white_king_square = NO_SQUARE;
+    black_king_square = NO_SQUARE;
     material_score = { 0,0 };
     positional_score = { 0,0 };
     half_moves = 0;
@@ -113,7 +113,7 @@ void Board::parse_fen_castling(const std::string& castling_data){
 
 void Board::parse_fen_en_passant(const std::string& en_passant_data){
     if (en_passant_data == "-") {
-        en_passant_square = -1; 
+        en_passant_square = NO_SQUARE; 
     } else {
         // Character arithmetic is a fast way to get indices
         int file = en_passant_data[0] - 'a'; // 'a' becomes 0, 'b' becomes 1, etc.
@@ -200,7 +200,7 @@ uint64_t Board::initialize_hash() const {
     h ^= Zobrist::castling_keys[this->castling_rights];
 
     // Hash en passant square
-    if (this->en_passant_square != -1) {
+    if (this->en_passant_square != NO_SQUARE) {
         h ^= Zobrist::en_passant_keys[this->en_passant_square % 8]; // Use the file of the square
     }
 
@@ -231,10 +231,10 @@ EvaluationResult Board::initialize_material_score()const {
     return score;
 }
 EvaluationResult Board::initialize_positional_score()const {
-        int score_mg=0;
-        int score_eg=0;
-        int old_score_mg = 0;
-        int old_score_eg = 0;
+        int16_t score_mg=0;
+        int16_t score_eg=0;
+        int16_t old_score_mg = 0;
+        int16_t old_score_eg = 0;
         for (int color=0;color<2;++color){
             for (int piece=0;piece<6;++piece){
                 uint64_t bitboard=pieces[color][piece];
@@ -367,15 +367,15 @@ void Board::update_castle_rights(const Move& move){
 }
 void Board::update_en_passsant_rights(const Move& move){
     
-        if (en_passant_square != -1) {
+        if (en_passant_square != NO_SQUARE) {
             zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
         }
-        en_passant_square=-1;
+        en_passant_square=NO_SQUARE;
         if (move.is_double_pawn_move())
         {
             en_passant_square=move.move_color==Color::WHITE ? move.to_square-8:move.to_square+8;
         }
-        if (en_passant_square != -1) {
+        if (en_passant_square != NO_SQUARE) {
             zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
         }
     
@@ -495,7 +495,7 @@ void Board::update_repetition_tracker() {
     }
 }
 CheckInfo Board::count_attacker_on_square(const int square, const Color attacker_color,const int bound,const bool need_square)const {
-    CheckInfo info={0,-1};
+    CheckInfo info={0,NO_SQUARE};
     int other_color=attacker_color==Color::BLACK ? to_int(Color::WHITE):to_int(Color::BLACK);
     // Check if PAWNS Attack the square
     uint64_t pawns = pieces[to_int(attacker_color)][to_int(PieceType::PAWN)];
@@ -504,7 +504,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     if (number > 0) {
 
         info.count += number;
-		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(pawns & attack_squares);
+		if (info.attacker_square == NO_SQUARE && need_square) info.attacker_square = get_lsb(pawns & attack_squares);
     }
     if (info.count>=bound) return info;
 
@@ -514,7 +514,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     number=popcount(knights & attack_squares);
     if (number > 0) {
 		info.count += number;
-		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(knights & attack_squares);
+		if (info.attacker_square == NO_SQUARE && need_square) info.attacker_square = get_lsb(knights & attack_squares);
     }
     if (info.count >= bound) return info;
 	// Check if KING Attacks the square
@@ -522,7 +522,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
 	number = popcount(kings & KING_ATTACKS[square]);
     if (number > 0) {
         info.count += number;
-		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(kings & KING_ATTACKS[square]);
+		if (info.attacker_square == NO_SQUARE && need_square) info.attacker_square = get_lsb(kings & KING_ATTACKS[square]);
     }
 	if (info.count>=bound) return info;
     
@@ -535,7 +535,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
 	number = popcount(attackers);
     if (number > 0) {
         info.count += number;
-		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(attackers);
+		if (info.attacker_square == NO_SQUARE && need_square) info.attacker_square = get_lsb(attackers);
     }
 	if (info.count >= bound) return info;
 	//Check for Rook or Queen attack
@@ -545,7 +545,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
 	number = popcount(attackers);
     if (number > 0) {
 		info.count += number;
-		if (info.attacker_square == -1 && need_square) info.attacker_square = get_lsb(attackers);
+		if (info.attacker_square == NO_SQUARE && need_square) info.attacker_square = get_lsb(attackers);
     }
 	return info;
 
@@ -593,7 +593,7 @@ char Board::get_char_on_square(int square) const {
         return std::tolower(piece_char); // Lowercase for black pieces
 	}
 }
-int Board::get_en_passant_rights() const{
+uint8_t Board::get_en_passant_rights() const{
     return en_passant_square;
 }
 uint8_t Board::get_castle_rights() const{
@@ -674,8 +674,8 @@ bool Board::in_check() const {
 int Board::make_null_move(){
     int original_ep_square=en_passant_square;
 
-    if (en_passant_square!=-1) zobrist_hash^=Zobrist::en_passant_keys[en_passant_square %8];
-    en_passant_square=-1;
+    if (en_passant_square!=NO_SQUARE) zobrist_hash^=Zobrist::en_passant_keys[en_passant_square %8];
+    en_passant_square=NO_SQUARE;
     turn= turn==0 ? 1:0;
     zobrist_hash^=Zobrist::black_to_move_key;
     return original_ep_square;
@@ -685,7 +685,7 @@ void Board::undo_null_move(int original_ep_square){
         zobrist_hash^=Zobrist::black_to_move_key;
         en_passant_square=original_ep_square;
 
-        if (en_passant_square!=-1) zobrist_hash^=Zobrist::en_passant_keys[en_passant_square % 8];
+        if (en_passant_square!=NO_SQUARE) zobrist_hash^=Zobrist::en_passant_keys[en_passant_square % 8];
         
 }
 void Board::recover_board_state(const BoardState& previous_state) {

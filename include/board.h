@@ -110,23 +110,28 @@ struct RepetitionTracker {
 	}
 };
 struct BoardState {
-    uint64_t zobrist_hash;
-    uint64_t pawn_key;
-    uint8_t castling_rights;
-    int en_passant_square;
-    int game_phase;
-    int turn;
-    int white_king_square;
-    int black_king_square;
-    std::array<std::array<uint64_t, 6>, 2> pieces;
-    std::array<uint64_t, 2> color_pieces;
-    uint64_t all_pieces;
-    EvaluationResult positional_score;
-    EvaluationResult material_score;
-    int half_moves;
-    int move_count;
-    int current_twofold_count;
-	int current_repetition_tracker_start;
+    // 1. Largest Types First (8-byte aligned)
+    std::array<std::array<uint64_t, 6>, 2> pieces; // 96 bytes
+    std::array<uint64_t, 2> color_pieces;          // 16 bytes
+    uint64_t all_pieces;                           // 8 bytes
+    uint64_t zobrist_hash;                         // 8 bytes
+    uint64_t pawn_key;                             // 8 bytes
+
+    // 2. Medium Types (Size depends on your implementation, usually 2 to 4 bytes)
+	EvaluationResult positional_score;             // 4 bytes
+    EvaluationResult material_score;               // 4 bytes
+
+    // 3. Bit-Fields (All 10 variables packed into a single 8-byte memory block)
+    uint64_t turn : 1;
+    uint64_t game_phase : 5;
+    uint64_t white_king_square : 6;
+    uint64_t black_king_square : 6;
+    uint64_t en_passant_square : 7;
+    uint64_t castling_rights : 4;
+    uint64_t current_twofold_count : 2;
+    uint64_t half_moves : 10;
+    uint64_t move_count : 9;
+    uint64_t current_repetition_tracker_start : 10;
 };
 // Board class
 class Board{
@@ -174,7 +179,7 @@ class Board{
 		// Getters for Game State
         Color get_turn() const;
 		bool is_white_to_move() const;
-        int get_en_passant_rights() const;
+        uint8_t get_en_passant_rights() const;
         uint8_t get_castle_rights() const;
         uint64_t get_hash() const;
         EvaluationResult get_material_score() const;

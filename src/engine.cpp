@@ -452,7 +452,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         int score = entry.score();
         int a = alpha, b = beta;
         if (entry.flag() == EXACT) {
-            if (out_move.from_square == -1) return false;
+            if (out_move.from_square == NO_SQUARE) return false;
             return true;
 		}
         if (entry.flag() == LOWERBOUND) a = std::max(a, score);
@@ -464,7 +464,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
             hits = true;
         }
         if (a >= b) {
-            if (out_move.from_square == -1) return false;
+            if (out_move.from_square == NO_SQUARE) return false;
             return true;
         }
     }
@@ -1029,7 +1029,7 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         // depth=0 akzeptiert jeden TT-Eintrag mit depth>=0
         if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, depth_0))
             break;
-        if (tt_move.from_square == -1 || tt_move.to_square == -1)
+        if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)
             break;
 
         // TT speichert nur from/to/promotion — Rest muss rekonstruiert werden

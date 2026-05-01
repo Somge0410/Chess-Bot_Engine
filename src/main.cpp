@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
                     }
 
                     Move move_object = parse_move(move_str, legal_moves);
-                    if (move_object.from_square != -1)
+                    if (move_object.from_square != NO_SQUARE)
                     {
                         board.make_move(move_object);
                         move_history.push_back(move_object);
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
                 SearchLimits limits;
                 limits.movetime = 15000;
                 Move best_move = engine.search(board, limits);
-                if (best_move.from_square != -1)
+                if (best_move.from_square != NO_SQUARE)
                 {
                     std::cout << "Computer plays:" << to_san(best_move, legal_moves) << std::endl;
                     board.make_move(best_move);

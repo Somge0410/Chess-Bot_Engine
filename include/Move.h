@@ -14,8 +14,8 @@ struct Move{
     bool is_castle;
     bool is_en_passant;
     Move()
-        : from_square(-1),
-          to_square(-1),
+        : from_square(NO_SQUARE),
+          to_square(NO_SQUARE),
           piece_moved(PieceType::NONE),
           move_color(Color::WHITE),
           piece_captured(PieceType::NONE),
@@ -59,7 +59,7 @@ struct Move{
     }
     uint16_t get_int() const {
         uint16_t move = 0;
-        if (from_square == -1 || to_square == -1) return 1u <<15;
+        if (from_square == NO_SQUARE || to_square == NO_SQUARE) return 1u <<15;
         move |= from_square;
         move |= to_square << 6;
         move |= uint16_t((static_cast<uint16_t>(promotion_piece) & 0x0F) << 12);

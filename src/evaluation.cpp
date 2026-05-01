@@ -319,7 +319,7 @@ static EvaluationResult eval_king_safety_score(const EvalContext& ctx) {
     int next_to_semi_open_count = 0;
     int next_to_open_diagonal_count[7] = { 0,0,0,0,0,0,0 };
     for (size_t color = 0; color < 2; color++) {
-        if (ctx.king_sq[color] == -1) return { 0,0 };
+        if (ctx.king_sq[color] == NO_SQUARE) return { 0,0 };
         int ecolor = color == 0 ? 1 : 0;
         uint64_t king_square_colors = ((bit64(ctx.king_sq[color]) & LIGHT_SQUARES) != 0) ? LIGHT_SQUARES : DARK_SQUARES;
         uint64_t shield_mask = KING_SHIELD[color][ctx.king_sq[color]];
@@ -429,7 +429,7 @@ static EvaluationResult eval_attack_score(const EvalContext& ctx) {
                     }
                     value_count += 20 * number_of_squares_attacked;
                     attackers &= attackers - 1;
-
+                    
                 }
             }
             else if (pt == PieceType::BISHOP) {
