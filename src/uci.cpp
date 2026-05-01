@@ -11,6 +11,13 @@
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
 
+#ifndef GIT_COMMIT
+#define GIT_COMMIT "unknown"
+#endif
+#ifndef GIT_BRANCH
+#define GIT_BRANCH "unknown"
+#endif
+
 static void wait_for_search(Engine& engine, std::thread& search_thread) {
     if (search_thread.joinable()) {
         engine.stop_search_and_wait();   // signal stop (non-blocking)
@@ -26,7 +33,7 @@ void uci_loop() {
     std::string line;
     while (std::getline(std::cin, line)) {
         if (line == "uci") {
-            std::cout << "id name MyEngine 0.1\n";
+            std::cout << "id name MyEngine 0.1 (" << GIT_BRANCH << " " << GIT_COMMIT << ")\n";
             std::cout << "id author Aaron\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
             std::cout << "option name Hash type spin default "
@@ -109,7 +116,9 @@ void uci_loop() {
             if (iss >> token && token == "moves") {
                 std::string move_str;
                 while (iss >> move_str) {
+                    int c = board.get_move_count();
                     Move m = parse_uci_move(board, move_str);
+                    bool ka=board.is_repetition_draw(2);
                     board.make_move(m);
                 }
             }
@@ -160,7 +169,6 @@ void uci_loop() {
             // Launch search on a joinable thread (not detached!)
             search_thread = std::thread([&engine, board, limits]() mutable {
                 Move best = engine.search(board, limits);
-
                 std::string best_uci = move_to_uci(best);
                 std::cout << "bestmove " << best_uci << "\n";
                 std::cout.flush();

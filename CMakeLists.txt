@@ -32,7 +32,33 @@ target_include_directories(Chess-Bot_Engine PUBLIC include)
 # 4. Pass TT size as compile definition
 target_compile_definitions(Chess-Bot_Engine PRIVATE DEFAULT_TT_MB=${TT_SIZE_MB})
 
-# 5. Apply optimization flags per compiler / platform
+# 5. Git version info
+find_package(Git QUIET)
+
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_COMMIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+else()
+    set(GIT_COMMIT "unknown_commit")
+    set(GIT_BRANCH "unknown_branch")
+endif()
+
+target_compile_definitions(Chess-Bot_Engine PRIVATE
+    GIT_COMMIT="${GIT_COMMIT}"
+    GIT_BRANCH="${GIT_BRANCH}"
+)
+
+# 6. Apply optimization flags per compiler / platform
 if(MSVC)
     # --- Release: maximum speed ---
     set(RELEASE_FLAGS /O2 /GL /Oi /Ot /Ob2 /DNDEBUG /Gy)

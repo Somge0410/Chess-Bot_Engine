@@ -125,6 +125,7 @@ class Engine {
         int ep_count;
         int capture_count;
         int checkmate_count;
+        int rev_fut_count = 0;
         std::atomic<uint64_t> nodes{ 0 };
         std::atomic<uint64_t>  qnodes{ 0 };
         uint64_t generation=0;
@@ -190,7 +191,7 @@ class Engine {
             int beta,
             int& out_best_score,
             Move& out_best_move);
-
+		std::string create_pv_string(const Board& board,const Move& best_move, int depth);
 };
 inline uint8_t dist_mod64_fast(uint8_t a, uint8_t b) {
     uint8_t d = (a - b) & 63;          // in 0..63 (mod 64)
