@@ -118,7 +118,7 @@ inline int get_second_blocker_sq(const uint64_t& ray, const uint64_t& occupied_m
     {
         first_blocker_sq=get_first_blocker_sq(ray,occupied_mask,forwards);
     }
-    if (first_blocker_sq==-1) return -1;
+    if (first_blocker_sq==NO_SQUARE) return NO_SQUARE;
     return get_first_blocker_sq(ray^(1ULL<<first_blocker_sq),occupied_mask,forwards);
     
 }
@@ -257,8 +257,8 @@ inline int king_distance(int sq1, int sq2) {
 }
 
 struct EvaluationResult {
-    int mg_score;
-    int eg_score;
+    int16_t mg_score;
+    int16_t eg_score;
     EvaluationResult& operator+=(const EvaluationResult& other) {
         this->mg_score += other.mg_score;
         this->eg_score += other.eg_score;

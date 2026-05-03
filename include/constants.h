@@ -17,6 +17,7 @@ inline const uint8_t WHITE_KING_CASTLE = 1U << 3;
 inline const uint8_t WHITE_QUEEN_CASTLE = 1U << 2;
 inline const uint8_t BLACK_KING_CASTLE = 1U << 1;
 inline const uint8_t BLACK_QUEEN_CASTLE = 1U << 0;
+inline const uint8_t NO_SQUARE = 64;
 
 
 //FEN-constants
