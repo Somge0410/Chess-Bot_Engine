@@ -128,7 +128,7 @@ struct BoardState {
     uint64_t black_king_square : 6;
     uint64_t en_passant_square : 7;
     uint64_t castling_rights : 4;
-    uint64_t current_twofold_count : 2;
+    uint64_t current_twofold_count : 6;
     uint64_t half_moves : 10;
     uint64_t move_count : 9;
     uint64_t current_repetition_tracker_start : 10;
