@@ -17,7 +17,7 @@
 #endif
 
 inline int get_lsb(uint64_t bitboard) {
-    if (bitboard == 0) return -1;
+    if (bitboard == 0) return NO_SQUARE;
 #if defined(_MSC_VER)
     unsigned long index;
     _BitScanForward64(&index, bitboard);
@@ -28,7 +28,7 @@ inline int get_lsb(uint64_t bitboard) {
 }
 
 inline int get_msb(uint64_t bitboard) {
-    if (bitboard == 0) return -1;
+    if (bitboard == 0) return NO_SQUARE;
 #if defined(_MSC_VER)
     unsigned long index;
     _BitScanReverse64(&index, bitboard);
