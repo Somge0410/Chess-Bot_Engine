@@ -1,6 +1,9 @@
+#include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "board.h"
@@ -21,8 +24,82 @@
 static void wait_for_search(Engine& engine, std::thread& search_thread) {
     if (search_thread.joinable()) {
         engine.stop_search_and_wait();   // signal stop (non-blocking)
-        search_thread.join();        // wait for bestmove output
+        search_thread.join();            // wait for bestmove output
     }
+}
+
+static void print_legal_moves(const Board& board) {
+    MoveList moves;
+    MoveGenerator::generate_moves(board, moves);
+
+    std::cout << "info string legalmoves";
+    for (const Move& move : moves) {
+        std::cout << ' ' << move_to_uci(move);
+    }
+    std::cout << "\n";
+    std::cout.flush();
+}
+
+static uint64_t perft(Board& board, int depth) {
+    if (depth == 0) {
+        return 1;
+    }
+
+    MoveList moves;
+    MoveGenerator::generate_moves(board, moves);
+
+    if (depth == 1) {
+        return static_cast<uint64_t>(moves.size());
+    }
+
+    uint64_t nodes = 0;
+    for (const Move& move : moves) {
+        board.make_move(move);
+        nodes += perft(board, depth - 1);
+        board.undo_move(move);
+    }
+
+    return nodes;
+}
+
+static void run_perft(const Board& root_board, int depth) {
+    Board board = root_board;
+    auto start = std::chrono::steady_clock::now();
+
+    if (depth < 0) {
+        depth = 0;
+    }
+
+    if (depth == 0) {
+        std::cout << "info string perft depth 0 nodes 1\n";
+        std::cout.flush();
+        return;
+    }
+
+    MoveList moves;
+    MoveGenerator::generate_moves(board, moves);
+
+    uint64_t total_nodes = 0;
+    for (const Move& move : moves) {
+        board.make_move(move);
+        uint64_t move_nodes = perft(board, depth - 1);
+        board.undo_move(move);
+
+        total_nodes += move_nodes;
+        std::cout << move_to_uci(move) << ": " << move_nodes << "\n";
+    }
+
+    auto end = std::chrono::steady_clock::now();
+    uint64_t elapsed_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    uint64_t nps = elapsed_ms > 0 ? (total_nodes * 1000ULL) / elapsed_ms : 0;
+
+    std::cout << "\n";
+    std::cout << "info string perft depth " << depth
+              << " nodes " << total_nodes
+              << " time " << elapsed_ms
+              << " nps " << nps << "\n";
+    std::cout.flush();
 }
 
 void uci_loop() {
@@ -49,6 +126,10 @@ void uci_loop() {
             wait_for_search(engine, search_thread);
             board = Board();  // reset to startpos
         }
+        else if (line == "legalmoves") {
+            wait_for_search(engine, search_thread);
+            print_legal_moves(board);
+        }
         else if (line.rfind("setoption", 0) == 0) {
             // Format: setoption name <name> value <value>
             wait_for_search(engine, search_thread);
@@ -74,8 +155,9 @@ void uci_loop() {
                 std::getline(iss, opt_value);
                 // Trim leading whitespace
                 auto pos = opt_value.find_first_not_of(' ');
-                if (pos != std::string::npos)
+                if (pos != std::string::npos) {
                     opt_value = opt_value.substr(pos);
+                }
             }
 
             if (opt_name == "Threads") {
@@ -100,7 +182,7 @@ void uci_loop() {
             iss >> type;
 
             if (type == "startpos") {
-                board =Board();  // start position
+                board = Board();  // start position
             }
             else if (type == "fen") {
                 std::string fen, part;
@@ -116,9 +198,7 @@ void uci_loop() {
             if (iss >> token && token == "moves") {
                 std::string move_str;
                 while (iss >> move_str) {
-                    int c = board.get_move_count();
                     Move m = parse_uci_move(board, move_str);
-                    bool ka=board.is_repetition_draw(2);
                     board.make_move(m);
                 }
             }
@@ -128,6 +208,9 @@ void uci_loop() {
             wait_for_search(engine, search_thread);
 
             SearchLimits limits;
+            bool legalmoves_only = false;
+            bool perft_mode = false;
+            int perft_depth = -1;
 
             std::istringstream iss(line);
             std::string token;
@@ -158,6 +241,35 @@ void uci_loop() {
                 else if (token == "infinite") {
                     limits.infinite = true;
                 }
+                else if (token == "legalmoves") {
+                    legalmoves_only = true;
+                }
+                else if (token == "perft") {
+                    perft_mode = true;
+
+                    if (iss >> token) {
+                        if (token == "depth") {
+                            iss >> perft_depth;
+                        }
+                        else {
+                            perft_depth = std::stoi(token);
+                        }
+                    }
+                }
+            }
+
+            if (legalmoves_only) {
+                print_legal_moves(board);
+                continue;
+            }
+
+            if (perft_mode) {
+                if (perft_depth < 0) {
+                    perft_depth = 1;
+                }
+
+                run_perft(board, perft_depth);
+                continue;
             }
 
             // If nothing specified at all, pick a default:
@@ -183,6 +295,7 @@ void uci_loop() {
             break;
         }
     }
+
     std::cerr << "leaving uci_loop() now\n";
     wait_for_search(engine, search_thread);
     engine.shutdown();
