@@ -21,6 +21,41 @@
 #define GIT_BRANCH "unknown"
 #endif
 
+struct NamedPosition {
+    const char* name;
+    const char* fen;
+};
+
+static constexpr NamedPosition DEFAULT_POSITIONS[] = {
+    {"Qe3", "r4rk1/1b3ppp/p2pp3/4n1Q1/B1p1P3/P1N4P/1qP2PP1/R4RK1 w - - 0 18"},
+    {"a4", "8/8/6k1/ppppp1P1/5pK1/P1PP1P2/1P6/8 b - - 0 41"},
+    {"g5", "rnb1k2r/pp4p1/8/2bQPp2/5q1p/1PN4K/PB1PBPP1/R4R2 b kq - 3 21"},
+    {"kiwipete", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"},
+    {"perft2", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"},
+    {"perft3", "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"},
+    {"perft4", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"},
+    {"perft5", "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"}
+};
+
+static bool try_get_default_position(const std::string& name, std::string& out_fen) {
+    for (const auto& preset : DEFAULT_POSITIONS) {
+        if (name == preset.name) {
+            out_fen = preset.fen;
+            return true;
+        }
+    }
+    return false;
+}
+
+static void print_default_positions() {
+    std::cout << "info string presets";
+    for (const auto& preset : DEFAULT_POSITIONS) {
+        std::cout << ' ' << preset.name;
+    }
+    std::cout << "\n";
+    std::cout.flush();
+}
+
 static void wait_for_search(Engine& engine, std::thread& search_thread) {
     if (search_thread.joinable()) {
         engine.stop_search_and_wait();   // signal stop (non-blocking)
@@ -96,9 +131,9 @@ static void run_perft(const Board& root_board, int depth) {
 
     std::cout << "\n";
     std::cout << "info string perft depth " << depth
-              << " nodes " << total_nodes
-              << " time " << elapsed_ms
-              << " nps " << nps << "\n";
+        << " nodes " << total_nodes
+        << " time " << elapsed_ms
+        << " nps " << nps << "\n";
     std::cout.flush();
 }
 
@@ -114,7 +149,7 @@ void uci_loop() {
             std::cout << "id author Aaron\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
             std::cout << "option name Hash type spin default "
-                      << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
+                << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
             std::cout << "uciok\n";
             std::cout.flush();
         }
@@ -129,6 +164,10 @@ void uci_loop() {
         else if (line == "legalmoves") {
             wait_for_search(engine, search_thread);
             print_legal_moves(board);
+        }
+        else if (line == "presets") {
+            wait_for_search(engine, search_thread);
+            print_default_positions();
         }
         else if (line.rfind("setoption", 0) == 0) {
             // Format: setoption name <name> value <value>
@@ -186,15 +225,31 @@ void uci_loop() {
             }
             else if (type == "fen") {
                 std::string fen, part;
-                // FEN is 6 space-separated parts
                 for (int i = 0; i < 6 && iss >> part; ++i) {
                     if (!fen.empty()) fen += ' ';
                     fen += part;
                 }
                 board = Board(fen);
             }
+            else if (type == "preset") {
+                std::string preset_name;
+                std::string fen;
+                iss >> preset_name;
 
-            // Optional moves part
+                if (try_get_default_position(preset_name, fen)) {
+                    board = Board(fen);
+                    std::cout << "info string loaded preset " << preset_name << "\n";
+                    std::cout << "info string fen " << fen << "\n";
+                    std::cout.flush();
+                }
+                else {
+                    std::cout << "info string unknown preset " << preset_name << "\n";
+                    std::cout.flush();
+                    print_default_positions();
+                    continue;
+                }
+            }
+
             if (iss >> token && token == "moves") {
                 std::string move_str;
                 while (iss >> move_str) {
@@ -284,7 +339,7 @@ void uci_loop() {
                 std::string best_uci = move_to_uci(best);
                 std::cout << "bestmove " << best_uci << "\n";
                 std::cout.flush();
-            });
+                });
         }
         else if (line == "stop") {
             wait_for_search(engine, search_thread);
