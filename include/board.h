@@ -175,6 +175,9 @@ class Board{
 		int get_half_moves() const;
 		int get_move_count() const;
 		int get_position_repeat_count() const;
+        const bool has_twofold() const {
+			return repetition_tracker.has_any_twofold();
+        }
 
 		// Getters for Game State
         Color get_turn() const;

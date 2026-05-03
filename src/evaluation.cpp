@@ -671,10 +671,10 @@ static EvaluationResult evaluate_rook_activity(const EvalContext& ctx) {
             uint64_t file_mask = FILE_MASK[file];
             int white_passed = get_lsb(ctx.passed_pawns[0] & file_mask);
             int black_passed = get_lsb(ctx.passed_pawns[1] & file_mask);
-            if (white_passed >= 0) {
+            if (white_passed != NO_SQUARE) {
                 rook_behind_free_pawn += popcount(ctx.pieces[0][to_int(PieceType::ROOK)] & FORWARD_WAY_MASK[1][white_passed]);
             }
-            if (black_passed >= 0) {
+            if (black_passed != NO_SQUARE) {
                 rook_behind_free_pawn -= popcount(ctx.pieces[1][to_int(PieceType::ROOK)] & FORWARD_WAY_MASK[0][black_passed]);
             }
         }

@@ -620,14 +620,7 @@ void Engine::init_tt(size_t tt_size_mb) {
 }
 bool Engine::move_could_result_in_repetition(Board& board, Move& move, int count) {
     if (move.piece_captured != PieceType::NONE || move.piece_moved == PieceType::PAWN || move.is_castle) return false;
-    if (board.any_appeared_more_than(2)) return true;
-	/*recover_move_fully(move, board);
-    board.make_move(move);
-    have_to_make_move_count++;
-	bool result = board.any_appeared_more_than(2);
-    board.undo_move(move);
-    return result;*/
-    return false;
+    return board.has_twofold();
 }
 void Engine::recover_move_fully(Move& move,const Board& board) {
     move.move_color = board.get_turn();

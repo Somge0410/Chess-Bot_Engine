@@ -450,7 +450,7 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, C
                         ray&= board.get_all_pieces();
                         int next_piece_square= (dir_index==7) ? get_msb(ray) : get_lsb(ray);
                         
-                        if ((next_piece_square==-1) | (opponent_rook_queen & (1ULL<<next_piece_square)) == 0)
+                        if ((next_piece_square==NO_SQUARE) | (opponent_rook_queen & (1ULL<<next_piece_square)) == 0)
                         {
                             moves.push_back(Move(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true));
                         }else{
