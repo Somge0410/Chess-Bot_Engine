@@ -81,18 +81,44 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
     bool king_is_in_check = board.in_check();
 	int static_eval = -MATE_SCORE;
-    //REVERSE FUTILITY PRUNING
-    // 
-	int rfp_max_depth = 5;
-	bool is_pv_node = (beta - alpha) > 1;
-    if(!king_is_in_check && depth <= rfp_max_depth&& std::abs(beta)<MATE_THRESHOLD && !is_pv_node) {
-        static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
-		int rfp_margin = 112 * depth; // This margin can be tuned
-        if (static_eval - rfp_margin >= beta) {
-            rev_fut_count++;
-            return { static_eval,Move() };
+    int rfp_max_depth = 5;
+    int razor_max_depth = 3; // Explicitly lower depth limit for razoring
+    bool is_pv_node = (beta - alpha) > 1;
+
+    if (!king_is_in_check && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
+
+        // Calculate static eval once to use for both pruning methods
+        static_eval = board.is_white_to_move() ?
+            evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) :
+            -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+
+        // 1. Reverse Futility Pruning (Safe at medium depths)
+        if (depth <= rfp_max_depth) {
+            int rfp_margin = 112 * depth;
+            if (static_eval - rfp_margin >= beta) {
+                rev_fut_count++;
+                return { static_eval, Move() }; // Fail-soft
+            }
         }
-	}
+
+        // 2. Razoring (Dangerous, restrict to shallow depths)
+        if (depth <= razor_max_depth) {
+            // Optional but recommended: Scale razor margin by depth, e.g., 300 at depth 1, higher at depth 3
+            int RAZOR_MARGIN = 300 + (depth * 50);
+
+            if (static_eval + RAZOR_MARGIN < alpha) {
+                // Drop into Q-search to verify the position is truly dead
+                int q_eval = quiescence_search(board, alpha, beta, 0, tls);
+
+                // Safer Razoring: Only prune if Q-search confirms it fails low
+                if (q_eval < alpha) {
+                    return { q_eval, Move() };
+                }
+                // If q_eval >= alpha, we simply do nothing and let the normal search continue below
+            }
+        }
+    }
+
    
     
     // NULL Move Pruning Here
