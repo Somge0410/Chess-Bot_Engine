@@ -220,7 +220,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         alpha = std::max(alpha, best_score);
        
             
-        
 
         if (beta<=alpha)
         {   
@@ -998,7 +997,7 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
         cv_done.wait(lk, [&] {return active_workers == 0; });
 	}
 
-    //std::cout << rev_fut_count;
+
 	return best_move_so_far;
 }
 Engine::~Engine() {
