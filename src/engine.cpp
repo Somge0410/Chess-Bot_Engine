@@ -82,7 +82,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool king_is_in_check = board.in_check();
 	int static_eval = -MATE_SCORE;
     int rfp_max_depth = 5;
-    int razor_max_depth = 3; // Explicitly lower depth limit for razoring
+    int razor_max_depth = 1; // Explicitly lower depth limit for razoring
     bool is_pv_node = (beta - alpha) > 1;
 
     if (!king_is_in_check && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
