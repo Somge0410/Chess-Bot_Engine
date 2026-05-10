@@ -190,6 +190,8 @@ int main(int argc, char* argv[]) {
         return 0;
 	}*/
     else {
+		Board board("k7/8/3r4/8/8/3R2n1/8/K2N4 w - - 0 1");
+        display_bitboard(get_rook_attacks(19, board.get_all_pieces()));
         std::ios::sync_with_stdio(false);
         std::cin.tie(nullptr);
         uci_loop();

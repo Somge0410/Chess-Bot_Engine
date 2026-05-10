@@ -57,3 +57,4 @@ constexpr uint64_t EXTENDED_CENTER_MASK = 1ULL << 26 | 1ULL << 29 |
                                       1ULL << 34 | 1ULL << 37 |
                                       1ULL << 42 | 1ULL << 43 | 1ULL << 44 | 1ULL << 45 |
 	                                  1ULL << 18 | 1ULL << 19| 1ULL << 20 | 1ULL << 21;
+constexpr uint64_t FOUR_CORNER_MASK = (1ULL << 0) | (1ULL << 7) | (1ULL << 56) | (1ULL << 63);
