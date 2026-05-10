@@ -18,7 +18,7 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool c
     Color own_color=board.get_turn();
     Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
     int king_square=board.get_king_square(own_color);
-	std::array<uint64_t, 64> pinned_info = calculate_pinned_pieces(board, own_color,opponent_color,king_square);
+	uint64_t pinned_info = calculate_pinned_pieces(board, own_color,opponent_color,king_square);
     CheckInfo check_info=board.count_attacker_on_square(king_square,opponent_color);
     uint64_t own_pieces=board.get_color_pieces(own_color);
     if (check_info.count>1)
@@ -58,13 +58,12 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool c
         generate_king_moves(move_list, board, own_color, own_pieces, king_square, captures_ony);
     }
 }
-std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& board, const Color friendly_color,const Color opponent_color, int king_square) {
+uint64_t MoveGenerator::calculate_pinned_pieces(const Board& board, const Color friendly_color,const Color opponent_color, int king_square) {
 	uint64_t all_rook_bockers = get_rook_attacks(king_square, board.get_all_pieces());
 	uint64_t all_bishop_blockers = get_bishop_attacks(king_square, board.get_all_pieces());
     uint64_t possible_rook_pinned = all_rook_bockers & board.get_color_pieces(friendly_color) & ~FOUR_CORNER_MASK;
     uint64_t possible_bishop_pinned = all_bishop_blockers & board.get_color_pieces(friendly_color) & ~FOUR_CORNER_MASK;
-    std::array<uint64_t,64> pinned_info;
-	pinned_info.fill(BOARD_ALL_SET);
+    uint64_t pinned_info=0;
     uint64_t opponent_rooks_queens = board.get_pieces(opponent_color, PieceType::ROOK) | board.get_pieces(opponent_color, PieceType::QUEEN);
     uint64_t opponent_bishops_queens = board.get_pieces(opponent_color, PieceType::BISHOP) | board.get_pieces(opponent_color, PieceType::QUEEN);
     if (opponent_rooks_queens != 0) {
@@ -73,7 +72,7 @@ std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& boa
             int second_blocker_sq = get_lsb(second_blockers);
             uint64_t between_mask = LINE_BETWEEN[king_square][second_blocker_sq];
             int first_blocker_sq = get_lsb(between_mask & possible_rook_pinned);
-            pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
+            pinned_info |= bit64(first_blocker_sq);
             second_blockers &= second_blockers - 1;
         }
     }
@@ -83,7 +82,7 @@ std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& boa
             int second_blocker_sq = get_lsb(second_blockers);
             uint64_t between_mask = LINE_BETWEEN[king_square][second_blocker_sq];
             int first_blocker_sq = get_lsb(between_mask & possible_bishop_pinned);
-            pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
+			pinned_info |= bit64(first_blocker_sq);
             second_blockers &= second_blockers - 1;
         }
     }
@@ -143,7 +142,7 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const
     return;
 }
 
-void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Color own_color,const std::array<uint64_t,64>& pinned_info,uint64_t remedy_mask, bool captures_only,bool with_checks) {
+void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask, bool captures_only,bool with_checks) {
     //return generate_sliding_moves(moves,PieceType::QUEEN,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t queens = board.get_pieces(own_color, PieceType::QUEEN);
     uint64_t occupied = board.get_all_pieces();
@@ -168,7 +167,10 @@ void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Col
         index = (rook_blockers * MAGIC_ROOK_NUMBER[from_square]) >> ROOK_SHIFT_NUMBERS[from_square];
         rook_attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index];
         uint64_t attacks = bishop_attacks | rook_attacks;
-        attacks&= ~own_pieces & remedy_mask & pinned_info[from_square];
+        attacks&= ~own_pieces & remedy_mask;
+        if (bit64(from_square) & pinned_info != 0) {
+			attacks &= COMPLETE_LINE[from_square][board.get_king_square(own_color)];
+        }
         while (attacks) {
             int to_square = get_lsb(attacks);
             moves.push_back(Move(from_square, to_square, PieceType::QUEEN, own_color, board.get_piece_on_square(to_square)));
@@ -180,7 +182,7 @@ void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Col
     }
 }
 
-void MoveGenerator::generate_rook_moves(MoveList& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info,uint64_t remedy_mask,bool captures_only,bool with_checks) {
+void MoveGenerator::generate_rook_moves(MoveList& moves,const Board& board, Color own_color, const uint64_t& pinned_info,uint64_t remedy_mask,bool captures_only,bool with_checks) {
     //return generate_sliding_moves(moves,PieceType::ROOK,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t rooks = board.get_pieces(own_color, PieceType::ROOK);
     uint64_t occupied = board.get_all_pieces();
@@ -199,7 +201,10 @@ void MoveGenerator::generate_rook_moves(MoveList& moves,const Board& board, Colo
         uint64_t attacks=0;
         uint64_t blockers = ROOK_BLOCKER_MASK[from_square] & occupied;
         uint64_t index = (blockers * MAGIC_ROOK_NUMBER[from_square]) >> ROOK_SHIFT_NUMBERS[from_square];
-        attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index] & ~ own_pieces & remedy_mask & pinned_info[from_square];
+        attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index] & ~own_pieces & remedy_mask;
+        if (bit64(from_square) & pinned_info) {
+            attacks &= COMPLETE_LINE[from_square][board.get_king_square(own_color)];
+        }
         while (attacks) {
             int to_square = get_lsb(attacks);
             moves.push_back(Move(from_square, to_square, PieceType::ROOK, own_color, board.get_piece_on_square(to_square)));
@@ -212,7 +217,7 @@ void MoveGenerator::generate_rook_moves(MoveList& moves,const Board& board, Colo
 
 }
 
-void MoveGenerator::generate_bishop_moves(MoveList& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, uint64_t remedy_mask,bool captures_only,bool with_checks) {
+void MoveGenerator::generate_bishop_moves(MoveList& moves,const Board& board, Color own_color, const uint64_t& pinned_info, uint64_t remedy_mask,bool captures_only,bool with_checks) {
     //return generate_sliding_moves(moves,PieceType::BISHOP,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t bishops = board.get_pieces(own_color, PieceType::BISHOP);
     uint64_t occupied = board.get_all_pieces();
@@ -231,7 +236,10 @@ void MoveGenerator::generate_bishop_moves(MoveList& moves,const Board& board, Co
         uint64_t attacks = 0;
         uint64_t blockers = BISHOP_BLOCKER_MASK[from_square] & occupied;
         uint64_t index = (blockers * MAGIC_BISHOP_NUMBER[from_square]) >> BISHOP_SHIFT_NUMBERS[from_square];
-        attacks = BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index] & ~own_pieces & remedy_mask & pinned_info[from_square]; 
+        attacks = BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index] & ~own_pieces & remedy_mask;
+        if(bit64(from_square) & pinned_info) {
+            attacks &= COMPLETE_LINE[from_square][board.get_king_square(own_color)];
+		}
         while (attacks) {
             int to_square = get_lsb(attacks);
             moves.push_back(Move(from_square, to_square, PieceType::BISHOP, own_color, board.get_piece_on_square(to_square)));
@@ -244,7 +252,7 @@ void MoveGenerator::generate_bishop_moves(MoveList& moves,const Board& board, Co
 
 }
 
-void MoveGenerator::generate_knight_moves(MoveList& moves,const Board& board, Color own_color, const std::array<uint64_t, 64>& pinned_info, uint64_t remedy_mask, bool captures_only,bool with_checks) {
+void MoveGenerator::generate_knight_moves(MoveList& moves,const Board& board, Color own_color, const uint64_t& pinned_info, uint64_t remedy_mask, bool captures_only,bool with_checks) {
     uint64_t knight_bitboard=board.get_pieces(own_color,PieceType::KNIGHT);
     uint64_t own_pieces = board.get_color_pieces(own_color);
     if (captures_only) {
@@ -259,7 +267,7 @@ void MoveGenerator::generate_knight_moves(MoveList& moves,const Board& board, Co
     while (knight_bitboard)
     {
         int from_square=get_lsb(knight_bitboard);
-        if (pinned_info[from_square]!=BOARD_ALL_SET)
+        if (bit64(from_square) & pinned_info)
         {
             knight_bitboard&=knight_bitboard-1;
             continue;
@@ -276,7 +284,7 @@ void MoveGenerator::generate_knight_moves(MoveList& moves,const Board& board, Co
     return;
 }
 
-void MoveGenerator::generate_pawn_moves(MoveList& moves,const Board& board, Color own_color,const int king_square, const std::array<uint64_t, 64>& pinned_info, const uint64_t& remedy_mask, bool captures_only,bool with_checks) {
+void MoveGenerator::generate_pawn_moves(MoveList& moves,const Board& board, Color own_color,const int king_square, const uint64_t& pinned_info, const uint64_t& remedy_mask, bool captures_only,bool with_checks) {
     
     if (!captures_only || (captures_only&&with_checks))
     {
@@ -292,7 +300,7 @@ void MoveGenerator::generate_sliding_moves(
     PieceType piece,
     const Board& board,
     Color own_color,
-    const std::array<uint64_t,64>& pinned_info, 
+    const uint64_t& pinned_info, 
     const uint64_t& remedy_mask,
     bool captures_only){
 
@@ -319,7 +327,10 @@ void MoveGenerator::generate_sliding_moves(
             
 
         }
-        possible_moves&=pinned_info[from_square] & remedy_mask&~board.get_color_pieces(own_color);
+        possible_moves&=remedy_mask&~board.get_color_pieces(own_color);
+        if (bit64(from_square) & pinned_info) {
+            possible_moves &= COMPLETE_LINE[from_square][board.get_king_square(own_color)];
+        }
         if (captures_only){
             Color other_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
             possible_moves &= board.get_color_pieces(other_color);
@@ -335,7 +346,7 @@ void MoveGenerator::generate_sliding_moves(
     return;
 }
 
-void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Board& board,Color own_color,const std::array<uint64_t,64>&pinned_info,uint64_t remedy_mask,bool with_checks){
+void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Board& board,Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask,bool with_checks){
 
         uint64_t own_pawns=board.get_pieces(own_color,PieceType::PAWN);
         uint64_t all_pieces=board.get_all_pieces();
@@ -357,8 +368,12 @@ void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Board& board,Colo
             if (to_square>=0 && to_square<64)
             {
                 if (!((1ULL<<to_square) &all_pieces))
-                {
-                    if (pinned_info[from_square] &(1ULL<< to_square) & remedy_mask)
+                {   
+                    uint64_t pinned_mask = BOARD_ALL_SET;
+                    if(bit64(from_square)& pinned_info) {
+                        pinned_mask = COMPLETE_LINE[from_square][board.get_king_square(own_color)];
+					}
+                    if (pinned_mask & (1ULL<< to_square) & remedy_mask)
                     {
                         bool is_promotion=(rank==promotion_rank);
                         if (is_promotion)
@@ -379,7 +394,7 @@ void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Board& board,Colo
                         int to_square2=from_square+2*push_step;
                         if (!((1ULL<< to_square2)& all_pieces))
                         {
-                            if (pinned_info[from_square] &(1ULL<<to_square2)& remedy_mask)
+                            if (pinned_mask & (1ULL<<to_square2) & remedy_mask)
                             {
                                 moves.push_back(Move(from_square,to_square2,PieceType::PAWN,own_color,PieceType::NONE));
                             }
@@ -396,7 +411,7 @@ void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Board& board,Colo
         }
         return;
 }
-void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, Color own_color,const int king_square,const std::array<uint64_t,64>& pinned_info,const uint64_t& remedy_mask){
+void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, Color own_color,const int king_square,const uint64_t& pinned_info,const uint64_t& remedy_mask){
 
         uint64_t own_pawns=board.get_pieces(own_color,PieceType::PAWN);
         Color opponent_color =(own_color==Color::WHITE) ? Color::BLACK:Color::WHITE;
@@ -411,7 +426,9 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, C
 
             uint64_t capture_bb=attack_bb & enemy_pieces;
 
-            capture_bb&=pinned_info[from_square];
+            if(bit64(from_square)& pinned_info) {
+                capture_bb &= COMPLETE_LINE[from_square][board.get_king_square(own_color)];
+            }
             capture_bb&=remedy_mask;
 
             while (capture_bb)
@@ -436,8 +453,12 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, C
             
             int ep_square=board.get_en_passant_rights();
             if (ep_square!=NO_SQUARE)
-            {  
-                if (attack_bb & (1ULL<<ep_square) & pinned_info[from_square] & remedy_mask)
+            {   
+				uint64_t pinned_mask = BOARD_ALL_SET;
+                if (bit64(from_square) & pinned_info) {
+                    pinned_mask = COMPLETE_LINE[from_square][board.get_king_square(own_color)];
+                }
+                if (attack_bb & (1ULL<<ep_square) & pinned_mask & remedy_mask)
                 {       
                     if (king_square /8 != from_square /8)
                     {
