@@ -109,19 +109,6 @@ inline int get_eg_pos_score(const Color& color, const PieceType& piece,const int
         return -EG_PST[to_int(piece)][flip_square(square)];
     }
 }
-inline int get_first_blocker_sq(const uint64_t& ray, const uint64_t& occupied_mask,bool forwards=true){
-    uint64_t blocker=ray & occupied_mask;
-    return forwards ? get_lsb(blocker):get_msb(blocker);
-}
-inline int get_second_blocker_sq(const uint64_t& ray, const uint64_t& occupied_mask,bool forwards=true,int first_blocker_sq=-2){
-    if (first_blocker_sq==-2)
-    {
-        first_blocker_sq=get_first_blocker_sq(ray,occupied_mask,forwards);
-    }
-    if (first_blocker_sq==NO_SQUARE) return NO_SQUARE;
-    return get_first_blocker_sq(ray^(1ULL<<first_blocker_sq),occupied_mask,forwards);
-    
-}
 inline Move parse_move(const std::string& move_str, MoveList& move_list){
     for (const Move& move : move_list)
     {

@@ -18,7 +18,7 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool c
     Color own_color=board.get_turn();
     Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
     int king_square=board.get_king_square(own_color);
-	std::array<uint64_t, 64> pinned_info = calculate_pinned_pieces(board, own_color, king_square);
+	std::array<uint64_t, 64> pinned_info = calculate_pinned_pieces(board, own_color,opponent_color,king_square);
     CheckInfo check_info=board.count_attacker_on_square(king_square,opponent_color);
     uint64_t own_pieces=board.get_color_pieces(own_color);
     if (check_info.count>1)
@@ -58,14 +58,13 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool c
         generate_king_moves(move_list, board, own_color, own_pieces, king_square, captures_ony);
     }
 }
-std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& board, const Color friendly_color, int king_square) {
+std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& board, const Color friendly_color,const Color opponent_color, int king_square) {
 	uint64_t all_rook_bockers = get_rook_attacks(king_square, board.get_all_pieces());
 	uint64_t all_bishop_blockers = get_bishop_attacks(king_square, board.get_all_pieces());
     uint64_t possible_rook_pinned = all_rook_bockers & board.get_color_pieces(friendly_color) & ~FOUR_CORNER_MASK;
     uint64_t possible_bishop_pinned = all_bishop_blockers & board.get_color_pieces(friendly_color) & ~FOUR_CORNER_MASK;
     std::array<uint64_t,64> pinned_info;
 	pinned_info.fill(BOARD_ALL_SET);
-    Color opponent_color = friendly_color == Color::WHITE ? Color::BLACK : Color::WHITE;
     uint64_t opponent_rooks_queens = board.get_pieces(opponent_color, PieceType::ROOK) | board.get_pieces(opponent_color, PieceType::QUEEN);
     uint64_t opponent_bishops_queens = board.get_pieces(opponent_color, PieceType::BISHOP) | board.get_pieces(opponent_color, PieceType::QUEEN);
     if (opponent_rooks_queens != 0) {
@@ -74,13 +73,7 @@ std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& boa
             int second_blocker_sq = get_lsb(second_blockers);
             uint64_t between_mask = LINE_BETWEEN[king_square][second_blocker_sq];
             int first_blocker_sq = get_lsb(between_mask & possible_rook_pinned);
-            if (first_blocker_sq != NO_SQUARE) {
-                pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
-            }
-            else {
-				std::cout << "Error in pinned piece calculation: no first blocker found for rook/queen!" << std::endl;
-                throw std::runtime_error("Error in pinned piece calculation: no first blocker found for rook/queen");
-            }
+            pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
             second_blockers &= second_blockers - 1;
         }
     }
@@ -90,13 +83,7 @@ std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& boa
             int second_blocker_sq = get_lsb(second_blockers);
             uint64_t between_mask = LINE_BETWEEN[king_square][second_blocker_sq];
             int first_blocker_sq = get_lsb(between_mask & possible_bishop_pinned);
-            if (first_blocker_sq != NO_SQUARE) {
-                pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
-            }
-            else {
-				std::cout << "Error in pinned piece calculation: no first blocker found for bishop/queen!" << std::endl;
-                throw std::runtime_error("Error in pinned piece calculation: no first blocker found for bishop/queen");
-            }
+            pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
             second_blockers &= second_blockers - 1;
         }
     }
