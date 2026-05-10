@@ -74,13 +74,7 @@ std::array<uint64_t, 64> MoveGenerator::calculate_pinned_pieces(const Board& boa
             int second_blocker_sq = get_lsb(second_blockers);
             uint64_t between_mask = LINE_BETWEEN[king_square][second_blocker_sq];
             int first_blocker_sq = get_lsb(between_mask & possible_rook_pinned);
-            if (first_blocker_sq != NO_SQUARE) {
-                pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
-            }
-            else {
-				std::cout << "Error in pinned piece calculation: no first blocker found for rook/queen!" << std::endl;
-                throw std::runtime_error("Error in pinned piece calculation: no first blocker found for rook/queen");
-            }
+            pinned_info[first_blocker_sq] = between_mask ^ (1ULL << king_square);
             second_blockers &= second_blockers - 1;
         }
     }
