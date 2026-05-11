@@ -168,7 +168,7 @@ void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Col
         rook_attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index];
         uint64_t attacks = bishop_attacks | rook_attacks;
         attacks&= ~own_pieces & remedy_mask;
-        if (bit64(from_square) & pinned_info != 0) {
+        if (bit64(from_square) & pinned_info) {
 			attacks &= COMPLETE_LINE[from_square][board.get_king_square(own_color)];
         }
         while (attacks) {
