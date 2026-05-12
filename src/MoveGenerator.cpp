@@ -12,8 +12,8 @@ MoveGenerator::MoveGenerator()
 {
     
 }
-
-void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool captures_ony,bool with_checks){
+template <bool captures_only, bool with_checks>
+void MoveGenerator::generate_moves(const Board& board,MoveList& move_list){
 	//if (board.is_fifty_move_rule_draw() || board.is_repetition_draw()) return move_list;
     Color own_color=board.get_turn();
     Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
@@ -23,10 +23,10 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list,bool c
     uint64_t own_pieces=board.get_color_pieces(own_color);
     if (check_info.count>1)
     { 
-        generate_king_moves(move_list,board, own_color,own_pieces,king_square,captures_ony);
+        generate_king_moves<captures_only>(move_list,board, own_color,own_pieces,king_square);
     }else if (check_info.count==1)
     {  
-        generate_king_moves(move_list,board, own_color,own_pieces ,king_square,captures_ony);
+        generate_king_moves(move_list,board, own_color,own_pieces ,king_square;
         
         PieceType checker=board.get_piece_on_square(check_info.attacker_square);
         uint64_t remedy_mask=(1ULL<< check_info.attacker_square);
@@ -89,7 +89,9 @@ uint64_t MoveGenerator::calculate_pinned_pieces(const Board& board, const Color 
 	return pinned_info;
       
 }
-void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const Color own_color, const uint64_t& own_pieces, int king_square, bool captures_only){
+
+template <bool captures_only>
+void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const Color own_color, const uint64_t& own_pieces, int king_square){
         uint64_t possible_moves=KING_ATTACKS[king_square]&~own_pieces;
         Color other_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
         if (captures_only) possible_moves&=board.get_color_pieces(other_color);
@@ -142,12 +144,13 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const
     return;
 }
 
-void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask, bool captures_only,bool with_checks) {
+template <bool captures_only, bool with_checks>
+void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask) {
     //return generate_sliding_moves(moves,PieceType::QUEEN,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t queens = board.get_pieces(own_color, PieceType::QUEEN);
     uint64_t occupied = board.get_all_pieces();
     uint64_t own_pieces = board.get_color_pieces(own_color); 
-    if (captures_only) {
+    if constexpr (captures_only) {
         Color other_color = own_color == Color::WHITE ? Color::BLACK : Color::WHITE;
         uint64_t mask_changer = board.get_color_pieces(other_color);
         if (with_checks) {
@@ -182,15 +185,16 @@ void MoveGenerator::generate_queen_moves(MoveList& moves,const Board& board, Col
     }
 }
 
-void MoveGenerator::generate_rook_moves(MoveList& moves,const Board& board, Color own_color, const uint64_t& pinned_info,uint64_t remedy_mask,bool captures_only,bool with_checks) {
+template <bool captures_only, bool with_checks>
+void MoveGenerator::generate_rook_moves(MoveList& moves,const Board& board, Color own_color, const uint64_t& pinned_info,uint64_t remedy_mask) {
     //return generate_sliding_moves(moves,PieceType::ROOK,board,own_color,pinned_info,remedy_mask,captures_only);
     uint64_t rooks = board.get_pieces(own_color, PieceType::ROOK);
     uint64_t occupied = board.get_all_pieces();
     uint64_t own_pieces = board.get_color_pieces(own_color); 
-    if (captures_only) {
+    if constexpr (captures_only) {
         Color other_color = own_color == Color::WHITE ? Color::BLACK : Color::WHITE;
         uint64_t mask_changer = board.get_color_pieces(other_color);
-        if (with_checks) {
+        if constexpr (with_checks) {
             int op_king_square = board.get_king_square(other_color);
             mask_changer |= get_rook_attacks(op_king_square,occupied);
         }
