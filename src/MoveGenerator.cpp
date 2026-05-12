@@ -89,7 +89,7 @@ uint64_t MoveGenerator::calculate_pinned_pieces(const Board& board, const Color 
 	return pinned_info;
       
 }
-void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const Color own_color, const uint64_t own_pieces, int king_square, bool captures_only){
+void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const Color own_color, const uint64_t& own_pieces, int king_square, bool captures_only){
         uint64_t possible_moves=KING_ATTACKS[king_square]&~own_pieces;
         Color other_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
         if (captures_only) possible_moves&=board.get_color_pieces(other_color);

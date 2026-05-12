@@ -8,7 +8,7 @@ class MoveGenerator
 {
 private:
     static uint64_t calculate_pinned_pieces(const Board& board,const Color friendly_color,const Color opponent_color, int king_square);
-    static void generate_king_moves(MoveList& moves,const Board& board, Color own_color,const uint64_t own_pieces, const int king_square, bool captures_only=false);
+    static void generate_king_moves(MoveList& moves,const Board& board, Color own_color,const uint64_t& own_pieces, const int king_square, bool captures_only=false);
     static void generate_queen_moves(MoveList& moves, const Board& board, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask=BOARD_ALL_SET, bool captures_only=false,bool with_checks=false);
     static void generate_rook_moves(MoveList& moves, const Board& board, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask=BOARD_ALL_SET, bool captures_only=false,bool with_checks=false);
     static void generate_bishop_moves(MoveList& moves, const Board& board, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask=BOARD_ALL_SET, bool captures_only=false,bool with_checks=false);
