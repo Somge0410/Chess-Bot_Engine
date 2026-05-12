@@ -107,6 +107,8 @@ struct ThreadLocalData {
         std::memset(history_scores, 0, sizeof(history_scores));
     }
 
+    MoveList move_lists[MAX_PLY];
+    int move_scores[MAX_PLY][256] = {};
     Move killer_moves[128][2] = {};
     int history_scores[2][6][64] = {};
     std::atomic<uint64_t> nodes{ 0 };
