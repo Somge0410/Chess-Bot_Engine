@@ -39,6 +39,7 @@ public:
 
     template <bool captures_only = false, bool with_checks = false>
     static void generate_moves(const Board& board,MoveList& moves);
+
     static void generate_captures(const Board& board,MoveList& moves);
 	static void generate_captures_with_checks(const Board& board,MoveList& moves);
     };
