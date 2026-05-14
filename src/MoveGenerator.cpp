@@ -23,10 +23,10 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list){
     uint64_t own_pieces=board.get_color_pieces(own_color);
     if (check_info.count>1)
     { 
-        generate_king_moves<captures_only,with_checks>(move_list,board, own_color,own_pieces,king_square);
+        generate_king_moves<captures_only>(move_list, board, own_color, own_pieces, king_square);
     }else if (check_info.count==1)
     {  
-        generate_king_moves<captures_only,with_checks>(move_list,board, own_color,own_pieces ,king_square);
+        generate_king_moves<captures_only>(move_list,board, own_color,own_pieces ,king_square);
         
         PieceType checker=board.get_piece_on_square(check_info.attacker_square);
         uint64_t remedy_mask=(1ULL<< check_info.attacker_square);
@@ -53,7 +53,7 @@ void MoveGenerator::generate_moves(const Board& board,MoveList& move_list){
 
         generate_pawn_moves<captures_only,with_checks>(move_list, board, own_color, king_square, pinned_info, BOARD_ALL_SET);
 
-        generate_king_moves<captures_only,with_checks>(move_list, board, own_color, own_pieces, king_square);
+        generate_king_moves<captures_only>(move_list, board, own_color, own_pieces, king_square);
     }
 }
 uint64_t MoveGenerator::calculate_pinned_pieces(const Board& board, const Color friendly_color,const Color opponent_color, int king_square) {
@@ -503,3 +503,11 @@ void MoveGenerator::generate_captures(const Board& board, MoveList& moves){
 void MoveGenerator::generate_captures_with_checks(const Board& board,MoveList& moves){
     return generate_moves<true,true>(board,moves);
 }
+
+
+
+// Force the compiler to generate these specific versions of the template
+template void MoveGenerator::generate_moves<false, false>(const Board&, MoveList&);
+template void MoveGenerator::generate_moves<true, false>(const Board&, MoveList&);
+template void MoveGenerator::generate_moves<false, true>(const Board&, MoveList&);
+template void MoveGenerator::generate_moves<true, true>(const Board&, MoveList&);
