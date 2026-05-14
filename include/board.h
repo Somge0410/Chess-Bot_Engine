@@ -162,6 +162,7 @@ class Board{
             return all_pieces;
         }
         PieceType get_piece_on_square(int square)const;
+        PieceType get_piece_on_square2(int square) const;
         Color get_color_on_square(int square) const;
         char get_char_on_square(int square) const;
 		uint64_t get_pawn_attacks_for_color(Color color) const;
@@ -212,6 +213,7 @@ class Board{
         int turn;
 		int white_king_square;
 		int black_king_square; 
+		std::array<PieceType, 64> piece_type_map;
 
         // Bitboards
 
@@ -230,6 +232,7 @@ class Board{
 
 		// Initialization Helpers
         void initialize_board();
+        void initialize_piece_type_map();
         void initialize_game_phase();
         uint64_t initialize_hash() const;
 		uint64_t initialize_pawn_key() const;
@@ -256,6 +259,8 @@ class Board{
         void update_positional_score(const Move& move);
         void update_game_phase(const Move& move);
 		void update_king_square(const Move& move);
+		void update_piece_type_map(const Move& move);
+		void undo_update_piece_type_map(const Move& move);
         void recover_board_state(const BoardState& previous_state);
 		void update_move_count(const Move& move);
         void update_repetition_tracker();

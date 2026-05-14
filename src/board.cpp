@@ -265,6 +265,7 @@ void Board::make_move(const Move& move){
     update_en_passsant_rights(move);
     update_king_square(move);
     update_pieces(move);
+    update_piece_type_map(move);
     update_pieces_hash(move);
     update_turn_rights(move);
     debug_check_pawn_key();
@@ -273,6 +274,7 @@ void Board::make_move(const Move& move){
 }
 void Board::undo_move(const Move& move){
     recover_board_state(history.back());
+    undo_update_piece_type_map(move);
     history.pop_back();
 	debug_check_pawn_key();
 }
@@ -571,6 +573,53 @@ PieceType Board::get_piece_on_square(int square) const {
 
     return piece_type;
 }
+PieceType Board::get_piece_on_square2(int square) const {
+    return piece_type_map[square];
+}
+void Board::initialize_piece_type_map() {
+
+    for (int square = 0; square < 64; ++square) {
+		piece_type_map[square] = PieceType::NONE;
+        for (int piece_type_index = 0; piece_type_index < 6; ++piece_type_index) {
+            if ((pieces[0][piece_type_index] & (1ULL << square)) != 0 || (pieces[1][piece_type_index] & (1ULL << square)) != 0) {
+                piece_type_map[square] = static_cast<PieceType>(piece_type_index);
+                break;
+            }
+		}
+    }
+
+}
+void Board::update_piece_type_map(const Move& move) {
+    PieceType piece_reached = move.promotion_piece == PieceType::NONE ? move.piece_moved : move.promotion_piece;
+    piece_type_map[move.from_square] = PieceType::NONE;
+    piece_type_map[move.to_square] = piece_reached;
+    if (move.is_castle) {
+        bool king_side = move.to_square > move.from_square;
+        int old_rook_square = king_side ? move.to_square + 1 : move.to_square - 2;
+        int new_rook_square = king_side ? move.to_square - 1 : move.to_square + 1;
+        piece_type_map[old_rook_square] = PieceType::NONE;
+        piece_type_map[new_rook_square] = PieceType::ROOK;
+    }
+    if (move.piece_captured != PieceType::NONE) {
+        int capture_square = move.is_en_passant ? (move.move_color == Color::WHITE ? move.to_square - 8 : move.to_square + 8) : move.to_square;
+        piece_type_map[capture_square] = PieceType::NONE;
+	}
+}
+void Board::undo_update_piece_type_map(const Move& move) {
+    piece_type_map[move.to_square] = PieceType::NONE;
+    piece_type_map[move.from_square] = move.piece_moved;
+    if (move.is_castle) {
+        bool king_side = move.to_square > move.from_square;
+        int old_rook_square = king_side ? move.to_square + 1 : move.to_square - 2;
+        int new_rook_square = king_side ? move.to_square - 1 : move.to_square + 1;
+        piece_type_map[old_rook_square] = PieceType::ROOK;
+        piece_type_map[new_rook_square] = PieceType::NONE;
+    }
+    if (move.piece_captured != PieceType::NONE) {
+        int capture_square = move.is_en_passant ? (move.move_color == Color::WHITE ? move.to_square - 8 : move.to_square + 8) : move.to_square;
+        piece_type_map[capture_square] = move.piece_captured;
+    }
+}
 Color Board::get_color_on_square(int square) const {
     
     for (int color = 0; color < 2; ++color) {
@@ -582,6 +631,7 @@ Color Board::get_color_on_square(int square) const {
 }
 char Board::get_char_on_square(int square) const {
 	char piece_char = PIECE_CHAR_LIST[to_int(get_piece_on_square(square))];
+    if(get_piece_on_square)
     if (piece_char == '.') {
         return piece_char; // Empty square
 	}
