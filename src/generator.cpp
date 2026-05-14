@@ -271,7 +271,7 @@ int main(){
         }
     }
     // King Shield_Masks
-
+	
     std::vector<std::vector<uint64_t>> king_shield_mask(2,std::vector<uint64_t>(64,0));
 
     for (int square = 0; square < 64; ++square)

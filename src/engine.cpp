@@ -103,7 +103,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	}
     // End of Null-move pruning
 	//Generate moves
-    MoveList moves;
+	MoveList& moves = tls->move_lists[ply];
+    moves.clear();
     MoveGenerator::generate_moves(board,moves);
 	//If only one move available, no need to search further
     if ((ply == 0) && (moves.size() == 1)) {
@@ -137,7 +138,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_any_tempered = false;
     bool is_best_move_tempered = false;
     bool current_move_tempered = false;
-    int scores[256];
+    int* scores = tls->move_scores[ply];
 	score_moves(moves, scores, ply, tt_move, is_from_depth_0,board,tls);
     for (int i=0;i<(int)moves.size();++i)
     {   
