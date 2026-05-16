@@ -89,7 +89,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
 		int rfp_margin = 112 * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
-            rev_fut_count++;
             return { static_eval,Move() };
         }
 	}
