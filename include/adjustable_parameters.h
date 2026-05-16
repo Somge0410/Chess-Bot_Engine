@@ -121,7 +121,7 @@ constexpr int QUEEN_ATTACK_VALUE = 80;
 const int FUTILITY_MARGIN_D1 = 200;
 const int FUTILITY_MARGIN_D2 = 400;
 const int DELTA_MARGIN = 200;
-constexpr int MAX_QUIET_PLY = 7;
+constexpr int MAX_QUIET_PLY = 12;
 
 // --- NEU: Late Move Reduction (LMR) ---
 constexpr int LMR_MIN_DEPTH = 3;
