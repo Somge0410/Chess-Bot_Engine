@@ -256,7 +256,7 @@ int Engine::quiescence_search(Board& board,int alpha, int beta,int ply, ThreadLo
 	int stand_pat_score = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     if (stand_pat_score >= beta) {
         Move move;
-        store_tt(hash, 0, alpha, beta, stand_pat_score, move,false,false, TTMode::Quiescence);
+        //store_tt(hash, 0, alpha, beta, stand_pat_score, move,false,false, TTMode::Quiescence);
         return stand_pat_score;
     } 
 
