@@ -21,8 +21,6 @@
 #include <iostream>
 int main(int argc, char* argv[]) {
     Zobrist::initialize_keys();
-  
-
         std::ios::sync_with_stdio(false);
         std::cin.tie(nullptr);
         uci_loop();
