@@ -13,6 +13,7 @@
 #include "constants.h"
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
+#include "adjustable_parameters.h"
 
 #ifndef GIT_COMMIT
 #define GIT_COMMIT "unknown"
@@ -156,7 +157,23 @@ void uci_loop() {
             std::cout << "id author Aaron\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
             std::cout << "option name Hash type spin default "
-                << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
+                      << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
+            std::cout << "option name RevFut type spin default 125 min 0 max 500" << std::endl;
+            std::cout << "option name RevFutDepth type spin default 5 min 1 max 20" << std::endl;
+            std::cout << "option name FutilityMarginD1 type spin default 200 min 0 max 1000" << std::endl;
+            std::cout << "option name FutilityMarginD2 type spin default 400 min 0 max 1000" << std::endl;
+            std::cout << "option name DeltaMargin type spin default 200 min 0 max 1000" << std::endl;
+            std::cout << "option name MaxQuietPly type spin default 7 min 1 max 20" << std::endl;
+            std::cout << "option name LmrMinDepth type spin default 3 min 1 max 10" << std::endl;
+            std::cout << "option name LmrMinMoves type spin default 3 min 1 max 10" << std::endl;
+            std::cout << "option name LmrRedAm type spin default 2 min 0 max 10" << std::endl;
+            std::cout << "option name NmpReduction type spin default 3 min 1 max 10" << std::endl;
+            std::cout << "option name HistoryBonusMultiplier type spin default 1 min 0 max 10" << std::endl;
+            std::cout << "option name AspirationWindowInitial type spin default 50 min 1 max 500" << std::endl;
+            std::cout << "option name AspirationWindowMultiplier type spin default 2 min 1 max 10" << std::endl;
+            std::cout << "option name TimeAllocationDivisor type spin default 40 min 1 max 100" << std::endl;
+            std::cout << "option name MaxTimeFraction type spin default 2 min 1 max 10" << std::endl;
+
             std::cout << "uciok\n";
             std::cout.flush();
         }
@@ -218,6 +235,89 @@ void uci_loop() {
                 engine.resize_tt(hash_mb);
                 std::cerr << "info string Hash set to " << hash_mb << " MB\n";
             }
+            else if(opt_name == "RevFut"){
+                int val=std::stoi(opt_value);
+                REVERSE_FUTILITY_MARGIN = std::max(0,val);
+                std::cerr << "info string RevFut set to " << val << "\n";
+			}
+            else if (opt_name == "RevFutDepth") {
+                int val = std::stoi(opt_value);
+                REVERSE_FUTILITY_MAX_DEPTH = std::max(0, val);
+                std::cerr << "info string RevFutDepth set to " << val << "\n";
+            }
+            else if(opt_name =="FutilityMarginD1"){
+                int val=std::stoi(opt_value);
+                FUTILITY_MARGIN_D1=std::max(0,val);
+                std::cerr << "info string FutilityMarginD1 set to " << val << "\n";
+            }
+            else if (opt_name == "FutilityMarginD2") {
+                int val = std::stoi(opt_value);
+                FUTILITY_MARGIN_D2 = std::max(0, val);
+                std::cerr << "info string FutilityMarginD2 set to " << val << "\n";
+			}
+            else if(opt_name == "DeltaMargin"){
+                int val=std::stoi(opt_value);
+                DELTA_MARGIN=std::max(0,val);
+                std::cerr << "info string DeltaMargin set to " << val << "\n";
+			}
+            else if (opt_name == "MaxQuietPly") {
+                int val = std::stoi(opt_value);
+                MAX_QUIET_PLY = std::max(0, val);
+                std::cerr << "info string MaxQuietPly set to " << val << "\n";
+            }
+            else if (opt_name == "LmrMinDepth") {
+                int val = std::stoi(opt_value);
+                LMR_MIN_DEPTH = std::max(0, val);
+                std::cerr << "info string LmrMinDepth set to " << val << "\n";
+            }
+            else if (opt_name == "LmrMinMoves") {
+                int val = std::stoi(opt_value);
+                LMR_MIN_MOVES_SEARCHED = std::max(0, val);
+                std::cerr << "info string LMR_MIN_MOVES set to " << val << "\n";
+            }
+            else if (opt_name == "LmrRedAm") {
+                int val = std::stoi(opt_value);
+                LMR_REDUCTION_AMOUNT = std::max(0, val);
+                std::cerr << "info string LmrRedAm set to " << val << "\n";
+            }
+            else if (opt_name == "NmpMinDepth") {
+                int val = std::stoi(opt_value);
+                NMP_MIN_DEPTH = std::max(0, val);
+                std::cerr << "info string NmpMinDepth set to " << val << "\n";
+            }
+            else if (opt_name == "NmpReduction") {
+                int val = std::stoi(opt_value);
+                NMP_REDUCTION = std::max(0, val);
+                std::cerr << "info string NmpReduction set to " << val << "\n";
+            }
+            else if (opt_name == "HistoryBonusMultiplier") {
+                int val = std::stoi(opt_value);
+                HISTORY_BONUS_MULTIPLIER = std::max(1, val);
+                std::cerr << "info string HISTORY_BONUS_MULTIPLIER set to " << val << "\n";
+            }
+            else if (opt_name == "AspirationWindowInitial") {
+                int val = std::stoi(opt_value);
+                ASPIRATION_WINDOW_INITIAL = std::max(0, val);
+                std::cerr << "info string AspirationWindowInitial set to " << val << "\n";
+            }
+            else if(opt_name == "AspirationWindowMultiplier"){
+                int val=std::stoi(opt_value);
+                ASPIRATION_WINDOW_MULTIPLIER=std::max(1,val);
+                std::cerr << "info string AspirationWindowMultiplier set to " << val << "\n";
+            }
+             else if (opt_name == "TimeAllocationDivisor") {
+                int val = std::stoi(opt_value);
+                TIME_ALLOCATION_DIVISOR = std::max(1, val);
+                std::cerr << "info string TimeAllocationDivisor set to " << val << "\n";
+            }
+            else if (opt_name == "MaxTimeFraction") {
+                int val = std::stoi(opt_value);
+                MAX_TIME_FRACTION = std::max(1, val);
+                std::cerr << "info string MaxTimeFraction set to " << val << "\n";
+			}
+        
+
+
         }
         else if (line.rfind("position", 0) == 0) {
             std::istringstream iss(line);
