@@ -559,11 +559,12 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
 
 }
 bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move) {
-	if (depth > 2) return false;
+	if (depth > 3) return false;
     bool is_quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
     if (in_check || !is_quiet) return false;
     if (depth == 1 && eval + FUTILITY_MARGIN_D1 <= alpha) return true;
     if (depth == 2 && eval + FUTILITY_MARGIN_D2 <= alpha) return true;
+    if (depth == 3 && eval + FUTILITY_MARGIN_D3 <= alpha) return true;
     return false;
 }
 int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply,ThreadLocalData* tls) {
