@@ -17,7 +17,7 @@
 #endif
 
 inline int get_lsb(uint64_t bitboard) {
-    if (bitboard == 0) return -1;
+    if (bitboard == 0) return NO_SQUARE;
 #if defined(_MSC_VER)
     unsigned long index;
     _BitScanForward64(&index, bitboard);
@@ -28,7 +28,7 @@ inline int get_lsb(uint64_t bitboard) {
 }
 
 inline int get_msb(uint64_t bitboard) {
-    if (bitboard == 0) return -1;
+    if (bitboard == 0) return NO_SQUARE;
 #if defined(_MSC_VER)
     unsigned long index;
     _BitScanReverse64(&index, bitboard);
@@ -108,19 +108,6 @@ inline int get_eg_pos_score(const Color& color, const PieceType& piece,const int
     else {
         return -EG_PST[to_int(piece)][flip_square(square)];
     }
-}
-inline int get_first_blocker_sq(const uint64_t& ray, const uint64_t& occupied_mask,bool forwards=true){
-    uint64_t blocker=ray & occupied_mask;
-    return forwards ? get_lsb(blocker):get_msb(blocker);
-}
-inline int get_second_blocker_sq(const uint64_t& ray, const uint64_t& occupied_mask,bool forwards=true,int first_blocker_sq=-2){
-    if (first_blocker_sq==-2)
-    {
-        first_blocker_sq=get_first_blocker_sq(ray,occupied_mask,forwards);
-    }
-    if (first_blocker_sq==-1) return -1;
-    return get_first_blocker_sq(ray^(1ULL<<first_blocker_sq),occupied_mask,forwards);
-    
 }
 inline Move parse_move(const std::string& move_str, MoveList& move_list){
     for (const Move& move : move_list)
@@ -257,8 +244,8 @@ inline int king_distance(int sq1, int sq2) {
 }
 
 struct EvaluationResult {
-    int mg_score;
-    int eg_score;
+    int16_t mg_score;
+    int16_t eg_score;
     EvaluationResult& operator+=(const EvaluationResult& other) {
         this->mg_score += other.mg_score;
         this->eg_score += other.eg_score;

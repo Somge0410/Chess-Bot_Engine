@@ -88,7 +88,6 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
 		int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
-            rev_fut_count++;
             return { static_eval,Move() };
         }
 	}
@@ -102,7 +101,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	}
     // End of Null-move pruning
 	//Generate moves
-    MoveList moves;
+	MoveList& moves = tls->move_lists[ply];
+    moves.clear();
     MoveGenerator::generate_moves(board,moves);
 	//If only one move available, no need to search further
     if ((ply == 0) && (moves.size() == 1)) {
@@ -136,7 +136,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_any_tempered = false;
     bool is_best_move_tempered = false;
     bool current_move_tempered = false;
-    int scores[256];
+    int* scores = tls->move_scores[ply];
 	score_moves(moves, scores, ply, tt_move, is_from_depth_0,board,tls);
     for (int i=0;i<(int)moves.size();++i)
     {   
@@ -253,8 +253,6 @@ int Engine::quiescence_search(Board& board,int alpha, int beta,int ply, ThreadLo
     }
 	int stand_pat_score = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     if (stand_pat_score >= beta) {
-        Move move;
-        store_tt(hash, 0, alpha, beta, stand_pat_score, move,false,false, TTMode::Quiescence);
         return stand_pat_score;
     } 
 
@@ -451,7 +449,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         int score = entry.score();
         int a = alpha, b = beta;
         if (entry.flag() == EXACT) {
-            if (out_move.from_square == -1) return false;
+            if (out_move.from_square == NO_SQUARE) return false;
             return true;
 		}
         if (entry.flag() == LOWERBOUND) a = std::max(a, score);
@@ -463,7 +461,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
             hits = true;
         }
         if (a >= b) {
-            if (out_move.from_square == -1) return false;
+            if (out_move.from_square == NO_SQUARE) return false;
             return true;
         }
     }
@@ -560,11 +558,12 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
 
 }
 bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move) {
-	if (depth > 2) return false;
+	if (depth > 3) return false;
     bool is_quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
     if (in_check || !is_quiet) return false;
     if (depth == 1 && eval + FUTILITY_MARGIN_D1 <= alpha) return true;
     if (depth == 2 && eval + FUTILITY_MARGIN_D2 <= alpha) return true;
+    if (depth == 3 && eval + FUTILITY_MARGIN_D3 <= alpha) return true;
     return false;
 }
 int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply,ThreadLocalData* tls) {
@@ -619,14 +618,7 @@ void Engine::init_tt(size_t tt_size_mb) {
 }
 bool Engine::move_could_result_in_repetition(Board& board, Move& move, int count) {
     if (move.piece_captured != PieceType::NONE || move.piece_moved == PieceType::PAWN || move.is_castle) return false;
-    if (board.any_appeared_more_than(2)) return true;
-	/*recover_move_fully(move, board);
-    board.make_move(move);
-    have_to_make_move_count++;
-	bool result = board.any_appeared_more_than(2);
-    board.undo_move(move);
-    return result;*/
-    return false;
+    return board.has_twofold();
 }
 void Engine::recover_move_fully(Move& move,const Board& board) {
     move.move_color = board.get_turn();
@@ -1028,7 +1020,7 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         // depth=0 akzeptiert jeden TT-Eintrag mit depth>=0
         if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, depth_0))
             break;
-        if (tt_move.from_square == -1 || tt_move.to_square == -1)
+        if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)
             break;
 
         // TT speichert nur from/to/promotion — Rest muss rekonstruiert werden
