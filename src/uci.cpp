@@ -162,6 +162,7 @@ void uci_loop() {
             std::cout << "option name RevFutDepth type spin default 5 min 1 max 20" << std::endl;
             std::cout << "option name FutilityMarginD1 type spin default 200 min 0 max 1000" << std::endl;
             std::cout << "option name FutilityMarginD2 type spin default 400 min 0 max 1000" << std::endl;
+			std::cout << "option name FutilityMarginD2 type spin default 400 min 0 max 1000" << std::endl;
             std::cout << "option name DeltaMargin type spin default 200 min 0 max 1000" << std::endl;
             std::cout << "option name MaxQuietPly type spin default 7 min 1 max 20" << std::endl;
             std::cout << "option name LmrMinDepth type spin default 3 min 1 max 10" << std::endl;
@@ -255,6 +256,11 @@ void uci_loop() {
                 FUTILITY_MARGIN_D2 = std::max(0, val);
                 std::cerr << "info string FutilityMarginD2 set to " << val << "\n";
 			}
+            else if (opt_name == "FutilityMarginD3") {
+                int val = std::stoi(opt_value);
+                FUTILITY_MARGIN_D3 = std::max(0, val);
+                std::cerr << "info string FutilityMarginD3 set to " << val << "\n";
+            }
             else if(opt_name == "DeltaMargin"){
                 int val=std::stoi(opt_value);
                 DELTA_MARGIN=std::max(0,val);

@@ -121,6 +121,7 @@ constexpr int QUEEN_ATTACK_VALUE = 80;
 
 inline int FUTILITY_MARGIN_D1 = 200;
 inline int FUTILITY_MARGIN_D2 = 400;
+inline int FUTILITY_MARGIN_D3 = 600;
 inline int DELTA_MARGIN = 200;
 inline int MAX_QUIET_PLY = 7;
 
