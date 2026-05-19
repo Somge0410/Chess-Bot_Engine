@@ -160,9 +160,9 @@ void uci_loop() {
                       << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
             std::cout << "option name RevFut type spin default 125 min 0 max 500" << std::endl;
             std::cout << "option name RevFutDepth type spin default 5 min 1 max 20" << std::endl;
-            std::cout << "option name FutilityMarginD1 type spin default 200 min 0 max 1000" << std::endl;
-            std::cout << "option name FutilityMarginD2 type spin default 400 min 0 max 1000" << std::endl;
-			std::cout << "option name FutilityMarginD2 type spin default 400 min 0 max 1000" << std::endl;
+            std::cout << "option name FutilityMarginD1 type spin default 200 min 0 max 10000" << std::endl;
+            std::cout << "option name FutilityMarginD2 type spin default 400 min 0 max 10000" << std::endl;
+			std::cout << "option name FutilityMarginD3 type spin default 400 min 0 max 10000" << std::endl;
             std::cout << "option name DeltaMargin type spin default 200 min 0 max 1000" << std::endl;
             std::cout << "option name MaxQuietPly type spin default 7 min 1 max 20" << std::endl;
             std::cout << "option name LmrMinDepth type spin default 3 min 1 max 10" << std::endl;
