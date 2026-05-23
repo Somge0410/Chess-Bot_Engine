@@ -203,6 +203,7 @@ class Board{
         bool has_enough_material_for_nmp() const;
         //other
         bool is_passed_after(const Move& move) const;
+		bool is_dangerous_passer_push(const Move& move) const;
     private:
 		// Member Variables
         uint64_t zobrist_hash;

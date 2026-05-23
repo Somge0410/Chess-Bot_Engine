@@ -151,7 +151,10 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             continue;
 		}
         // Late Move Reduction
-		int reduction = late_move_reduction(depth, moves_searched, move, ply,tls);
+        int reduction = 0;
+        if (!board.is_dangerous_passer_push(move)) {
+            reduction = late_move_reduction(depth, moves_searched, move, ply, tls);
+        }
         moves_searched++;
         //Now make the move
         board.make_move(move);

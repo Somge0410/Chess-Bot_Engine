@@ -875,3 +875,15 @@ bool Board::is_passed_after(const Move& move) const {
     if (move.piece_moved!= PieceType::PAWN) return false;
 	return (pieces[to_int(flip_color(move.move_color))][to_int(PieceType::PAWN)] & PASSED_PAWN_MASK[to_int(move.move_color)][move.to_square]) == 0;
 }
+bool Board::is_dangerous_passer_push(const Move& move) const {
+    if (move.piece_moved != PieceType::PAWN) return false;
+	if (move.piece_captured != PieceType::NONE) return false;
+	if (move.promotion_piece != PieceType::NONE) return true;
+
+	int rr = move.move_color == Color::WHITE ? move.to_square/8 : 7-move.to_square/8;
+
+    if (rr < 6) return false;
+	if (!is_passed_after(move)) return false;
+    return true;
+
+}
