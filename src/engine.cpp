@@ -139,7 +139,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_best_move_tempered = false;
     bool current_move_tempered = false;
     int* scores = tls->move_scores[ply];
-	score_moves(moves, scores, ply, tt_move, is_from_depth_0,board,tls);
+	score_moves(moves, scores, ply, tt_move, is_from_depth_0,board,tls,previous_move);
     for (int i=0;i<(int)moves.size();++i)
     {   
 		pick_best(moves, scores, i);
@@ -153,7 +153,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         // Late Move Reduction
         int reduction = 0;
         if (!board.is_dangerous_passer_push(move)) {
-            reduction = late_move_reduction(depth, moves_searched, move, ply, tls);
+            reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
         }
         moves_searched++;
         //Now make the move
@@ -254,10 +254,10 @@ int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_
 	}
 	return stage * 100000 + sub;
 }      
-void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& tt_move,bool tt_depth_0, ThreadLocalData* tls){
+void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& tt_move,bool tt_depth_0, ThreadLocalData* tls, const Move& previous_move){
     std::vector<std::pair<int, Move>> scored;
     scored.reserve(moves.size());
-    for (const auto& m : moves) scored.emplace_back(score_move(m, ply, tt_move,tt_depth_0,board,tls), m);
+    for (const auto& m : moves) scored.emplace_back(score_move(m, ply, tt_move,tt_depth_0,board,tls,previous_move), m);
 
     std::sort(scored.begin(), scored.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
 
@@ -652,9 +652,9 @@ void Engine::recover_move_fully(Move& move,const Board& board) {
     move.is_en_passant = move.piece_moved == PieceType::PAWN && move.to_square==board.get_en_passant_rights();
 }
 void Engine::score_moves(const MoveList& moves, int* scores,
-    int ply, const Move& tt_move, bool tt_depth_0,const Board& board,ThreadLocalData* tls) {
+    int ply, const Move& tt_move, bool tt_depth_0,const Board& board,ThreadLocalData* tls,const Move& previous_move) {
     for (int i = 0; i < (int)moves.size(); ++i)
-        scores[i] = score_move(moves[i], ply, tt_move, tt_depth_0,board, tls);
+        scores[i] = score_move(moves[i], ply, tt_move, tt_depth_0,board, tls,previous_move);
 }
 void Engine::score_quiet_moves(const MoveList& moves, int* scores,const Board& board,bool evade_check) {
     for (int i = 0; i < (int)moves.size(); ++i) {

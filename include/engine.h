@@ -168,7 +168,7 @@ class Engine {
         int history_scores[2][6][64]={};*/
         std::chrono::steady_clock::time_point start_time;
         std::chrono::duration<double> time_limit;
-        void sort_moves(MoveList& moves, const Board& board, int ply,const Move& tt_move, bool tt_depth_0 = false,ThreadLocalData* tls={});
+        void sort_moves(MoveList& moves, const Board& board, int ply,const Move& tt_move, bool tt_depth_0 = false,ThreadLocalData* tls={}, const Move& previous_move=Move());
         int score_move(const Move& move, int ply,const Move& tt_move, bool depth_0,const Board& board,ThreadLocalData* tls, const Move& previous_move);
         uint64_t perft_driver(Board& board, int depth, int orignal_depth);
         TimeControlDecision decide_time_control(const Board& position, const SearchLimits& limits);
@@ -183,7 +183,7 @@ class Engine {
         bool move_could_result_in_repetition(Board& board, Move& move, int count=3);
         void recover_move_fully(Move& move,const Board& board);
         void score_moves(const MoveList& moves, int* scores, 
-		int ply, const Move& tt_move, bool depth_0,const Board& board, ThreadLocalData* tls);
+		int ply, const Move& tt_move, bool depth_0,const Board& board, ThreadLocalData* tls,const Move& previous_move);
         void score_quiet_moves(const MoveList& moves, int* scores,const Board& board,bool evade_check);
 		int relevant_pawn_push(const Board& board, const Move& move);
 		void iterative_deepening_new(int thread_id, bool is_master,Move& out_best_move ,int& io_best_score,const Board& board, const TimeControlDecision& tc,ThreadLocalData* tls);
