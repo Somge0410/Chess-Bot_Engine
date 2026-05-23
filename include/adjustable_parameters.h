@@ -134,12 +134,13 @@ constexpr int NMP_REDUCTION = 3;
 
 // --- NEU: Move Ordering ---
 constexpr int CAPTURE_SCORE_TIEBREAK_DIVISOR = 16;
-constexpr int MVV_LVA_STAGE = 4;
+constexpr int COUNTERMOVE_STAGE=3;
+constexpr int MVV_LVA_STAGE = 5;
 constexpr int LOSING_CAPTURE_STAGE = 1;
-constexpr int KILLER_STAGE = 3;
+constexpr int KILLER_STAGE = 4;
 constexpr int QUIET_STAGE = 2;
-constexpr int TT_STAGE = 6;
-constexpr int PROMO_STAGE = 5;
+constexpr int TT_STAGE = 7;
+constexpr int PROMO_STAGE = 6;
 
 // --- NEU: History Heuristic ---
 constexpr int HISTORY_BONUS_MULTIPLIER = 1;  // bonus = depth * depth * multiplier

@@ -43,7 +43,7 @@ Engine::Engine(size_t tt_size_mb){
     checkmate_count=0;
 	int overwrite_tt_counter = 0;
 }
-SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls){
+SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls, const Move& previous_move){
     if (tls) {
         if(depth==0) tls->qnodes++;
 		else tls->nodes++;
@@ -167,7 +167,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		}
         int evaluation;
         if (first) { 
-			SearchResult first_result = negamax(board, depth - 1 + extension, -beta, -alpha, ply + 1,tls);
+			SearchResult first_result = negamax(board, depth - 1 + extension, -beta, -alpha, ply + 1,tls,move);
             evaluation = -first_result.score;
             current_move_tempered = first_result.is_tempered;
 			first = false;
@@ -176,18 +176,18 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             int new_depth = depth - 1 + extension;
 			int reduced_depth = new_depth - reduction;
 
-            SearchResult other_result = negamax(board, reduced_depth, -alpha - 1, -alpha, ply + 1,tls);
+            SearchResult other_result = negamax(board, reduced_depth, -alpha - 1, -alpha, ply + 1,tls,move);
             evaluation = -other_result.score;
             current_move_tempered = other_result.is_tempered;
 
             if (reduction > 0 && evaluation > alpha) {
-                other_result = negamax(board, new_depth, -alpha - 1, -alpha, ply + 1,tls);
+                other_result = negamax(board, new_depth, -alpha - 1, -alpha, ply + 1,tls,move);
                 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
             }
 
             if(evaluation > alpha && evaluation < beta) {
-                 other_result = negamax(board, new_depth, -beta, -alpha, ply + 1,tls);
+                 other_result = negamax(board, new_depth, -beta, -alpha, ply + 1,tls,move);
 				 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
             }
@@ -212,7 +212,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
         if (beta<=alpha)
         {   
-			update_history_killer(move, depth, ply,tls);
+			update_history_killer(move, depth, ply,tls,previous_move);
             break;
         }
         
@@ -221,7 +221,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_result_tempered=store_tt(hash, depth, original_alpha, beta, best_score, best_move,is_best_move_tempered,is_any_tempered);
     return {best_score,best_move,is_result_tempered};
 }
-int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Board& board, ThreadLocalData* tls) {
+int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Board& board, ThreadLocalData* tls, const Move& previous_move) {
    
 
     int stage = 0;
@@ -241,6 +241,14 @@ int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_
 		else { stage = LOSING_CAPTURE_STAGE; sub = see; }
     }
     else if(move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]) { stage = KILLER_STAGE; sub = 0; }
+    else if (previous_move.from_square != NO_SQUARE &&
+        move == tls->counter_moves[to_int(previous_move.move_color)]
+        [to_int(previous_move.piece_moved)]
+        [previous_move.to_square]
+        ) {
+        stage = COUNTERMOVE_STAGE;
+        sub = 0;
+    }
     else {
         stage = QUIET_STAGE; sub = tls->history_scores[to_int(move.move_color)][to_int(move.piece_moved)][move.to_square] +relevant_pawn_push(board,move);
 	}
@@ -570,11 +578,15 @@ bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check
     if (depth == 2 && eval + FUTILITY_MARGIN_D2 <= alpha) return true;
     return false;
 }
-int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply,ThreadLocalData* tls) {
+int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply,ThreadLocalData* tls,const Move& previous_move) {
 	bool is_capture = (move.piece_captured != PieceType::NONE);
 	bool is_promotion = (move.promotion_piece != PieceType::NONE);
 	bool is_killer = (ply > 0 && (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]));
-	bool is_special_move = is_capture || is_promotion || is_killer;
+    bool is_counter = previous_move.from_square != NO_SQUARE &&
+        move == tls->counter_moves[to_int(previous_move.move_color)]
+        [to_int(previous_move.piece_moved)]
+		[previous_move.to_square];
+	bool is_special_move = is_capture || is_promotion || is_killer || is_counter;
     if (!is_special_move && depth >= LMR_MIN_DEPTH && moves_searched > LMR_MIN_MOVES_SEARCHED) return LMR_REDUCTION_AMOUNT;
 	return 0;
 }
@@ -604,12 +616,19 @@ SearchResult Engine::terminal_eval(const Board& board, bool king_is_in_check,int
     }
     else return { 0,Move() };
 }
-void Engine::update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls) {
+void Engine::update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls,const Move& previous_move) {
     if (!tls) return;
-    if (move.piece_captured == PieceType::NONE)
+	bool quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
+    if (quiet)
     {
         tls->killer_moves[ply][1] = tls->killer_moves[ply][0];
         tls->killer_moves[ply][0] = move;
+
+        if(previous_move.from_square != NO_SQUARE) {
+            tls->counter_moves[to_int(previous_move.move_color)]
+                [to_int(previous_move.piece_moved)]
+                [previous_move.to_square] = move;
+		}
     }
     int bonus = depth * depth*HISTORY_BONUS_MULTIPLIER;
     tls->history_scores[to_int(move.move_color)][to_int(move.piece_moved)][move.to_square] += bonus;
@@ -896,15 +915,16 @@ void Engine::root_pvs(const Board& pos,MoveList& root_moves,
             SearchResult r;
 
             if (i == 0) {
+
                 //First move:: full window.
-                r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, &tls_data);
+                r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, &tls_data,m);
             }
                 else {
                 //Other moves: null windo then research if needed.
-                r = negamax(b, current_depth - 1, -(local_alpha + 1), -local_alpha, 1, &tls_data);
+                r = negamax(b, current_depth - 1, -(local_alpha + 1), -local_alpha, 1, &tls_data,m);
                 int score = -r.score;
                 if (!stop_search.load(std::memory_order_relaxed) && score > local_alpha && score < beta) {
-                    r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, &tls_data);
+                    r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, &tls_data,m);
                 }
             }
             int score = -r.score;
