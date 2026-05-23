@@ -252,72 +252,65 @@ void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& 
 
     for (size_t i = 0; i < moves.size(); ++i) moves[i]=scored[i].second;
 }
-int Engine::quiescence_search(Board& board,int alpha, int beta,int ply, ThreadLocalData* tls){
+int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, ThreadLocalData* tls) {
     if (tls) {
-		tls->qnodes++;
-		tls->flush_counters(this);
+        tls->qnodes++;
+        tls->flush_counters(this);
     }
-
-	bool in_check = board.in_check();
-
-
-    if (ply>=MAX_QUIET_PLY) return board.is_white_to_move() ? evaluate(board): -evaluate(board);
-
-    uint64_t hash=board.get_hash();
+    uint64_t hash = board.get_hash();
 
     int tt_score;
     Move tt_move;
-    bool depth_0=0;
-    if (probe_tt(hash, 0 , alpha, beta, tt_score, tt_move,depth_0,TTMode::Quiescence)) {
+    bool depth_0 = 0;
+    if (probe_tt(hash, 0, alpha, beta, tt_score, tt_move, depth_0, TTMode::Quiescence)) {
         return tt_score;
     }
-	int stand_pat_score = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
-    if (stand_pat_score >= beta) {
-        return stand_pat_score;
-    } 
+    bool in_check = board.in_check();
 
-    int original_alpha=alpha;
-    alpha=std::max(alpha,stand_pat_score);
-    MoveList moves_to_search;
-	bool evade_check = board.in_check();
-    if (evade_check)
-        MoveGenerator::generate_moves(board,moves_to_search); // evasions
-    else
-        MoveGenerator::generate_captures(board,moves_to_search); // captures only
-    int best_score=stand_pat_score;
-
-    Move best_move;
-    bool searched = !moves_to_search.empty();
-    int scores[256];
-    score_quiet_moves(moves_to_search,scores,board,evade_check);
-    for (int i = 0; i < (int)moves_to_search.size(); ++i)
-    {
-        pick_best(moves_to_search, scores, i);
-        //if (scores[i] == NEG_SEE_SCORE) break;
-        Move move = moves_to_search[i];
-        if (!evade_check) {
-        int gain = 0;
-        gain += PIECE_VALUES_QU[to_int(move.piece_captured)];
-        if (move.promotion_piece != PieceType::NONE)
-            gain += PIECE_VALUES_QU[to_int(move.promotion_piece)] - PIECE_VALUES_QU[to_int(PieceType::PAWN)];
-        if (stand_pat_score + gain + DELTA_MARGIN < alpha) continue;
+    if (ply >= MAX_QUIET_PLY) {
+        if (in_check) {
+            MoveList evasions;
+            MoveGenerator::generate_moves(board, evasions);
+            if (evasions.empty()) return -MATE_SCORE + ply;
         }
+        return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+    }
+
+    MoveList moves;
+    if (in_check) {
+        MoveGenerator::generate_moves(board, moves);
+        if (moves.empty()) return -MATE_SCORE + ply;
+    }
+    else {
+        int stand_pat = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+        if (stand_pat >= beta) return stand_pat;
+        if (stand_pat > alpha) alpha = stand_pat;
+
+        MoveGenerator::generate_captures(board, moves);
+    }
+
+    int best_score = in_check ? -MATE_SCORE : alpha;
+    int scores[256];
+    score_quiet_moves(moves, scores, board, in_check);
+
+    for (int i = 0; i < (int)moves.size(); ++i) {
+        pick_best(moves, scores, i);
+        Move move = moves[i];
+
+        if (!in_check) {
+            int see = see_move(board, move);
+            if (see < 0) continue; // tune; or start with see < 0
+        }
+
         board.make_move(move);
-
-        int score=quiescence_search(board,-beta,-alpha,ply+1,tls);
-        score=-score;
-
+        int score = -quiescence_search(board, -beta, -alpha, ply + 1, tls);
         board.undo_move(move);
 
-        if (score>best_score) best_move=move;
-        best_score=std::max(best_score,score);
+        if (score > best_score) best_score = score;
+        if (score > alpha) alpha = score;
+        if (alpha >= beta) break;
+    }
 
-        alpha=std::max(alpha,best_score);
-        if (alpha>=beta) break;
-    }
-    if (alpha >= beta || ply < 2 && searched) {
-        //store_tt(hash, 0, original_alpha, beta, best_score, best_move,false,false, TTMode::Quiescence);
-    }
     return best_score;
 }
 uint64_t Engine::perft_driver(Board& board, int depth, int original_depth){
@@ -658,28 +651,30 @@ void Engine::score_quiet_moves(const MoveList& moves, int* scores,const Board& b
 int Engine::relevant_pawn_push(const Board& board, const Move& move) {
     if (move.piece_moved != PieceType::PAWN) return 0;
     int score = 0;
-    Color color = board.get_turn();
-    int king_square = board.get_king_square(flip_color(color));
-    uint64_t king_zone = KING_ZONE[king_square];
-    if(king_zone & bit64(move.to_square))
-    {
-        score += 100; // pawn push into opponent king zone
-	}
-    if (color == Color::WHITE) {
-        if (move.to_square>=32) score+=20; // pushed to 5th rank or beyond
-        if (move.to_square>=40) score+=20; // pushed to 4th rank
-		if (move.to_square >= 48) score+= 20; // pushed to 3rd rank
+    Color us = board.get_turn();
+
+    int to = move.to_square;
+	int rank = to / 8;
+	int relative_rank = (us == Color::WHITE) ? rank : 7 - rank;
+
+    bool passed = board.is_passed_after(move);
+
+    if (passed) {
+        score += 40;
+        if (relative_rank >= 4) score += 30;
+        if (relative_rank >= 5) score += 50;
+        if (relative_rank >= 6) score += 160;
+
+        if (board.count_attacker_on_square(to, flip_color(us), 1, false).count == 0) {
+            score += 25;
+        }
     }
-    else {
-		if (move.to_square < 32) score += 20; // pushed to 5th rank or beyond
-		if (move.to_square < 24) score += 20; // pushed to 4th rank
-		if (move.to_square < 16) score += 20; // pushed to 3rd rank
-    }
-    if (board.is_free_file(move.to_square, color))
-    {
-        score += 15; // pawn push to free file
-    }
-	return score;
+		int king_square = board.get_king_square(flip_color(us));
+        if (KING_ZONE[king_square] & bit64(to)) {
+            score += 60;
+		}
+        return score;
+
 }
 void Engine::set_threads(int n) {
     n = std::max(1, n);

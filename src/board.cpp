@@ -871,4 +871,7 @@ bool Board::is_free_file(const int square, const Color color) const {
     uint64_t pawns = pieces[to_int(flip_color(color))][to_int(PieceType::PAWN)];
 	return (pawns& PASSED_PAWN_MASK[to_int(color)][square])==0;
 }
-
+bool Board::is_passed_after(const Move& move) {
+    if (move.piece_moved!= PieceType::PAWN) return false;
+	return (pieces[to_int(flip_color(move.move_color))][to_int(PieceType::PAWN)] & PASSED_PAWN_MASK[to_int(move.move_color)][move.to_square]) == 0;
+}
