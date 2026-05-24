@@ -111,6 +111,7 @@ struct ThreadLocalData {
     MoveList move_lists[MAX_PLY];
     int move_scores[MAX_PLY][256] = {};
     Move killer_moves[128][2] = {};
+    MoveList searched_quiets[MAX_PLY];
     int history_scores[2][6][64] = {};
     Move counter_moves[2][7][64] = {};
     std::atomic<uint64_t> nodes{ 0 };
@@ -178,7 +179,7 @@ class Engine {
 		int late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls,const Move& previous_move);
 		bool try_null_move_pruning(Board& board,bool is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls);
 		SearchResult terminal_eval(const Board& board, bool king_is_in_check,int ply);
-		void update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls, const Move& previous_move=Move());
+		void update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls, const Move& previous_move=Move(),const MoveList& searched_quiets=MoveList());
         void init_tt(size_t tt_size_mb = MAX_MEMORY_TT_MB);
         bool move_could_result_in_repetition(Board& board, Move& move, int count=3);
         void recover_move_fully(Move& move,const Board& board);
@@ -196,6 +197,7 @@ class Engine {
             int& out_best_score,
             Move& out_best_move);
 		std::string create_pv_string(const Board& board,const Move& best_move, int depth);
+		void add_history(ThreadLocalData* tls, const Move& move, int bonus);
 };
 inline uint8_t dist_mod64_fast(uint8_t a, uint8_t b) {
     uint8_t d = (a - b) & 63;          // in 0..63 (mod 64)

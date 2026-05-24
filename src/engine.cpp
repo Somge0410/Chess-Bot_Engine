@@ -104,7 +104,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     // End of Null-move pruning
 	//Generate moves
 	MoveList& moves = tls->move_lists[ply];
+	MoveList& searched_quiets = tls->searched_quiets[ply];
     moves.clear();
+	searched_quiets.clear();
     MoveGenerator::generate_moves(board,moves);
 	//If only one move available, no need to search further
     if ((ply == 0) && (moves.size() == 1)) {
@@ -194,6 +196,11 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         }
         is_any_tempered |= current_move_tempered;
         board.undo_move(move);
+		bool quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
+
+        if (quiet) {
+			searched_quiets.push_back(move);
+        }
         
         if (stop_search.load(std::memory_order_relaxed))
         {   // Better: Best Move so far??
@@ -212,7 +219,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
         if (beta<=alpha)
         {   
-			update_history_killer(move, depth, ply,tls,previous_move);
+			update_history_killer(move, depth, ply,tls,previous_move,searched_quiets);
             break;
         }
         
@@ -582,11 +589,11 @@ int Engine::late_move_reduction(int depth, int moves_searched, const Move& move,
 	bool is_capture = (move.piece_captured != PieceType::NONE);
 	bool is_promotion = (move.promotion_piece != PieceType::NONE);
 	bool is_killer = (ply > 0 && (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]));
-    bool is_counter = previous_move.from_square != NO_SQUARE &&
-        move == tls->counter_moves[to_int(previous_move.move_color)]
-        [to_int(previous_move.piece_moved)]
-		[previous_move.to_square];
-	bool is_special_move = is_capture || is_promotion || is_killer || is_counter;
+  //  //bool is_counter = previous_move.from_square != NO_SQUARE &&
+  //      move == tls->counter_moves[to_int(previous_move.move_color)]
+  //      [to_int(previous_move.piece_moved)]
+		//[previous_move.to_square];
+	bool is_special_move = is_capture || is_promotion || is_killer;
     if (!is_special_move && depth >= LMR_MIN_DEPTH && moves_searched > LMR_MIN_MOVES_SEARCHED) return LMR_REDUCTION_AMOUNT;
 	return 0;
 }
@@ -616,7 +623,8 @@ SearchResult Engine::terminal_eval(const Board& board, bool king_is_in_check,int
     }
     else return { 0,Move() };
 }
-void Engine::update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls,const Move& previous_move) {
+void Engine::update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls,const Move& previous_move,
+    const MoveList& serached_quiets) {
     if (!tls) return;
 	bool quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
     if (quiet)
@@ -631,7 +639,12 @@ void Engine::update_history_killer(const Move& move, int depth, int ply,ThreadLo
 		}
     }
     int bonus = depth * depth*HISTORY_BONUS_MULTIPLIER;
-    tls->history_scores[to_int(move.move_color)][to_int(move.piece_moved)][move.to_square] += bonus;
+    add_history(tls, move, bonus);
+    for(int i=0;i<(int)serached_quiets.size();++i){
+        const Move& m = serached_quiets[i];
+		if (m == move) continue;
+        add_history(tls, m, -bonus);
+	}
 }
 void Engine::init_tt(size_t tt_size_mb) {
     size_t bytes = tt_size_mb * 1024ull * 1024ull;
@@ -1065,4 +1078,8 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
        
     }
     return pv;
+}
+void Engine::add_history(ThreadLocalData* tls, const Move& move, int bonus) {
+	int& h = tls->history_scores[to_int(move.move_color)][to_int(move.piece_moved)][move.to_square];
+    gravity_update(h, bonus);
 }
