@@ -587,16 +587,16 @@ bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check
 }
 int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply,ThreadLocalData* tls,const Move& previous_move) {
 	if (depth >= 64 || moves_searched >=218) return 7;
-	if (moves_searched == 0) return 0; // No reduction for the first move
+	if (depth==0||moves_searched == 0) return 0; // No reduction for the first move
 	bool is_killer = (ply > 0 && (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]));
     if (is_killer) return 0;
     bool is_quiet = move.is_quiet();
     if (is_quiet) {
-		return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+		return Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
     }
     else{
        
-		return Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+		return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
 	}
 }
 bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls) {
