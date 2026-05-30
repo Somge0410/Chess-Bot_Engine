@@ -369,8 +369,8 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
         }
 
         if (tc.time_ms > time_left / 2){
-            tc.time_ms = time_left / OPT_TIME_ALLOCATION_DIVISOR_EG;
-            tc.max_time_ms = time_left / MAX_TIME_ALLOCATION_DIVISOR_EG;
+            tc.time_ms = time_left / 40;
+            tc.max_time_ms = time_left / 40;
         }
 
         // Near 50-move rule: use half of remaining time to avoid draw
