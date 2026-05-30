@@ -589,15 +589,23 @@ int Engine::late_move_reduction(int depth, int moves_searched, const Move& move,
     if (depth >= 64 || moves_searched >= 218) return 7;
     if (depth<=1 || moves_searched <=1) return 0; // No reduction for the first move
     bool is_killer = (ply > 0 && (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]));
-    if (is_killer) return 0;
+    bool is_counter= (previous_move.from_square != NO_SQUARE &&
+        move == tls->counter_moves[to_int(previous_move.move_color)]
+        [to_int(previous_move.piece_moved)]
+		[previous_move.to_square]);
     bool is_quiet = move.is_quiet();
+ 
+    int reduction = 0;
     if (is_quiet) {
-        return Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+        reduction=Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
     }
     else {
 
-        return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+        reduction= REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
     }
+	if (is_killer) reduction=reduction-4;
+    if (is_counter) reduction = reduction - 3;
+	return std::clamp(reduction, 0, depth - 1);
 }
 bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls) {
 	bool is_mate_score_possible = (alpha >= MATE_THRESHOLD || beta <= -MATE_THRESHOLD);
