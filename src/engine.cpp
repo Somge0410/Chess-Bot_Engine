@@ -359,7 +359,7 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
         if (position.get_move_count() < 10) {
         tc.time_ms = time_left / OPT_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
         tc.max_time_ms = time_left / MAX_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
-        }else if(position.get_move_count() < 30|| position.get_game_phase()>=15){
+        }else if(position.get_move_count() < 30){
             tc.time_ms = time_left / (OPT_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
             tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
         }
@@ -931,6 +931,11 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             const int64_t remaining_ms = std::max<int64_t>(0, (deadline_ns - now_ns) / 1000000LL);
 			prev_root_score = best_score;
 			has_prev_root_score = true;
+            const int64_t HARD_SAFETY_MS = 10 + tc.time_ms / 50;
+
+            if (remaining_ms <= HARD_SAFETY_MS) {
+                break;
+            }
             if (static_cast<double>(predicted_next_iteration_ms) * TIME_MARGIN > static_cast<double>(remaining_ms)) {
                 break;
             }

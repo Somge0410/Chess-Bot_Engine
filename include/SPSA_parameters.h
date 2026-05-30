@@ -42,16 +42,16 @@ constexpr int OPT_TIME_ALLOCATION_DIVISOR_EG = 50;  // time_left / divisor
 constexpr int MAX_TIME_ALLOCATION_DIVISOR = 20;
 constexpr int MAX_TIME_ALLOCATION_DIVISOR_MG = 15;
 constexpr int MAX_TIME_ALLOCATION_DIVISOR_EG = 25;
-constexpr int MAX_RECENT_BEST_COUNT = 6;
-constexpr int TIME_CHANGES_COUNT_BIG = 0.5;
-constexpr int TIME_CHANGES_COUNT_MEDIUM = 0.3;
-constexpr int TIME_CHANGES_COUNT_SMALL = 0.2;
-constexpr int INCREMENT_DIVISOR = 1;
-constexpr int DELTA_BEST_SCORE = 50;
-constexpr double VOLATILITY_DIV = 250.0;
-constexpr double EXTRA_BEST_BASE = 0.08;
-constexpr double EXTRA_BEST_FLIP = 0.1;
-constexpr double EXTRA_BEST_WEIGHT = 0.22;
+constexpr int MAX_RECENT_BEST_COUNT = 1; //6;
+constexpr int TIME_CHANGES_COUNT_BIG = 0;//0.5;
+constexpr int TIME_CHANGES_COUNT_MEDIUM = 0;// 0.3;
+constexpr int TIME_CHANGES_COUNT_SMALL = 0;// 0.2;
+constexpr int INCREMENT_DIVISOR = 2;
+constexpr int DELTA_BEST_SCORE = -1; //50;
+constexpr double VOLATILITY_DIV = 1;//250.0;
+constexpr double EXTRA_BEST_BASE = 0; //0.08;
+constexpr double EXTRA_BEST_FLIP = 0;//0.1;
+constexpr double EXTRA_BEST_WEIGHT = 0; //0.22;
 constexpr double TIME_MARGIN = 0.75;
 constexpr int MAX_TIME_FRACTION = 2;  // max time = time_left / divisor
 
