@@ -16,6 +16,7 @@
 #include <algorithm>
 #include "adjustable_parameters.h"
 #include "uci_helpers.h"
+#include "SPSA_parameters.h"
 void ThreadLocalData::flush_counters(Engine* engine) {
     if (nodes > 10000) {
         engine->nodes.fetch_add(nodes, std::memory_order_relaxed);
@@ -43,13 +44,16 @@ Engine::Engine(size_t tt_size_mb){
     checkmate_count=0;
 	int overwrite_tt_counter = 0;
 }
-SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls, const Move& previous_move){
+SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls, const Move& previous_move) {
     if (tls) {
-        if(depth==0) tls->qnodes++;
-		else tls->nodes++;
-		tls->flush_counters(this);
+        if (depth == 0) {
+            tls->qnodes++;
+        } else {
+            tls->nodes++;
+        }
+        tls->flush_counters(this);
     }
-        if (std::chrono::steady_clock::now() - start_time >= time_limit)
+    if (is_time_up())
         {
             stop_search.store(true, std::memory_order_relaxed);
             return { .score = 0,.best_move = Move(),.is_tempered = true };
@@ -275,6 +279,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
         tls->qnodes++;
         tls->flush_counters(this);
     }
+    if(is_time_up())
+    {
+        stop_search.store(true, std::memory_order_relaxed);
+        return 0;
+	}
     uint64_t hash = board.get_hash();
 
     int tt_score;
@@ -312,6 +321,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
     score_quiet_moves(moves, scores, board, in_check);
 
     for (int i = 0; i < (int)moves.size(); ++i) {
+        if(stop_search.load(std::memory_order_relaxed)|| is_time_up())
+        {
+			stop_search.store(true, std::memory_order_relaxed);
+            break;
+		}
         pick_best(moves, scores, i);
         Move move = moves[i];
 
@@ -331,107 +345,38 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
 
     return best_score;
 }
-uint64_t Engine::perft_driver(Board& board, int depth, int original_depth){
-    if (depth==0){
-        // if (board.in_check() && MoveGenerator::generate_moves(board).empty())
-        // {
-        //     checkmate_count+=1;
-        // }
-        
-        
-        return 1;
-        
-    }
-
-    
-    
-    uint64_t nodes=0;
-	MoveList legal_moves;
-    MoveGenerator::generate_moves(board,legal_moves);
-    int new_nodes=0;
-    for (const Move& move : legal_moves)
-    {   
-        
-        // if(move.is_en_passant) ep_count+=1;
-        // if(move.piece_captured!=PieceType::NONE) capture_count+=1;
-        board.make_move(move);
-        // if (depth==1 and move.is_en_passant)
-        // {
-            
-        //     special_boards.push_back(board);
-        // }
-        
-        // if(board.in_check()){
-        //     checks_count+=1;
-        // }
-        
-		evaluate(board);
-     
-        new_nodes=perft_driver(board,depth-1,original_depth);
-        nodes+=new_nodes;
-        board.undo_move(move);
-        // if (depth==original_depth)
-        // {
-        //     std::cout << to_san(move,legal_moves) << "    " << new_nodes << std::endl;
-        // }
-        
-    }
-
-    return nodes;  
-}
-
-PerftRes Engine::perft_test(Board& board, int depth) {
-    std::cout << "Starting perft test to depth " << depth << std::endl;
-    
-    // Record the starting hash and time
-    uint64_t start_hash = board.get_hash();
-    auto start_time = std::chrono::steady_clock::now();
-
-    // Call the recursive helper
-    uint64_t nodes_found = perft_driver(board, depth,depth);
-
-    // Record the end time and calculate duration
-    auto end_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> duration = end_time - start_time;
-    uint64_t end_hash = board.get_hash();
-
-    // Print the results
-    std::cout << "--------------------" << std::endl;
-    std::cout << "Perft test complete." << std::endl;
-    std::cout << "Depth: " << depth << std::endl;
-    std::cout << "Nodes found: " << nodes_found << std::endl;
-    std::cout << "Time elapsed: " << duration.count() << "s" << std::endl; 
-    if (duration.count() > 0) {
-        std::cout << "Nodes per second: " << static_cast<uint64_t>(nodes_found / duration.count()) << std::endl;
-    }
-
-    // Crucial check: verify that the hash is the same after all moves
-    if (start_hash == end_hash) {
-        std::cout << "Zobrist hash is correct!" << std::endl;
-    } else {
-        std::cout << "!!! ZOBRIST HASH FAILED !!!" << std::endl;
-        std::cout << "Start Hash: " << start_hash << ", End Hash: " << end_hash << std::endl;
-    }
-    std::cout << "--------------------" << std::endl;
-    return { duration.count(), nodes_found };
-}
 TimeControlDecision Engine::decide_time_control(const Board& position, const SearchLimits& limits) {
     TimeControlDecision tc{};
     tc.max_depth = limits.depth > 0 ? limits.depth : INFINITE_DEPTH;
     if (limits.movetime > 0) {
         tc.time_ms = limits.movetime;
+		tc.max_time_ms = limits.movetime;
     }
     else if (limits.wtime > 0 || limits.btime > 0) {
         int time_left = (position.get_turn() == Color::WHITE) ? limits.wtime : limits.btime;
         int inc = (position.get_turn() == Color::WHITE) ? limits.winc : limits.binc;
 
-        tc.time_ms = time_left / TIME_ALLOCATION_DIVISOR + inc/INCREMENT_DIVISOR;
-        if (tc.time_ms > time_left / 2) tc.time_ms = time_left / TIME_ALLOCATION_DIVISOR;
+        if (position.get_move_count() < 10) {
+        tc.time_ms = time_left / OPT_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
+        tc.max_time_ms = time_left / MAX_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
+        }else if(position.get_move_count() < 30|| position.get_game_phase()>=15){
+            tc.time_ms = time_left / (OPT_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
+            tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
+        }
+        else {
+            tc.time_ms = time_left / (OPT_TIME_ALLOCATION_DIVISOR_EG) + inc / INCREMENT_DIVISOR;
+			tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_EG)+inc / INCREMENT_DIVISOR;
+        }
+
+        if (tc.time_ms > time_left / 2){
+            tc.time_ms = time_left / OPT_TIME_ALLOCATION_DIVISOR_EG;
+            tc.max_time_ms = time_left / MAX_TIME_ALLOCATION_DIVISOR_EG;
+        }
 
         // Near 50-move rule: use half of remaining time to avoid draw
         int half_moves = position.get_half_moves();
         if ((half_moves == 50 || half_moves == 51) && time_left > 500) {
-            tc.time_ms = time_left / 2;
+            tc.time_ms =std::max(time_left / 2,30000);
         }
     }
     else if (limits.depth > 0) {
@@ -767,8 +712,8 @@ void Engine::worker_loop(int thread_id) {
 
         Move tmp_best = local_best;
 		int tmp_score = local_score;    
-
-        iterative_deepening_new(thread_id, false, tmp_best, tmp_score, pos, decide_time_control(pos, limits), &tls_data);
+		TimeControlDecision tc = decide_time_control(pos, limits);
+        iterative_deepening_new(thread_id, false, tmp_best, tmp_score, pos, tc, &tls_data);
 		local_best = tmp_best;
 		local_score = tmp_score;
         {
@@ -779,12 +724,30 @@ void Engine::worker_loop(int thread_id) {
     }
 }
 
-void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_best_move, int& io_best_score, const Board& position, const TimeControlDecision& tc , ThreadLocalData* tls) {
+void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_best_move, int& io_best_score, const Board& position, TimeControlDecision& tc , ThreadLocalData* tls) {
     int start_depth = 1 + (thread_id & 1);
+    uint64_t prev_total_nodes = 0;
+    uint64_t prev_elapsed_ms = 0;
+    uint64_t prev_iteration_nodes = 0;
+    uint64_t prev_iteration_ms = 0;
+    uint64_t iteration_nodes = 0;
+	uint64_t iteration_ms = 0;
+    double effective_branching_factor = 1;
+    double time_growth = 1;
+    double predicted_next_iteration_ms = 0;
+    Move recent_best_moves[MAX_RECENT_BEST_COUNT] = { };
+    int recent_best_move_count = 0;
+    int dynamic_soft_time_ms = tc.time_ms;
 
+    int prev_root_score = 0;
+    bool has_prev_root_score = false;
+    int dominant_gap_streak = 0;
+
+    int second_best_score = -MATE_SCORE;
     for (int current_depth = start_depth; current_depth <= tc.max_depth; ++current_depth) {
         Board board = position;
         MoveList root_moves;
+
         MoveGenerator::generate_moves(board, root_moves);
         if (root_moves.empty()) {
             if (is_master) {
@@ -807,7 +770,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
         //If we dont have a valid previous best yet, seed it so ordering is stable.
 
-        sort_moves(root_moves, board, 0, io_best_move, false, &tls_data);
+        sort_moves(root_moves, board, 0, io_best_move, false, tls);
         perturb_root_order(root_moves, thread_id, current_depth,board.get_zobrist_hash());
 
         //Aspiration window (per thread).
@@ -822,11 +785,11 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
         alpha = std::max(-MATE_SCORE, alpha);
         beta = std::min(MATE_SCORE, beta);
         int best_score = -MATE_SCORE;
+        Move second_best_move = Move();
         Move best_move = root_moves[0];
-
         //Retry loop for aspiration failures: re-search the whole root with a wider window.
         for (int attempt = 0; attempt < 4; ++attempt) {
-            root_pvs(position, root_moves, current_depth, alpha, beta, best_score, best_move);
+            root_pvs(position, root_moves, current_depth, alpha, beta, best_score, best_move,second_best_score,second_best_move, tls);
             if (stop_search.load(std::memory_order_relaxed)) break;
 
             if (current_depth == 1) break; // no aspiration on depth 1
@@ -839,7 +802,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                 beta = std::min(MATE_SCORE, best_score + window);
 
                 //Put the current best move first to speed up re-search.
-                sort_moves(root_moves, board, 0, best_move, false, &tls_data);
+                sort_moves(root_moves, board, 0, best_move, false, tls);
                 continue;
             }
             //Inside the window-> done.
@@ -855,8 +818,79 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
         // --- UCI info output (nur Master-Thread, auf stdout) ---
         if (is_master) {
-            auto elapsed = std::chrono::steady_clock::now() - start_time;
+            const auto now_tp = std::chrono::steady_clock::now();
+            const int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                now_tp.time_since_epoch()
+            ).count();
+
+            auto elapsed = now_tp - start_time;
+
+            recent_best_moves[recent_best_move_count % MAX_RECENT_BEST_COUNT] = best_move;
+            recent_best_move_count++;
+
+            if (recent_best_move_count >= 6 && tc.max_time_ms > tc.time_ms) {
+                int changes = 0;
+                int consecutive_changes = 0;
+                bool has_two_consecutive_changes = false;
+                int start = recent_best_move_count - MAX_RECENT_BEST_COUNT;
+                for (int i = 0; i < 5; ++i) {
+                    const Move& a = recent_best_moves[(start + i) % MAX_RECENT_BEST_COUNT];
+                    const Move& b = recent_best_moves[(start + i + 1) % MAX_RECENT_BEST_COUNT];
+                    if (a != b) {
+                        changes++;
+                        consecutive_changes++;
+                        if (consecutive_changes >= 2) {
+                            has_two_consecutive_changes = true;
+                        }
+                    }
+                    else {
+                        consecutive_changes = 0;
+                    }
+                }
+				const bool unstable = has_two_consecutive_changes || changes >= 3;
+                    if (unstable) {
+                        int gap = tc.max_time_ms - tc.time_ms;
+                        double extra_fraction = 0.0;
+                        if (has_two_consecutive_changes) {
+							extra_fraction = (changes >= 3) ? TIME_CHANGES_COUNT_BIG : TIME_CHANGES_COUNT_MEDIUM;
+                        }
+                        else {
+                            extra_fraction = TIME_CHANGES_COUNT_SMALL;
+                        }
+                        int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
+                        tc.time_ms = std::clamp(tc.time_ms + extra_time_ms, tc.time_ms, tc.max_time_ms);
+                        set_time_budget_ms(tc.time_ms);
+                    }
+            }
+            if (tc.max_time_ms > tc.time_ms && has_prev_root_score) {
+                const bool curr_is_mate = std::abs(best_score) >= MATE_THRESHOLD;
+                const bool prev_is_mate = std::abs(prev_root_score) >= MATE_THRESHOLD;
+
+                if (!curr_is_mate && !prev_is_mate) {
+                    const int delta_cp = std::abs(best_score - prev_root_score);
+                    const bool sign_flip = (best_score > 0) != (prev_root_score > 0);
+
+                    // Tuning: ab ~50cp Unterschied reagieren
+                    if (delta_cp >= DELTA_BEST_SCORE || sign_flip) {
+                        const int gap = tc.max_time_ms - tc.time_ms;
+
+                        // sanfte Skalierung
+                        const double volatility = std::clamp(static_cast<double>(delta_cp - DELTA_BEST_SCORE) / VOLATILITY_DIV, 0.0, 1.0);
+                        double extra_fraction = EXTRA_BEST_BASE + EXTRA_BEST_WEIGHT * volatility;
+                        if (sign_flip) {
+                            extra_fraction += EXTRA_BEST_FLIP;
+                        }
+
+                        int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
+
+                        tc.time_ms = std::clamp(tc.time_ms + extra_time_ms, tc.time_ms, tc.max_time_ms);
+                        set_time_budget_ms(tc.time_ms);
+                    }
+                }
+            }
+
             uint64_t elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+
             uint64_t total_nodes = nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
             uint64_t nps = (elapsed_ms > 0) ? (total_nodes * 1000 / elapsed_ms) : 0;
 
@@ -879,8 +913,30 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                       << " pv " << create_pv_string(board, best_move, current_depth)
                       << "\n";
             std::cout.flush();
+			iteration_nodes = total_nodes - prev_total_nodes;
+			iteration_ms = elapsed_ms - prev_elapsed_ms;
+			if (prev_iteration_nodes > 0) {
+                effective_branching_factor = static_cast<double>(iteration_nodes) / static_cast<double>(prev_iteration_nodes);
+			}
+            time_growth = effective_branching_factor;
+            if (prev_iteration_ms > 0) {
+				time_growth = static_cast<double>(iteration_ms) / static_cast<double>(prev_iteration_ms);
+            }
+			predicted_next_iteration_ms = static_cast<double>(iteration_ms) * time_growth;
+            prev_total_nodes = total_nodes;
+            prev_elapsed_ms = elapsed_ms;
+            prev_iteration_nodes = iteration_nodes;
+			prev_iteration_ms = iteration_ms;
+            const int64_t deadline_ns = search_deadline_ns.load(std::memory_order_acquire);
+            const int64_t remaining_ms = std::max<int64_t>(0, (deadline_ns - now_ns) / 1000000LL);
+			prev_root_score = best_score;
+			has_prev_root_score = true;
+            if (static_cast<double>(predicted_next_iteration_ms) * TIME_MARGIN > static_cast<double>(remaining_ms)) {
+                break;
+            }
         }
     }
+
 }
 void Engine::perturb_root_order(MoveList& moves, int thread_id, int depth, uint64_t hash) {
     if (thread_id == 0) return;
@@ -910,51 +966,66 @@ void Engine::perturb_root_order(MoveList& moves, int thread_id, int depth, uint6
     //std::rotate(moves.begin() + 1, moves.begin() + 1 + shift, moves.end());
 
     }
-void Engine::root_pvs(const Board& pos,MoveList& root_moves,
+void Engine::root_pvs(const Board& pos, MoveList& root_moves,
     int current_depth,
     int alpha,
     int beta,
     int& out_best_score,
-    Move& out_best_move) {
-        int best_score = -MATE_SCORE;
-        Move best_move = root_moves[0];
+    Move& out_best_move,
+    int& out_second_best_score,
+	Move& out_second_best_move,
+    ThreadLocalData* tls) {
+    int best_score = -MATE_SCORE;
+	int second_best_score = -MATE_SCORE;
+	Move local_second_best_move = out_second_best_move;
+    Move best_move = root_moves[0];
+    int local_alpha = alpha;
 
-        int local_alpha = alpha;
 
-        for (size_t i = 0; i < root_moves.size(); ++i) {
-            if (stop_search.load(std::memory_order_relaxed)) break;
-            const Move m = root_moves[i];
-            Board b = pos;
-            b.make_move(m);
+    Board b = pos;
+    for (size_t i = 0; i < root_moves.size(); ++i) {
+        if (stop_search.load(std::memory_order_relaxed)) break;
 
-            SearchResult r;
+        const Move m = root_moves[i];
+        b.make_move(m);
 
-            if (i == 0) {
-
-                //First move:: full window.
-                r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, &tls_data,m);
-            }
-                else {
-                //Other moves: null windo then research if needed.
-                r = negamax(b, current_depth - 1, -(local_alpha + 1), -local_alpha, 1, &tls_data,m);
-                int score = -r.score;
-                if (!stop_search.load(std::memory_order_relaxed) && score > local_alpha && score < beta) {
-                    r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, &tls_data,m);
-                }
-            }
-            int score = -r.score;
-            if (stop_search.load(std::memory_order_relaxed)) break;
-
-            if (score > best_score || i == 0) {
-                best_score = score;
-                best_move = m;
-            }
-            if (score > local_alpha) local_alpha = score;
-            if (local_alpha >= beta) break;
+        SearchResult r;
+        if (i == 0) {
+            r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m);
         }
-        out_best_score = best_score;
-        out_best_move = best_move;
-    };
+		else {
+            r = negamax(b, current_depth - 1, -(local_alpha + 1), -local_alpha, 1, tls, m);
+            int score = -r.score;
+            if (!stop_search.load(std::memory_order_relaxed) && score > local_alpha && score < beta) {
+                r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m);
+            }
+        }
+
+        int score = -r.score;
+        b.undo_move(m);
+
+        if (stop_search.load(std::memory_order_relaxed)) break;
+
+        if (i == 0 || score > best_score) {
+            second_best_score = best_score;
+            local_second_best_move = best_move;
+            best_score = score;
+            best_move = m;
+        } 
+		else if (score > second_best_score) {
+            second_best_score = score;
+            local_second_best_move = m;
+        }
+
+        if (score > local_alpha) local_alpha = score;
+        if (local_alpha >= beta) break;
+    }
+
+    out_best_score = best_score;
+    out_best_move = best_move;
+    out_second_best_score = second_best_score;
+    out_second_best_move = local_second_best_move;
+}
 Move Engine::search(const Board& position, const SearchLimits& limits) {
     //decide time control
 	auto tc = decide_time_control(position, limits);
@@ -993,8 +1064,20 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
     {
 		std::lock_guard<std::mutex> lk(pool_mtx);
 		stop_search.store(false, std::memory_order_relaxed);
-        start_time = std::chrono::steady_clock::now();
-        time_limit = std::chrono::milliseconds(tc.time_ms);
+
+    const auto now = std::chrono::steady_clock::now();
+    start_time = now;
+
+    const int64_t start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        now.time_since_epoch()
+    ).count();
+
+    search_start_ns.store(start_ns, std::memory_order_release);
+    search_deadline_ns.store(
+        start_ns + static_cast<int64_t>(tc.time_ms) * 1000000LL,
+        std::memory_order_release
+    );
+
 		job_position = position;
         job_limits = limits;
 		active_workers = std::max(0, use_threads - 1);
@@ -1084,4 +1167,18 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
 void Engine::add_history(ThreadLocalData* tls, const Move& move, int bonus) {
 	int& h = tls->history_scores[to_int(move.move_color)][to_int(move.piece_moved)][move.to_square];
     gravity_update(h, bonus);
+}
+int64_t Engine::now_ns() {
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+void Engine::set_time_budget_ms(int total_time_ms) {
+	const int64_t start_ns = search_start_ns.load(std::memory_order_acquire);
+    const int64_t deadline_ns = start_ns + static_cast<int64_t>(total_time_ms) * 1000000LL;
+	search_deadline_ns.store(deadline_ns, std::memory_order_release);
+}
+bool Engine::is_time_up() const {
+    const int64_t deadline_ns = search_deadline_ns.load(std::memory_order_acquire);
+    const int64_t now = now_ns();
+    return now >= deadline_ns;
 }

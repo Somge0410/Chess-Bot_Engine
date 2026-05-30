@@ -76,6 +76,7 @@ struct MoveList {
     Move& operator[](int index) { return moves[index]; }
     const Move& operator[](int index) const { return moves[index]; }
     size_t size() const { return count; }
+
     bool empty() const { return count == 0; }
     void clear() { count = 0; }
     void swap_items(int i, int j) {

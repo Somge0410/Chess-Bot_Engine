@@ -13,6 +13,7 @@
 #include <thread>
 #include <cstring>
 #include <condition_variable>
+#include <limits>
 enum TTFlag {
     EXACT,
     LOWERBOUND,
@@ -89,6 +90,7 @@ struct SearchLimits {
 struct TimeControlDecision {
     int time_ms;
     int max_depth;
+    int max_time_ms;
 };
 enum class TTMode {Negamax, Quiescence};
 struct SearchResult {
@@ -123,9 +125,8 @@ class Engine {
 		Engine(size_t tt_size_mb = MAX_MEMORY_TT_MB);
         void set_threads(int n);
 		void resize_tt(size_t tt_size_mb);
-    ~Engine();
+        ~Engine();
         void shutdown();
-        PerftRes perft_test(Board& board, int depth);
         int checks_count;
         int ep_count;
         int capture_count;
@@ -168,10 +169,14 @@ class Engine {
         Move killer_moves[128][2];
         int history_scores[2][6][64]={};*/
         std::chrono::steady_clock::time_point start_time;
-        std::chrono::duration<double> time_limit;
+        std::atomic<int64_t> search_start_ns{ 0 };
+		std::atomic<int64_t> search_deadline_ns{ std::numeric_limits<int64_t>::max() };
+
+        static int64_t now_ns();
+        void set_time_budget_ms(int total_time_ms);
+        bool is_time_up() const;
         void sort_moves(MoveList& moves, const Board& board, int ply,const Move& tt_move, bool tt_depth_0 = false,ThreadLocalData* tls={}, const Move& previous_move=Move());
         int score_move(const Move& move, int ply,const Move& tt_move, bool depth_0,const Board& board,ThreadLocalData* tls, const Move& previous_move);
-        uint64_t perft_driver(Board& board, int depth, int orignal_depth);
         TimeControlDecision decide_time_control(const Board& position, const SearchLimits& limits);
         bool probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move, bool is_depth_0 = false, TTMode mode = TTMode::Negamax);
         bool store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score, Move& best_move,bool is_best_tempered,bool is_any_tempered = false, TTMode mode = TTMode::Negamax);
@@ -187,7 +192,7 @@ class Engine {
 		int ply, const Move& tt_move, bool depth_0,const Board& board, ThreadLocalData* tls,const Move& previous_move);
         void score_quiet_moves(const MoveList& moves, int* scores,const Board& board,bool evade_check);
 		int relevant_pawn_push(const Board& board, const Move& move);
-		void iterative_deepening_new(int thread_id, bool is_master,Move& out_best_move ,int& io_best_score,const Board& board, const TimeControlDecision& tc,ThreadLocalData* tls);
+		void iterative_deepening_new(int thread_id, bool is_master,Move& out_best_move ,int& io_best_score,const Board& board, TimeControlDecision& tc,ThreadLocalData* tls);
 		void perturb_root_order(MoveList& moves, int thread_id, int current_depth, uint64_t hash);
         void root_pvs(const Board& pos,
             MoveList& root_moves,
@@ -195,7 +200,10 @@ class Engine {
             int alpha,
             int beta,
             int& out_best_score,
-            Move& out_best_move);
+            Move& out_best_move,
+            int& out_second_best_score,
+            Move& second_best_move,
+			ThreadLocalData* tls);
 		std::string create_pv_string(const Board& board,const Move& best_move, int depth);
 		void add_history(ThreadLocalData* tls, const Move& move, int bonus);
 };
