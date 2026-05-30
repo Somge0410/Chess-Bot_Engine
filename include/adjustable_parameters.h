@@ -152,7 +152,8 @@ constexpr int ASPIRATION_WINDOW_INITIAL = 50;
 constexpr int ASPIRATION_WINDOW_MULTIPLIER = 2;
 
 // --- NEU: Time Management ---
-constexpr int TIME_ALLOCATION_DIVISOR = 40;  // time_left / divisor
+constexpr int TIME_ALLOCATION_DIVISOR = 20;  // time_left / divisor
+constexpr int INCREMENT_DIVISOR = 2;
 constexpr int MAX_TIME_FRACTION = 2;  // max time = time_left / divisor
 
 // --- NEU: Root Move Perturbation (Multi-Threading) ---

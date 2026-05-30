@@ -425,7 +425,7 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
         int time_left = (position.get_turn() == Color::WHITE) ? limits.wtime : limits.btime;
         int inc = (position.get_turn() == Color::WHITE) ? limits.winc : limits.binc;
 
-        tc.time_ms = time_left / TIME_ALLOCATION_DIVISOR + inc;
+        tc.time_ms = time_left / TIME_ALLOCATION_DIVISOR + inc/INCREMENT_DIVISOR;
         if (tc.time_ms > time_left / 2) tc.time_ms = time_left / TIME_ALLOCATION_DIVISOR;
 
         // Near 50-move rule: use half of remaining time to avoid draw
