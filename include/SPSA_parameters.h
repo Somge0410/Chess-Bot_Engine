@@ -39,9 +39,9 @@ constexpr int ASPIRATION_WINDOW_MULTIPLIER = 2;
 constexpr int OPT_TIME_ALLOCATION_DIVISOR = 40;  // time_left / divisor
 constexpr int OPT_TIME_ALLOCATION_DIVISOR_MG = 40;  // time_left / divisor
 constexpr int OPT_TIME_ALLOCATION_DIVISOR_EG = 40;  // time_left / divisor
-constexpr int MAX_TIME_ALLOCATION_DIVISOR = 20;
-constexpr int MAX_TIME_ALLOCATION_DIVISOR_MG = 15;
-constexpr int MAX_TIME_ALLOCATION_DIVISOR_EG = 25;
+constexpr int MAX_TIME_ALLOCATION_DIVISOR = 40;// 20;
+constexpr int MAX_TIME_ALLOCATION_DIVISOR_MG = 40;// 15;
+constexpr int MAX_TIME_ALLOCATION_DIVISOR_EG = 40;// 25;
 constexpr int MAX_RECENT_BEST_COUNT = 1; //6;
 constexpr int TIME_CHANGES_COUNT_BIG = 0;//0.5;
 constexpr int TIME_CHANGES_COUNT_MEDIUM = 0;// 0.3;
@@ -52,7 +52,7 @@ constexpr double VOLATILITY_DIV = 1;//250.0;
 constexpr double EXTRA_BEST_BASE = 0; //0.08;
 constexpr double EXTRA_BEST_FLIP = 0;//0.1;
 constexpr double EXTRA_BEST_WEIGHT = 0; //0.22;
-constexpr double TIME_MARGIN = 0.75;
+constexpr double TIME_MARGIN = 0;
 constexpr int MAX_TIME_FRACTION = 2;  // max time = time_left / divisor
 
 // --- NEU: Root Move Perturbation (Multi-Threading) ---

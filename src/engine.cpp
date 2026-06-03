@@ -376,7 +376,7 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
         // Near 50-move rule: use half of remaining time to avoid draw
         int half_moves = position.get_half_moves();
         if ((half_moves == 50 || half_moves == 51) && time_left > 500) {
-            tc.time_ms =std::max(time_left / 2,30000);
+            tc.time_ms =std::min(time_left / 2,30000);
         }
     }
     else if (limits.depth > 0) {
