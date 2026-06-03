@@ -65,6 +65,9 @@ struct Move{
         move |= uint16_t((static_cast<uint16_t>(promotion_piece) & 0x0F) << 12);
         return move;
     }
+    bool is_quiet() const {
+        return piece_captured == PieceType::NONE && promotion_piece == PieceType::NONE;
+    }
 };
 struct MoveList {
     Move moves[256]; int count = 0;
@@ -73,6 +76,7 @@ struct MoveList {
     Move& operator[](int index) { return moves[index]; }
     const Move& operator[](int index) const { return moves[index]; }
     size_t size() const { return count; }
+
     bool empty() const { return count == 0; }
     void clear() { count = 0; }
     void swap_items(int i, int j) {

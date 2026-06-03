@@ -446,6 +446,12 @@ int main(){
         outpost_mask[1][square] = backward_ranks & files;
 
     }
+	int reduction_depth[64][218] = {};
+    for(int depth=0;depth<64; ++depth){
+        for(int move_count=0; move_count<218; ++move_count){
+			reduction_depth[depth][move_count] = 1.35 + std::log(depth+1) * std::log(move_count + 1) / 2.75;
+        }
+	}
 	std::vector<std::vector<int>> distance_bonus(64, std::vector<int>(64, 0));
     for (int king_square = 0; king_square < 64; ++king_square) {
         for (int att_sq = 0; att_sq < 64; ++att_sq) {
@@ -474,7 +480,8 @@ int main(){
     //print_array("RANK_MASK",rank_mask);
     //print_array("ADJACENT_FILE_MASK",adjacend_file_mask);
     //print_2d_array("PASSED_PAWN_MASK",passed_pawn_mask);
-	print_2d_array("FORWARD_WAY_MASK", forward_way_mask);
+	//print_2d_array("FORWARD_WAY_MASK", forward_way_mask);
+	print_2d_array("REDUCTION_AMOUNT", reduction_depth);
 
     //print_2d_array("OUTPOST_MASK",outpost_mask);
 	//print_2d_int_array("DISTANCE_BONUS", distance_bonus);

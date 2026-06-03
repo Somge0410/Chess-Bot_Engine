@@ -35,6 +35,7 @@ constexpr int INFINITE_DEPTH = 64;
 constexpr int INFINITE_TIME_MS = 3600000;
 constexpr int DEFAULT_TIME_MS = 20000;
 constexpr int NEG_SEE_SCORE = -100000;
+constexpr int HISTORY_MAX = 16384;
 
 // constants for evaluation
 const int MATE_SCORE=32000;

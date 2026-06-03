@@ -276,3 +276,8 @@ inline bool is_on_center_files(int king_square) {
     uint64_t center_file_mask = FILE_MASK[3] | FILE_MASK[4] | FILE_MASK[5];
 	return (bit64(king_square) & center_file_mask) != 0;
 }
+inline void gravity_update(int& h, int bonus) {
+    bonus = std::clamp(bonus, -HISTORY_MAX, HISTORY_MAX);
+	h += bonus-h*std::abs(bonus)/HISTORY_MAX;
+	h = std::clamp(h, -HISTORY_MAX, HISTORY_MAX);
+}
