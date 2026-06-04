@@ -223,7 +223,6 @@ static bool try_set_spsa_option(const std::string& opt_name, const std::string& 
     if (opt_name == #name) { \
         int val = std::stoi(opt_value); \
         name = std::clamp(val, minv, maxv); \
-        std::cerr << "info string " #name " set to " << name << "\n"; \
         return true; \
     }
 
@@ -231,7 +230,6 @@ static bool try_set_spsa_option(const std::string& opt_name, const std::string& 
     if (opt_name == #name) { \
         double val = std::stod(opt_value); \
         name = std::clamp(val, minv, maxv); \
-        std::cerr << "info string " #name " set to " << name << "\n"; \
         return true; \
     }
 
