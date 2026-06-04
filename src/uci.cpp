@@ -151,10 +151,10 @@ static void run_perft(const Board& root_board, int depth) {
     X(DELTA_MARGIN, 0, 10000) \
     X(MAX_QUIET_PLY, 1, 64) \
     X(LMR_MIN_DEPTH, 0, 64) \
-    X(LMR_MIN_MOVES_SEARCHED, 0, 256) \
+    X(LMR_MIN_MOVES_SEARCHED, 1, 256) \
     X(LMR_REDUCTION_AMOUNT, 0, 64) \
     X(NMP_MIN_DEPTH, 0, 64) \
-    X(NMP_REDUCTION, 0, 64) \
+    X(NMP_REDUCTION, 1, 64) \
     X(TT_STAGE, 0, 16) \
     X(PROMO_STAGE, 0, 16) \
     X(MVV_LVA_STAGE, 0, 16) \
@@ -164,8 +164,6 @@ static void run_perft(const Board& root_board, int depth) {
     X(LOSING_CAPTURE_STAGE, 0, 16) \
     X(HISTORY_BONUS_MULTIPLIER, 0, 1000) \
     X(ASPIRATION_WINDOW_INITIAL, 0, 10000) \
-    X(ASPIRATION_WINDOW_MULTIPLIER, 1, 100) \
-    X(INCREMENT_DIVISOR, 1, 1000) \
     X(DELTA_BEST_SCORE, 0, 10000) \
     X(ROOT_PERTURBATION_MIN_HELPERS, 0, 256) \
     X(ROOT_PERTURBATION_MIN_BAND_SIZE, 0, 256) \
@@ -184,6 +182,7 @@ static void run_perft(const Board& root_board, int depth) {
     X(EXTRA_BEST_BASE, 0.0, 100000.0) \
     X(EXTRA_BEST_FLIP, 0.0, 100000.0) \
     X(EXTRA_BEST_WEIGHT, 0.0, 100000.0) \
+    X(INCREMENT_DIVISOR, 1.0, 1000.0) \
     X(OPT_TIME_ALLOCATION_DIVISOR, 1.0, 1000.0) \
     X(OPT_TIME_ALLOCATION_DIVISOR_MG, 1.0, 1000.0) \
     X(OPT_TIME_ALLOCATION_DIVISOR_EG, 1.0, 1000.0) \
@@ -195,6 +194,7 @@ static void run_perft(const Board& root_board, int depth) {
     X(MAX_NO_TIME_ALLOC_DIV, 1.0, 100000.0) \
     X(TIME_MARGIN, -100000.0, 100000.0)\
     X(TIME_CHANGES_COUNT_BIG, 0.0, 1.0) \
+    X(ASPIRATION_WINDOW_MULTIPLIER, 1.0, 100.0) \
     X(Q_LOG_BASE, 0.0,10.0)\
     X(Q_LOG_DIV, 1.0,1000.0) \
     X(LOG_BASE, 0.0,10.0) \

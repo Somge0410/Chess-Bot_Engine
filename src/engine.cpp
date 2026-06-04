@@ -537,13 +537,13 @@ int Engine::late_move_reduction(int depth, int moves_searched, const Move& move,
     bool is_quiet = move.is_quiet();
     if (is_quiet) {
         //return Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
-        return std::min(depth-1,static_cast<int>(Q_LOG_BASE + std::log(depth) * std::log(moves_searched) / Q_LOG_DIV));
+        return std::clamp(static_cast<int>(Q_LOG_BASE + std::log(depth) * std::log(moves_searched) / Q_LOG_DIV), 0, depth - 1);
     }
     else {
 
         //return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
 
-        return std::min(depth-1,static_cast<int>(LOG_BASE + std::log(depth) * std::log(moves_searched) / LOG_DIV));
+        return std::clamp(static_cast<int>(LOG_BASE + std::log(depth) * std::log(moves_searched) / LOG_DIV),0,depth-1);
     }
 }
 bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls) {
@@ -552,6 +552,7 @@ bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int dept
     if(is_mate_score_possible|| depth < NMP_MIN_DEPTH || king_is_in_check || !board.has_enough_material_for_nmp()) {
         return false;
 	}
+	if (depth - NMP_REDUCTION <= 0) return false;
 	int original_ep_square = board.make_null_move();
 	int null_move_score = negamax(board, depth - NMP_REDUCTION, -beta, -beta + 1, ply + 1,tls).score;
 	null_move_score = -null_move_score;

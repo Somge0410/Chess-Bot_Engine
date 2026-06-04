@@ -7,13 +7,13 @@ inline int DELTA_MARGIN = 200;
 inline int MAX_QUIET_PLY = 7;
 
 // --- NEU: Late Move Reduction (LMR) ---
-inline int LMR_MIN_DEPTH = 3;
-inline int LMR_MIN_MOVES_SEARCHED = 3;
-inline int LMR_REDUCTION_AMOUNT = 2;
+inline int LMR_MIN_DEPTH = 0;
+inline int LMR_MIN_MOVES_SEARCHED = 1;
+inline int LMR_REDUCTION_AMOUNT = 64;
 
 // --- NEU: Null Move Pruning (NMP) ---
-inline int NMP_MIN_DEPTH = 3;
-inline int NMP_REDUCTION = 3;
+inline int NMP_MIN_DEPTH = 0;
+inline int NMP_REDUCTION = 1;
 
 // --- NEU: Move Ordering ---
 inline int TT_STAGE = 7;
@@ -44,7 +44,7 @@ constexpr int MAX_RECENT_BEST_COUNT = 5;
 inline double TIME_CHANGES_COUNT_BIG = 0.1;
 inline double TIME_CHANGES_COUNT_MEDIUM = 0.05 ;
 inline double TIME_CHANGES_COUNT_SMALL = 0.01;
-inline int INCREMENT_DIVISOR = 1;
+inline double INCREMENT_DIVISOR = 1;
 inline int DELTA_BEST_SCORE = 300;
 inline double VOLATILITY_DIV = 1;
 inline double EXTRA_BEST_BASE = 0;
