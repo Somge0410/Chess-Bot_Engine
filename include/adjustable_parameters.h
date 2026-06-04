@@ -114,5 +114,3 @@ constexpr int KNIGHT_ATTACK_VALUE = 20;
 constexpr int BISHOP_ATTACK_VALUE = 20;
 constexpr int ROOK_ATTACK_VALUE = 40;
 constexpr int QUEEN_ATTACK_VALUE = 80;
-
-
