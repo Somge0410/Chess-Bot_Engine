@@ -42,18 +42,10 @@ void print_2d_array(const std::string& name, const std::vector<std::vector<uint6
 
 }
 int main(int argc, char* argv[]) {
-	/*std::vector<std::vector<uint64_t>> reduction_depth(64, std::vector<uint64_t>(218, 0));
-    for (int depth = 0; depth < 64; ++depth) {
-        for (int move_count = 0; move_count < 218; ++move_count) {
-            int red= std::round(1.35 + std::log(depth + 1) * std::log(move_count + 1) / 2.75);
-            if(depth<=red)
-                reduction_depth[depth][move_count] = std::min(std::max(0,red-1),std::max(0,depth-1));
-            else
-				reduction_depth[depth][move_count] = red;
-        }
-    }*/
-
-    //print_2d_array("Q-REDUCTION_AMOUNT", reduction_depth);
+    if (argc >= 2 && std::string(argv[1]) == "bench") {
+        std::cout << "1 nodes 1 nps\n";
+        return 0;
+    }
     Zobrist::initialize_keys();
         std::ios::sync_with_stdio(false);
         std::cin.tie(nullptr);
