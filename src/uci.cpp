@@ -14,6 +14,7 @@
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
 #include "adjustable_parameters.h"
+#include "SPSA_parameters.h"
 
 #ifndef GIT_COMMIT
 #define GIT_COMMIT "unknown"
@@ -144,6 +145,103 @@ static void run_perft(const Board& root_board, int depth) {
         << " nps " << nps << "\n";
     std::cout.flush();
 }
+#define SPSA_INT_PARAMS(X) \
+    X(FUTILITY_MARGIN_D1, 0, 10000) \
+    X(FUTILITY_MARGIN_D2, 0, 10000) \
+    X(DELTA_MARGIN, 0, 10000) \
+    X(MAX_QUIET_PLY, 1, 64) \
+    X(LMR_MIN_DEPTH, 0, 64) \
+    X(LMR_MIN_MOVES_SEARCHED, 0, 256) \
+    X(LMR_REDUCTION_AMOUNT, 0, 64) \
+    X(NMP_MIN_DEPTH, 0, 64) \
+    X(NMP_REDUCTION, 0, 64) \
+    X(TT_STAGE, 0, 16) \
+    X(PROMO_STAGE, 0, 16) \
+    X(MVV_LVA_STAGE, 0, 16) \
+    X(KILLER_STAGE, 0, 16) \
+    X(COUNTERMOVE_STAGE, 0, 16) \
+    X(QUIET_STAGE, 0, 16) \
+    X(LOSING_CAPTURE_STAGE, 0, 16) \
+    X(HISTORY_BONUS_MULTIPLIER, 0, 1000) \
+    X(ASPIRATION_WINDOW_INITIAL, 0, 10000) \
+    X(ASPIRATION_WINDOW_MULTIPLIER, 1, 100) \
+    X(INCREMENT_DIVISOR, 1, 1000) \
+    X(DELTA_BEST_SCORE, 0, 10000) \
+    X(ROOT_PERTURBATION_MIN_HELPERS, 0, 256) \
+    X(ROOT_PERTURBATION_MIN_BAND_SIZE, 0, 256) \
+    X(ROOT_PERTURBATION_MAX_BAND_SIZE, 0, 256) \
+    X(REVERSE_FUTILITY_MAX_DEPTH, 0, 64) \
+    X(REVERSE_FUTILITY_MARGIN, 0, 100000) \
+    X(PAWN_PUSH_SCORE1, -10000, 10000) \
+    X(PAWN_PUSH_SCORE2, -10000, 10000) \
+    X(PAWN_PUSH_SCORE3, -10000, 10000) \
+    X(PAWN_PUSH_SCORE4, -10000, 10000) \
+    X(PAWN_PUSH_SCORE5, -10000, 10000) \
+    X(PAWN_PUSH_SCORE6, -10000, 10000)
+
+#define SPSA_DOUBLE_PARAMS(X) \
+    X(VOLATILITY_DIV, 1.0, 100000.0) \
+    X(EXTRA_BEST_BASE, 0.0, 100000.0) \
+    X(EXTRA_BEST_FLIP, 0.0, 100000.0) \
+    X(EXTRA_BEST_WEIGHT, 0.0, 100000.0) \
+    X(OPT_TIME_ALLOCATION_DIVISOR, 1.0, 1000.0) \
+    X(OPT_TIME_ALLOCATION_DIVISOR_MG, 1.0, 1000.0) \
+    X(OPT_TIME_ALLOCATION_DIVISOR_EG, 1.0, 1000.0) \
+    X(MAX_TIME_ALLOCATION_DIVISOR, 1.0, 1000.0) \
+    X(MAX_TIME_ALLOCATION_DIVISOR_MG, 1.0, 1000.0) \
+    X(MAX_TIME_ALLOCATION_DIVISOR_EG, 1.0, 1000.0) \
+    X(NO_TIME_TRIGGER_DIV, 1.0, 100000.0) \
+    X(NO_TIME_ALLOC_DIV, 1.0, 100000.0) \
+    X(MAX_NO_TIME_ALLOC_DIV, 1.0, 100000.0) \
+    X(TIME_MARGIN, -100000.0, 100000.0)\
+    X(TIME_CHANGES_COUNT_BIG, 0.0, 1.0) \
+    X(Q_LOG_BASE, 0.0,10.0)\
+    X(Q_LOG_DIV, 1.0,1000.0) \
+    X(LOG_BASE, 0.0,10.0) \
+    X(LOG_DIV, 1.0,1000.0) \
+    X(TIME_CHANGES_COUNT_MEDIUM, 0.0, 1.0) \
+    X(TIME_CHANGES_COUNT_SMALL, 0.0, 1.0) \
+    X(CAPTURE_SCORE_TIEBREAK_DIVISOR, 1.0, 1024.0) 
+
+static void print_spsa_options() {
+#define PRINT_INT_OPT(name, minv, maxv) \
+    std::cout << "option name " #name " type spin default " << name \
+              << " min " << minv << " max " << maxv << std::endl;
+#define PRINT_DOUBLE_OPT(name, minv, maxv) \
+    std::cout << "option name " #name " type spin default " << static_cast<int>(name) \
+              << " min " << static_cast<int>(minv) << " max " << static_cast<int>(maxv) << std::endl;
+
+    SPSA_INT_PARAMS(PRINT_INT_OPT)
+        SPSA_DOUBLE_PARAMS(PRINT_DOUBLE_OPT)
+
+#undef PRINT_INT_OPT
+#undef PRINT_DOUBLE_OPT
+}
+
+static bool try_set_spsa_option(const std::string& opt_name, const std::string& opt_value) {
+#define SET_INT_OPT(name, minv, maxv) \
+    if (opt_name == #name) { \
+        int val = std::stoi(opt_value); \
+        name = std::clamp(val, minv, maxv); \
+        std::cerr << "info string " #name " set to " << name << "\n"; \
+        return true; \
+    }
+
+#define SET_DOUBLE_OPT(name, minv, maxv) \
+    if (opt_name == #name) { \
+        double val = std::stod(opt_value); \
+        name = std::clamp(val, minv, maxv); \
+        std::cerr << "info string " #name " set to " << name << "\n"; \
+        return true; \
+    }
+
+    SPSA_INT_PARAMS(SET_INT_OPT)
+    SPSA_DOUBLE_PARAMS(SET_DOUBLE_OPT)
+
+#undef SET_INT_OPT
+#undef SET_DOUBLE_OPT
+        return false;
+}
 
 void uci_loop() {
     Board board;     // starts in startpos, thanks to default ctor
@@ -158,22 +256,7 @@ void uci_loop() {
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
             std::cout << "option name Hash type spin default "
                       << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
-            std::cout << "option name RevFut type spin default 125 min 0 max 500" << std::endl;
-            std::cout << "option name RevFutDepth type spin default 5 min 1 max 20" << std::endl;
-            std::cout << "option name FutilityMarginD1 type spin default 200 min 0 max 10000" << std::endl;
-            std::cout << "option name FutilityMarginD2 type spin default 400 min 0 max 10000" << std::endl;
-			std::cout << "option name FutilityMarginD3 type spin default 400 min 0 max 10000" << std::endl;
-            std::cout << "option name DeltaMargin type spin default 200 min 0 max 1000" << std::endl;
-            std::cout << "option name MaxQuietPly type spin default 7 min 1 max 20" << std::endl;
-            std::cout << "option name LmrMinDepth type spin default 3 min 1 max 10" << std::endl;
-            std::cout << "option name LmrMinMoves type spin default 3 min 1 max 10" << std::endl;
-            std::cout << "option name LmrRedAm type spin default 2 min 0 max 10" << std::endl;
-            std::cout << "option name NmpReduction type spin default 3 min 1 max 10" << std::endl;
-            std::cout << "option name HistoryBonusMultiplier type spin default 1 min 0 max 10" << std::endl;
-            std::cout << "option name AspirationWindowInitial type spin default 50 min 1 max 500" << std::endl;
-            std::cout << "option name AspirationWindowMultiplier type spin default 2 min 1 max 10" << std::endl;
-            std::cout << "option name TimeAllocationDivisor type spin default 40 min 1 max 100" << std::endl;
-            std::cout << "option name MaxTimeFraction type spin default 2 min 1 max 10" << std::endl;
+            print_spsa_options();
 
             std::cout << "uciok\n";
             std::cout.flush();
@@ -236,90 +319,8 @@ void uci_loop() {
                 engine.resize_tt(hash_mb);
                 std::cerr << "info string Hash set to " << hash_mb << " MB\n";
             }
-            else if(opt_name == "RevFut"){
-                int val=std::stoi(opt_value);
-                REVERSE_FUTILITY_MARGIN = std::max(0,val);
-                std::cerr << "info string RevFut set to " << val << "\n";
-			}
-            else if (opt_name == "RevFutDepth") {
-                int val = std::stoi(opt_value);
-                REVERSE_FUTILITY_MAX_DEPTH = std::max(0, val);
-                std::cerr << "info string RevFutDepth set to " << val << "\n";
-            }
-            else if(opt_name =="FutilityMarginD1"){
-                int val=std::stoi(opt_value);
-                FUTILITY_MARGIN_D1=std::max(0,val);
-                std::cerr << "info string FutilityMarginD1 set to " << val << "\n";
-            }
-            else if (opt_name == "FutilityMarginD2") {
-                int val = std::stoi(opt_value);
-                FUTILITY_MARGIN_D2 = std::max(0, val);
-                std::cerr << "info string FutilityMarginD2 set to " << val << "\n";
-			}
-            else if (opt_name == "FutilityMarginD3") {
-                int val = std::stoi(opt_value);
-                FUTILITY_MARGIN_D3 = std::max(0, val);
-                std::cerr << "info string FutilityMarginD3 set to " << val << "\n";
-            }
-            else if(opt_name == "DeltaMargin"){
-                int val=std::stoi(opt_value);
-                DELTA_MARGIN=std::max(0,val);
-                std::cerr << "info string DeltaMargin set to " << val << "\n";
-			}
-            else if (opt_name == "MaxQuietPly") {
-                int val = std::stoi(opt_value);
-                MAX_QUIET_PLY = std::max(0, val);
-                std::cerr << "info string MaxQuietPly set to " << val << "\n";
-            }
-            else if (opt_name == "LmrMinDepth") {
-                int val = std::stoi(opt_value);
-                LMR_MIN_DEPTH = std::max(0, val);
-                std::cerr << "info string LmrMinDepth set to " << val << "\n";
-            }
-            else if (opt_name == "LmrMinMoves") {
-                int val = std::stoi(opt_value);
-                LMR_MIN_MOVES_SEARCHED = std::max(0, val);
-                std::cerr << "info string LMR_MIN_MOVES set to " << val << "\n";
-            }
-            else if (opt_name == "LmrRedAm") {
-                int val = std::stoi(opt_value);
-                LMR_REDUCTION_AMOUNT = std::max(0, val);
-                std::cerr << "info string LmrRedAm set to " << val << "\n";
-            }
-            else if (opt_name == "NmpMinDepth") {
-                int val = std::stoi(opt_value);
-                NMP_MIN_DEPTH = std::max(0, val);
-                std::cerr << "info string NmpMinDepth set to " << val << "\n";
-            }
-            else if (opt_name == "NmpReduction") {
-                int val = std::stoi(opt_value);
-                NMP_REDUCTION = std::max(0, val);
-                std::cerr << "info string NmpReduction set to " << val << "\n";
-            }
-            else if (opt_name == "HistoryBonusMultiplier") {
-                int val = std::stoi(opt_value);
-                HISTORY_BONUS_MULTIPLIER = std::max(1, val);
-                std::cerr << "info string HISTORY_BONUS_MULTIPLIER set to " << val << "\n";
-            }
-            else if (opt_name == "AspirationWindowInitial") {
-                int val = std::stoi(opt_value);
-                ASPIRATION_WINDOW_INITIAL = std::max(0, val);
-                std::cerr << "info string AspirationWindowInitial set to " << val << "\n";
-            }
-            else if(opt_name == "AspirationWindowMultiplier"){
-                int val=std::stoi(opt_value);
-                ASPIRATION_WINDOW_MULTIPLIER=std::max(1,val);
-                std::cerr << "info string AspirationWindowMultiplier set to " << val << "\n";
-            }
-             else if (opt_name == "TimeAllocationDivisor") {
-                int val = std::stoi(opt_value);
-                TIME_ALLOCATION_DIVISOR = std::max(1, val);
-                std::cerr << "info string TimeAllocationDivisor set to " << val << "\n";
-            }
-            else if (opt_name == "MaxTimeFraction") {
-                int val = std::stoi(opt_value);
-                MAX_TIME_FRACTION = std::max(1, val);
-                std::cerr << "info string MaxTimeFraction set to " << val << "\n";
+            else if (try_set_spsa_option(opt_name, opt_value)) {
+                continue;
 			}
         
 
@@ -468,3 +469,4 @@ void uci_loop() {
     wait_for_search(engine, search_thread);
     engine.shutdown();
 }
+
