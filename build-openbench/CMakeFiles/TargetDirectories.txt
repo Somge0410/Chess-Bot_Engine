@@ -1,7 +1,0 @@
-/mnt/c/Chess-Projects/Chess-Bot_Engine/build-openbench/CMakeFiles/Chess-Bot_Engine.dir
-/mnt/c/Chess-Projects/Chess-Bot_Engine/build-openbench/CMakeFiles/edit_cache.dir
-/mnt/c/Chess-Projects/Chess-Bot_Engine/build-openbench/CMakeFiles/rebuild_cache.dir
-/mnt/c/Chess-Projects/Chess-Bot_Engine/build-openbench/CMakeFiles/list_install_components.dir
-/mnt/c/Chess-Projects/Chess-Bot_Engine/build-openbench/CMakeFiles/install.dir
-/mnt/c/Chess-Projects/Chess-Bot_Engine/build-openbench/CMakeFiles/install/local.dir
-/mnt/c/Chess-Projects/Chess-Bot_Engine/build-openbench/CMakeFiles/install/strip.dir
