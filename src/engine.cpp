@@ -1131,8 +1131,8 @@ void Engine::resize_tt(size_t tt_size_mb) {
     tt.clear();
     init_tt(tt_size_mb);
 
-    std::cerr << "info string TT resized to " << tt_size_mb
-              << " MB, entries=" << 4 * tt.size() << "\n";
+    //std::cerr << "info string TT resized to " << tt_size_mb
+    //          << " MB, entries=" << 4 * tt.size() << "\n";
 
     // Thread-Pool mit gleicher Thread-Anzahl wieder hochfahren
     start_thread_pool(saved_threads);
