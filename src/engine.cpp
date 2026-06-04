@@ -35,8 +35,8 @@ Engine::Engine(size_t tt_size_mb){
     //int thread_count = std::thread::hardware_concurrency();
 	int thread_count = 1;
     start_thread_pool(thread_count);
-    std::cerr << "Engine initialized with threads=" << thread_count
-		<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
+    //std::cerr << "Engine initialized with threads=" << thread_count
+	//	<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
 	stop_search.store(false, std::memory_order_relaxed);
     checks_count=0;
     ep_count=0;

@@ -309,13 +309,13 @@ void uci_loop() {
                 int threads = std::stoi(opt_value);
                 threads = std::max(1, std::min(threads, static_cast<int>(std::thread::hardware_concurrency())));
                 engine.set_threads(threads);
-                std::cerr << "info string Threads set to " << threads << "\n";
+                //std::cerr << "info string Threads set to " << threads << "\n";
             }
             else if (opt_name == "Hash") {
                 size_t hash_mb = std::stoull(opt_value);
                 hash_mb = std::max<size_t>(1, std::min<size_t>(hash_mb, 65536));
                 engine.resize_tt(hash_mb);
-                std::cerr << "info string Hash set to " << hash_mb << " MB\n";
+                //std::cerr << "info string Hash set to " << hash_mb << " MB\n";
             }
             else if (try_set_spsa_option(opt_name, opt_value)) {
                 continue;
