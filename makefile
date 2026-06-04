@@ -14,11 +14,12 @@ CXX ?= g++
 
 all:
 	@echo "OpenBench requested EXE=$(EXE)"
-	cmake -S . -B build-openbench -G "Unix Makefiles" \
+	rm -rf $(BUILD_DIR)
+	cmake -S . -B $(BUILD_DIR) -G "Unix Makefiles" \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_CXX_COMPILER=$(CXX)
-	cmake --build build-openbench --parallel
-	cmake -E copy build-openbench/Chess-Bot_Engine $(EXE)
+	cmake --build $(BUILD_DIR) --parallel
+	cmake -E copy $(BUILD_DIR)/$(TARGET) $(EXE)
 
 clean:
 	rm -rf $(BUILD_DIR) $(EXE)

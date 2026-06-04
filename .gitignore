@@ -416,3 +416,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+build-openbench/
+out/
+test_engine
+Chess-Bot_Engine
+*.exey
