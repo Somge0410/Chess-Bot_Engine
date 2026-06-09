@@ -40,6 +40,13 @@ inline int get_msb(uint64_t bitboard) {
 static constexpr int flip_square(int sq) {
     return sq ^ 56;
 }
+inline int poplsb(uint64_t& bitboard) {
+    int lsb_index = get_lsb(bitboard);
+    if (lsb_index != NO_SQUARE) {
+        bitboard &= bitboard - 1; // Clear the least significant bit
+    }
+    return lsb_index;
+}
     
 inline void display_bitboard(uint64_t bitboard){
     std::cout<<std::unitbuf <<"\n"
