@@ -256,6 +256,11 @@ struct EvaluationResult {
         this->eg_score -= other.eg_score;
         return *this;
 	}
+    EvaluationResult& operator*=(int multiplier) {
+        this->mg_score = static_cast<int16_t>(this->mg_score * multiplier);
+        this->eg_score = static_cast<int16_t>(this->eg_score * multiplier);
+        return *this;
+	}
 };
 inline EvaluationResult operator+(EvaluationResult lhs, const EvaluationResult& rhs) {
     lhs += rhs;
@@ -264,6 +269,10 @@ inline EvaluationResult operator+(EvaluationResult lhs, const EvaluationResult& 
 inline EvaluationResult operator-(EvaluationResult lhs, const EvaluationResult& rhs) {
     lhs.mg_score -= rhs.mg_score;
     lhs.eg_score -= rhs.eg_score;
+    return lhs;
+}
+inline EvaluationResult operator*(EvaluationResult lhs, int multiplier) {
+    lhs *= multiplier;
     return lhs;
 }
 inline EvaluationResult get_piece_values(const Color& color, const PieceType& piece) {
