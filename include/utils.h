@@ -67,7 +67,7 @@ inline void display_bitboard(uint64_t bitboard){
 }
 
 static inline uint64_t bit64(int sq) { return 1ULL << sq; }
-
+static inline uint8_t bit8(int sq) { return static_cast<uint8_t>(1u << sq); }
 
 static inline Color flip_color(Color color) {
     return (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
@@ -249,7 +249,15 @@ inline int king_distance(int sq1, int sq2) {
     int rank2 = sq2 / 8;
     return std::max(std::abs(file1 - file2), std::abs(rank1 - rank2));
 }
-
+inline int rank(int square) {
+    return square / 8;
+}
+inline int file(int square) {
+    return square % 8;
+}
+inline int flip_rank(int square) {
+    return 7 - rank(square);
+}
 struct EvaluationResult {
     int16_t mg_score;
     int16_t eg_score;

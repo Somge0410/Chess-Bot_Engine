@@ -90,7 +90,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	int rfp_max_depth = 5;
 	bool is_pv_node = (beta - alpha) > 1;
     if(!king_is_in_check && depth <= rfp_max_depth&& std::abs(beta)<MATE_THRESHOLD && !is_pv_node) {
-        static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        static_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
 		int rfp_margin = 112 * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
             rev_fut_count++;
@@ -131,10 +131,10 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     int current_eval=-MATE_SCORE;
     if (depth<=2)
 	{
-		if (static_eval != -MATE_SCORE) 
+        if (static_eval != -MATE_SCORE)
             current_eval = static_eval;
         else
-            current_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+            current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     
 	// Late Move Reduction prerequisites here
