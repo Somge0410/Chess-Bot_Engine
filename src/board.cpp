@@ -224,8 +224,7 @@ EvaluationResult Board::initialize_material_score()const {
     EvaluationResult score = { 0,0 };
     for (int color=0;color<2;++color){
         for (int piece=0;piece<6;++piece){
-			score.mg_score += color == 0 ? popcount(pieces[color][piece]) * PIECE_VALUES_MG[piece] : -popcount(pieces[color][piece]) * PIECE_VALUES_MG[piece];
-			score.eg_score += color == 0 ? popcount(pieces[color][piece]) * PIECE_VALUES_EG[piece] : -popcount(pieces[color][piece]) * PIECE_VALUES_EG[piece];
+			score += color == 0 ? EvalWeights[static_cast<EvalParam>(piece)] * popcount(pieces[color][piece]) : EvalWeights[static_cast<EvalParam>(piece)] * -popcount(pieces[color][piece]);
         }
     }
     return score;

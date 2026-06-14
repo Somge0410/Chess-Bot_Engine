@@ -1,632 +1,650 @@
 #include "evaluation.h"
-
 EvaluationResult EvalWeights[PARAM_COUNT] = {
-	{100, 100 },  // PAWN
-	{ 340, 255 }, // KNIGHT
-	{ 280, 242 }, // BISHOP
-	{ 334, 416 }, // ROOK
-	{ 782, 889 }, // QUEEN
-	// Positional weights
-	//PAWN Values
-	{0,0},        // PAWN_PST_START
-	{0,0},        // PAWN_PST_START+1
-	{0,0},		  // PAWN_PST_START+2
-	{0,0},		  // PAWN_PST_START+3
-	{0,0},		  // PAWN_PST_START+4
-	{0,0},		  // PAWN_PST_START+5
-	{0,0},		  // PAWN_PST_START+6
-	{0,0},		  // PAWN_PST_START+7
-	{-33,2},	  // PAWN_PST_START+8
-	{-32,7},	  // PAWN_PST_START+9
-	{-25,11},	  // PAWN_PST_START+10
-	{-30,13},	  // PAWN_PST_START+11
-	{-14,18},	  // PAWN_PST_START+12
-	{ -9, 14},	  // PAWN_PST_START+13
-	{ -5, 1},	  // PAWN_PST_START+14
-	{-38,-5},	  // PAWN_PST_START+15
-	{-35,0},	  // PAWN_PST_START+16
-	{-40,4},	  // PAWN_PST_START+17
-	{-21,3},	  // PAWN_PST_START+18
-	{-21,8},	  // PAWN_PST_START+19
-	{ -7, 7},	  // PAWN_PST_START+20
-	{-14,8},	  // PAWN_PST_START+21
-	{-10,-2},	  // PAWN_PST_START+22
-	{-21,-8},	  // PAWN_PST_START+23
-	{-33,6},	  // PAWN_PST_START+24
-	{-28,7},	  // PAWN_PST_START+25
-	{-12,4},	  // PAWN_PST_START+26
-	{  1,  3},	  // PAWN_PST_START+27
-	{  6,  1},	  // PAWN_PST_START+28
-	{ -3, 4},	  // PAWN_PST_START+29
-	{-21,3},	  // PAWN_PST_START+30
-	{-28,-2},	  // PAWN_PST_START+31
-	{-24,17},	  // PAWN_PST_START+32
-	{-16,10},	  // PAWN_PST_START+33
-	{ -8, 9},	  // PAWN_PST_START+34
-	{ -4, 1},	  // PAWN_PST_START+35
-	{ 23, -4 },   // PAWN_PST_START+36
-	{  8,  4 },   // PAWN_PST_START+37
-	{-10,8},      // PAWN_PST_START+38
-	{-14,5},      // PAWN_PST_START+39
-	{-7, 22},     // PAWN_PST_START+40
-	{-15,28},	  // PAWN_PST_START+41
-	{ 21, 17 },   // PAWN_PST_START+42
-	{ 27, 21 },   // PAWN_PST_START+43
-	{ 44, 6 },    // PAWN_PST_START+44
-	{ 66, 11 },   // PAWN_PST_START+45
-	{ 32, 37 },   // PAWN_PST_START+46
-	{ 10, 24 },   // PAWN_PST_START+47
-	{ 74, 111 },  // PAWN_PST_START+48
-	{ 95, 106 },  // PAWN_PST_START+49
-	{ 84, 102 },  // PAWN_PST_START+50
-	{121,75},     // PAWN_PST_START+51
-	{101,72},     // PAWN_PST_START+52
-	{ 83, 83 },   // PAWN_PST_START+53
-	{-31,107},    // PAWN_PST_START+54
-	{-57,115},    // PAWN_PST_START+55
-	{ 0, 0 },     // PAWN_PST_START+56
-	{ 0, 0 },     // PAWN_PST_START+57
-	{ 0, 0 },     // PAWN_PST_START+58
-	{ 0, 0 },     // PAWN_PST_START+59
-	{ 0,0 },      // PAWN_PST_START+60
-	{0,0},		  // PAWN_PST_START+61
-	{0,0},        // PAWN_PST_START+62
-	{0,0},        // PAWN_PST_START+63
-	// Knight PST values
-	{44,44},	  // KNIGHT_PST_START
-	{25,25},	  // KNIGHT_PST_START+1
-	{50,50},	  // KNIGHT_PST_START+2
-	{49,49},	  // KNIGHT_PST_START+3
-	{51,51},	  // KNIGHT_PST_START+4
-	{42,42},	  // KNIGHT_PST_START+5
-	{31,31},	  // KNIGHT_PST_START+6
-	{31,31},	  // KNIGHT_PST_START+7
-	{42,42},	  // KNIGHT_PST_START+8
-	{52,52},	  // KNIGHT_PST_START+9
-	{65,65},	  // KNIGHT_PST_START+10
-	{63,63},	  // KNIGHT_PST_START+11
-	{62,62},	  // KNIGHT_PST_START+12
-	{59,59},	  // KNIGHT_PST_START+13
-	{42,42},	  // KNIGHT_PST_START+14
-	{45,45},	  // KNIGHT_PST_START+15
-	{56,56},	  // KNIGHT_PST_START+16
-	{72,72},	  // KNIGHT_PST_START+17
-	{80,80},	  // KNIGHT_PST_START+18
-	{86,86},	  // KNIGHT_PST_START+19
-	{83,83},	  // KNIGHT_PST_START+20
-	{79,79},	  // KNIGHT_PST_START+21
-	{68,68},	  // KNIGHT_PST_START+22
-	{56,56},	  // KNIGHT_PST_START+23
-	{55,55},	  // KNIGHT_PST_START+24
-	{70,70},	  // KNIGHT_PST_START+25
-	{85,85},	  // KNIGHT_PST_START+26
-	{87,87},	  // KNIGHT_PST_START+27
-	{90,90},	  // KNIGHT_PST_START+28
-	{80,80},	  // KNIGHT_PST_START+29
-	{66,66},	  // KNIGHT_PST_START+30
-	{50,50},	  // KNIGHT_PST_START+31
-	{59,59},	  // KNIGHT_PST_START+32
-	{74,74},	  // KNIGHT_PST_START+33
-	{83,83},	  // KNIGHT_PST_START+34
-	{85,85},	  // KNIGHT_PST_START+35
-	{79,79},	  // KNIGHT_PST_START+36
-	{74,74},	  // KNIGHT_PST_START+37
-	{46,46},	  // KNIGHT_PST_START+38
-	{47,47},	  // KNIGHT_PST_START+39
-	{63,63},	  // KNIGHT_PST_START+40
-	{80,80},	  // KNIGHT_PST_START+41
-	{81,81},	  // KNIGHT_PST_START+42
-	{65,65},	  // KNIGHT_PST_START+43
-	{56,56},	  // KNIGHT_PST_START+44
-	{52,52},	  // KNIGHT_PST_START+45
-	{38,38},	  // KNIGHT_PST_START+46
-	{37,37},	  // KNIGHT_PST_START+47
-	{55,55},	  // KNIGHT_PST_START+48
-	{56,56},	  // KNIGHT_PST_START+49
-	{62,62},	  // KNIGHT_PST_START+50
-	{64,64},      // KNIGHT_PST_START+51
-	{0,0},        // KNIGHT_PST_START+52
-	{0,0},	      // KNIGHT_PST_START+53
-	{0,0},	      // KNIGHT_PST_START+54
-	{56,56},	  // KNIGHT_PST_START+55
-	{62,62},	  // KNIGHT_PST_START+56
-	{64,64},      // KNIGHT_PST_START+57
-	{0,0},        // KNIGHT_PST_START+58
-	{0,0},	      // KNIGHT_PST_START+59
-	{0,0},	      // KNIGHT_PST_START+60
-	{56,56},	  // KNIGHT_PST_START+61
-	{62,62},	  // KNIGHT_PST_START+62
-	{64,64},      // KNIGHT_PST_START+63
-	// BISHOP PST values
-	{ 44,44 },	  // BISHOP_PST_START
-	{ 25,25 },	  // BISHOP_PST_START+1
-	{ 50,50 },	  // BISHOP_PST_START+2
-	{ 49,49 },	  // BISHOP_PST_START+3
-	{ 51,51 },	  // BISHOP_PST_START+4
-	{ 42,42 },	  // BISHOP_PST_START+5
-	{ 31,31 },	  // BISHOP_PST_START+6
-	{ 31,31 },	  // BISHOP_PST_START+7
-	{ 42,42 },	  // BISHOP_PST_START+8
-	{ 52,52 },	  // BISHOP_PST_START+9
-	{ 65,65 },	  // BISHOP_PST_START+10
-	{ 63,63 },	  // BISHOP_PST_START+11
-	{ 62,62 },	  // BISHOP_PST_START+12
-	{ 59,59 },	  // BISHOP_PST_START+13
-	{ 42,42 },	  // BISHOP_PST_START+14
-	{ 45,45 },	  // BISHOP_PST_START+15
-	{ 56,56 },	  // BISHOP_PST_START+16
-	{ 72,72 },	  // BISHOP_PST_START+17
-	{ 80,80 },	  // BISHOP_PST_START+18
-	{ 86,86 },	  // BISHOP_PST_START+19
-	{ 83,83 },	  // BISHOP_PST_START+20
-	{ 79,79 },	  // BISHOP_PST_START+21
-	{ 68,68 },	  // BISHOP_PST_START+22
-	{ 56,56 },	  // BISHOP_PST_START+23
-	{ 55,55 },	  // BISHOP_PST_START+24
-	{ 70,70 },	  // BISHOP_PST_START+25
-	{ 85,85 },	  // BISHOP_PST_START+26
-	{ 87,87 },	  // BISHOP_PST_START+27
-	{ 90,90 },	  // BISHOP_PST_START+28
-	{ 80,80 },	  // BISHOP_PST_START+29
-	{ 66,66 },	  // BISHOP_PST_START+30
-	{ 50,50 },	  // BISHOP_PST_START+31
-	{ 59,59 },	  // BISHOP_PST_START+32
-	{ 74,74 },	  // BISHOP_PST_START+33
-	{ 83,83 },	  // BISHOP_PST_START+34
-	{ 85,85 },	  // BISHOP_PST_START+35
-	{ 79,79 },	  // BISHOP_PST_START+36
-	{ 74,74 },	  // BISHOP_PST_START+37
-	{ 46,46 },	  // BISHOP_PST_START+38
-	{ 47,47 },	  // BISHOP_PST_START+39
-	{ 63,63 },	  // BISHOP_PST_START+40
-	{ 80,80 },	  // BISHOP_PST_START+41
-	{ 81,81 },	  // BISHOP_PST_START+42
-	{ 65,65 },	  // BISHOP_PST_START+43
-	{ 56,56 },	  // BISHOP_PST_START+44
-	{ 52,52 },	  // BISHOP_PST_START+45
-	{ 38,38 },	  // BISHOP_PST_START+46
-	{ 37,37 },	  // BISHOP_PST_START+47
-	{ 55,55 },	  // BISHOP_PST_START+48
-	{ 56,56 },	  // BISHOP_PST_START+49
-	{ 62,62 },	  // BISHOP_PST_START+50
-	{ 64,64 },    // BISHOP_PST_START+51
-	{ 0,0 },      // BISHOP_PST_START+52
-	{ 0,0 },	  // BISHOP_PST_START+53
-	{ 0,0 },	  // BISHOP_PST_START+54
-	{ 56,56 },	  // BISHOP_PST_START+55
-	{ 62,62 },	  // BISHOP_PST_START+56
-	{ 64,64 },    // BISHOP_PST_START+57
-	{ 0,0 },      // BISHOP_PST_START+58
-	{ 0,0 },	  // BISHOP_PST_START+59
-	{ 0,0 },	  // BISHOP_PST_START+60
-	{ 56,56 },	  // BISHOP_PST_START+61
-	{ 62,62 },	  // BISHOP_PST_START+62
-	{ 64,64 },    // BISHOP_PST_START+63
-	// ROOK PST values
-	{ 44,44 },	  // ROOK_PST_START
-	{ 25,25 },	  // ROOK_PST_START+1
-	{ 50,50 },	  // ROOK_PST_START+2
-	{ 49,49 },	  // ROOK_PST_START+3
-	{ 51,51 },	  // ROOK_PST_START+4
-	{ 42,42 },	  // ROOK_PST_START+5
-	{ 31,31 },	  // ROOK_PST_START+6
-	{ 31,31 },	  // ROOK_PST_START+7
-	{ 42,42 },	  // ROOK_PST_START+8
-	{ 52,52 },	  // ROOK_PST_START+9
-	{ 65,65 },	  // ROOK_PST_START+10
-	{ 63,63 },	  // ROOK_PST_START+11
-	{ 62,62 },	  // ROOK_PST_START+12
-	{ 59,59 },	  // ROOK_PST_START+13
-	{ 42,42 },	  // ROOK_PST_START+14
-	{ 45,45 },	  // ROOK_PST_START+15
-	{ 56,56 },	  // ROOK_PST_START+16
-	{ 72,72 },	  // ROOK_PST_START+17
-	{ 80,80 },	  // ROOK_PST_START+18
-	{ 86,86 },	  // ROOK_PST_START+19
-	{ 83,83 },	  // ROOK_PST_START+20
-	{ 79,79 },	  // ROOK_PST_START+21
-	{ 68,68 },	  // ROOK_PST_START+22
-	{ 56,56 },	  // ROOK_PST_START+23
-	{ 55,55 },	  // ROOK_PST_START+24
-	{ 70,70 },	  // ROOK_PST_START+25
-	{ 85,85 },	  // ROOK_PST_START+26
-	{ 87,87 },	  // ROOK_PST_START+27
-	{ 90,90 },	  // ROOK_PST_START+28
-	{ 80,80 },	  // ROOK_PST_START+29
-	{ 66,66 },	  // ROOK_PST_START+30
-	{ 50,50 },	  // ROOK_PST_START+31
-	{ 59,59 },	  // ROOK_PST_START+32
-	{ 74,74 },	  // ROOK_PST_START+33
-	{ 83,83 },	  // ROOK_PST_START+34
-	{ 85,85 },	  // ROOK_PST_START+35
-	{ 79,79 },	  // ROOK_PST_START+36
-	{ 74,74 },	  // ROOK_PST_START+37
-	{ 46,46 },	  // ROOK_PST_START+38
-	{ 47,47 },	  // ROOK_PST_START+39
-	{ 63,63 },	  // ROOK_PST_START+40
-	{ 80,80 },	  // ROOK_PST_START+41
-	{ 81,81 },	  // ROOK_PST_START+42
-	{ 65,65 },	  // ROOK_PST_START+43
-	{ 56,56 },	  // ROOK_PST_START+44
-	{ 52,52 },	  // ROOK_PST_START+45
-	{ 38,38 },	  // ROOK_PST_START+46
-	{ 37,37 },	  // ROOK_PST_START+47
-	{ 55,55 },	  // ROOK_PST_START+48
-	{ 56,56 },	  // ROOK_PST_START+49
-	{ 62,62 },	  // ROOK_PST_START+50
-	{ 64,64 },    // ROOK_PST_START+51
-	{ 0,0 },      // ROOK_PST_START+52
-	{ 0,0 },	  // ROOK_PST_START+53
-	{ 0,0 },	  // ROOK_PST_START+54
-	{ 56,56 },	  // ROOK_PST_START+55
-	{ 62,62 },	  // ROOK_PST_START+56
-	{ 64,64 },    // ROOK_PST_START+57
-	{ 0,0 },      // ROOK_PST_START+58
-	{ 0,0 },	  // ROOK_PST_START+59
-	{ 0,0 },	  // ROOK_PST_START+60
-	{ 56,56 },	  // ROOK_PST_START+61
-	{ 62,62 },	  // ROOK_PST_START+62
-	{ 64,64 },    // ROOK_PST_START+63
-	// Queen PST values
-	{ 44,44 },	  // QUEEN_PST_START
-	{ 25,25 },	  // QUEEN_PST_START+1
-	{ 50,50 },	  // QUEEN_PST_START+2
-	{ 49,49 },	  // QUEEN_PST_START+3
-	{ 51,51 },	  // QUEEN_PST_START+4
-	{ 42,42 },	  // QUEEN_PST_START+5
-	{ 31,31 },	  // QUEEN_PST_START+6
-	{ 31,31 },	  // QUEEN_PST_START+7
-	{ 42,42 },	  // QUEEN_PST_START+8
-	{ 52,52 },	  // QUEEN_PST_START+9
-	{ 65,65 },	  // QUEEN_PST_START+10
-	{ 63,63 },	  // QUEEN_PST_START+11
-	{ 62,62 },	  // QUEEN_PST_START+12
-	{ 59,59 },	  // QUEEN_PST_START+13
-	{ 42,42 },	  // QUEEN_PST_START+14
-	{ 45,45 },	  // QUEEN_PST_START+15
-	{ 56,56 },	  // QUEEN_PST_START+16
-	{ 72,72 },	  // QUEEN_PST_START+17
-	{ 80,80 },	  // QUEEN_PST_START+18
-	{ 86,86 },	  // QUEEN_PST_START+19
-	{ 83,83 },	  // QUEEN_PST_START+20
-	{ 79,79 },	  // QUEEN_PST_START+21
-	{ 68,68 },	  // QUEEN_PST_START+22
-	{ 56,56 },	  // QUEEN_PST_START+23
-	{ 55,55 },	  // QUEEN_PST_START+24
-	{ 70,70 },	  // QUEEN_PST_START+25
-	{ 85,85 },	  // QUEEN_PST_START+26
-	{ 87,87 },	  // QUEEN_PST_START+27
-	{ 90,90 },	  // QUEEN_PST_START+28
-	{ 80,80 },	  // QUEEN_PST_START+29
-	{ 66,66 },	  // QUEEN_PST_START+30
-	{ 50,50 },	  // QUEEN_PST_START+31
-	{ 59,59 },	  // QUEEN_PST_START+32
-	{ 74,74 },	  // QUEEN_PST_START+33
-	{ 83,83 },	  // QUEEN_PST_START+34
-	{ 85,85 },	  // QUEEN_PST_START+35
-	{ 79,79 },	  // QUEEN_PST_START+36
-	{ 74,74 },	  // QUEEN_PST_START+37
-	{ 46,46 },	  // QUEEN_PST_START+38
-	{ 47,47 },	  // QUEEN_PST_START+39
-	{ 63,63 },	  // QUEEN_PST_START+40
-	{ 80,80 },	  // QUEEN_PST_START+41
-	{ 81,81 },	  // QUEEN_PST_START+42
-	{ 65,65 },	  // QUEEN_PST_START+43
-	{ 56,56 },	  // QUEEN_PST_START+44
-	{ 52,52 },	  // QUEEN_PST_START+45
-	{ 38,38 },	  // QUEEN_PST_START+46
-	{ 37,37 },	  // QUEEN_PST_START+47
-	{ 55,55 },	  // QUEEN_PST_START+48
-	{ 56,56 },	  // QUEEN_PST_START+49
-	{ 62,62 },	  // QUEEN_PST_START+50
-	{ 64,64 },    // QUEEN_PST_START+51
-	{ 0,0 },      // QUEEN_PST_START+52
-	{ 0,0 },	  // QUEEN_PST_START+53
-	{ 0,0 },	  // QUEEN_PST_START+54
-	{ 56,56 },	  // QUEEN_PST_START+55
-	{ 62,62 },	  // QUEEN_PST_START+56
-	{ 64,64 },    // QUEEN_PST_START+57
-	{ 0,0 },      // QUEEN_PST_START+58
-	{ 0,0 },	  // QUEEN_PST_START+59
-	{ 0,0 },	  // QUEEN_PST_START+60
-	{ 56,56 },	  // QUEEN_PST_START+61
-	{ 62,62 },	  // QUEEN_PST_START+62
-	{ 64,64 },    // QUEEN_PST_START+63
-	// Knight PST values
-	{ 44,44 },	  // KING_PST_START
-	{ 25,25 },	  // KING_PST_START+1
-	{ 50,50 },	  // KING_PST_START+2
-	{ 49,49 },	  // KING_PST_START+3
-	{ 51,51 },	  // KING_PST_START+4
-	{ 42,42 },	  // KING_PST_START+5
-	{ 31,31 },	  // KING_PST_START+6
-	{ 31,31 },	  // KING_PST_START+7
-	{ 42,42 },	  // KING_PST_START+8
-	{ 52,52 },	  // KING_PST_START+9
-	{ 65,65 },	  // KING_PST_START+10
-	{ 63,63 },	  // KING_PST_START+11
-	{ 62,62 },	  // KING_PST_START+12
-	{ 59,59 },	  // KING_PST_START+13
-	{ 42,42 },	  // KING_PST_START+14
-	{ 45,45 },	  // KING_PST_START+15
-	{ 56,56 },	  // KING_PST_START+16
-	{ 72,72 },	  // KING_PST_START+17
-	{ 80,80 },	  // KING_PST_START+18
-	{ 86,86 },	  // KING_PST_START+19
-	{ 83,83 },	  // KING_PST_START+20
-	{ 79,79 },	  // KING_PST_START+21
-	{ 68,68 },	  // KING_PST_START+22
-	{ 56,56 },	  // KING_PST_START+23
-	{ 55,55 },	  // KING_PST_START+24
-	{ 70,70 },	  // KING_PST_START+25
-	{ 85,85 },	  // KING_PST_START+26
-	{ 87,87 },	  // KING_PST_START+27
-	{ 90,90 },	  // KING_PST_START+28
-	{ 80,80 },	  // KING_PST_START+29
-	{ 66,66 },	  // KING_PST_START+30
-	{ 50,50 },	  // KING_PST_START+31
-	{ 59,59 },	  // KING_PST_START+32
-	{ 74,74 },	  // KING_PST_START+33
-	{ 83,83 },	  // KING_PST_START+34
-	{ 85,85 },	  // KING_PST_START+35
-	{ 79,79 },	  // KING_PST_START+36
-	{ 74,74 },	  // KING_PST_START+37
-	{ 46,46 },	  // KING_PST_START+38
-	{ 47,47 },	  // KING_PST_START+39
-	{ 63,63 },	  // KING_PST_START+40
-	{ 80,80 },	  // KING_PST_START+41
-	{ 81,81 },	  // KING_PST_START+42
-	{ 65,65 },	  // KING_PST_START+43
-	{ 56,56 },	  // KING_PST_START+44
-	{ 52,52 },	  // KING_PST_START+45
-	{ 38,38 },	  // KING_PST_START+46
-	{ 37,37 },	  // KING_PST_START+47
-	{ 55,55 },	  // KING_PST_START+48
-	{ 56,56 },	  // KING_PST_START+49
-	{ 62,62 },	  // KING_PST_START+50
-	{ 64,64 },    // KING_PST_START+51
-	{ 0,0 },      // KING_PST_START+52
-	{ 0,0 },	  // KING_PST_START+53
-	{ 0,0 },	  // KING_PST_START+54
-	{ 56,56 },	  // KING_PST_START+55
-	{ 62,62 },	  // KING_PST_START+56
-	{ 64,64 },    // KING_PST_START+57
-	{ 0,0 },      // KING_PST_START+58
-	{ 0,0 },	  // KING_PST_START+59
-	{ 0,0 },	  // KING_PST_START+60
-	{ 56,56 },	  // KING_PST_START+61
-	{ 62,62 },	  // KING_PST_START+62
-	{ 64,64 },    // KING_PST_START+63
-	//PAWN EVAL
-	// PASSED PST values
-	{ 44,44 },	  // PASSED_PAWNS_START
-	{ 25,25 },	  // PASSED_PAWNS_START+1
-	{ 50,50 },	  // PASSED_PAWNS_START+2
-	{ 49,49 },	  // PASSED_PAWNS_START+3
-	{ 51,51 },	  // PASSED_PAWNS_START+4
-	{ 42,42 },	  // PASSED_PAWNS_START+5
-	{ 31,31 },	  // PASSED_PAWNS_START+6
-	{ 31,31 },	  // PASSED_PAWNS_START+7
-	{ 42,42 },	  // PASSED_PAWNS_START+8
-	{ 52,52 },	  // PASSED_PAWNS_START+9
-	{ 65,65 },	  // PASSED_PAWNS_START+10
-	{ 63,63 },	  // PASSED_PAWNS_START+11
-	{ 62,62 },	  // PASSED_PAWNS_START+12
-	{ 59,59 },	  // PASSED_PAWNS_START+13
-	{ 42,42 },	  // PASSED_PAWNS_START+14
-	{ 45,45 },	  // PASSED_PAWNS_START+15
-	{ 56,56 },	  // PASSED_PAWNS_START+16
-	{ 72,72 },	  // PASSED_PAWNS_START+17
-	{ 80,80 },	  // PASSED_PAWNS_START+18
-	{ 86,86 },	  // PASSED_PAWNS_START+19
-	{ 83,83 },	  // PASSED_PAWNS_START+20
-	{ 79,79 },	  // PASSED_PAWNS_START+21
-	{ 68,68 },	  // PASSED_PAWNS_START+22
-	{ 56,56 },	  // PASSED_PAWNS_START+23
-	{ 55,55 },	  // PASSED_PAWNS_START+24
-	{ 70,70 },	  // PASSED_PAWNS_START+25
-	{ 85,85 },	  // PASSED_PAWNS_START+26
-	{ 87,87 },	  // PASSED_PAWNS_START+27
-	{ 90,90 },	  // PASSED_PAWNS_START+28
-	{ 80,80 },	  // PASSED_PAWNS_START+29
-	{ 66,66 },	  // PASSED_PAWNS_START+30
-	{ 50,50 },	  // PASSED_PAWNS_START+31
-	{ 59,59 },	  // PASSED_PAWNS_START+32
-	{ 74,74 },	  // PASSED_PAWNS_START+33
-	{ 83,83 },	  // PASSED_PAWNS_START+34
-	{ 85,85 },	  // PASSED_PAWNS_START+35
-	{ 79,79 },	  // PASSED_PAWNS_START+36
-	{ 74,74 },	  // PASSED_PAWNS_START+37
-	{ 46,46 },	  // PASSED_PAWNS_START+38
-	{ 47,47 },	  // PASSED_PAWNS_START+39
-	{ 63,63 },	  // PASSED_PAWNS_START+40
-	{ 80,80 },	  // PASSED_PAWNS_START+41
-	{ 81,81 },	  // PASSED_PAWNS_START+42
-	{ 65,65 },	  // PASSED_PAWNS_START+43
-	{ 56,56 },	  // PASSED_PAWNS_START+44
-	{ 52,52 },	  // PASSED_PAWNS_START+45
-	{ 38,38 },	  // PASSED_PAWNS_START+46
-	{ 37,37 },	  // PASSED_PAWNS_START+47
-	{ 55,55 },	  // PASSED_PAWNS_START+48
-	{ 56,56 },	  // PASSED_PAWNS_START+49
-	{ 62,62 },	  // PASSED_PAWNS_START+50
-	{ 64,64 },    // PASSED_PAWNS_START+51
-	{ 0,0 },      // PASSED_PAWNS_START+52
-	{ 0,0 },	  // PASSED_PAWNS_START+53
-	{ 0,0 },	  // PASSED_PAWNS_START+54
-	{ 56,56 },	  // PASSED_PAWNS_START+55
-	{ 62,62 },	  // PASSED_PAWNS_START+56
-	{ 64,64 },    // PASSED_PAWNS_START+57
-	{ 0,0 },      // PASSED_PAWNS_START+58
-	{ 0,0 },	  // PASSED_PAWNS_START+59
-	{ 0,0 },	  // PASSED_PAWNS_START+60
-	{ 56,56 },	  // PASSED_PAWNS_START+61
-	{ 62,62 },	  // PASSED_PAWNS_START+62
-	{ 64,64 },    // PASSED_PAWNS_START+63
-	// Knight PST values
-	{ 44,44 },	  // ISOLANI_START
-	{ 25,25 },	  // ISOLANI_START+1
-	{ 50,50 },	  // ISOLANI_START+2
-	{ 49,49 },	  // ISOLANI_START+3
-	{ 51,51 },	  // ISOLANI_START+4
-	{ 42,42 },	  // ISOLANI_START+5
-	{ 31,31 },	  // ISOLANI_START+6
-	{ 31,31 },	  // ISOLANI_START+7
-	{ 42,42 },	  // ISOLANI_START+8
-	{ 52,52 },	  // ISOLANI_START+9
-	{ 65,65 },	  // ISOLANI_START+10
-	{ 63,63 },	  // ISOLANI_START+11
-	{ 62,62 },	  // ISOLANI_START+12
-	{ 59,59 },	  // ISOLANI_START+13
-	{ 42,42 },	  // ISOLANI_START+14
-	{ 45,45 },	  // ISOLANI_START+15
-	{ 56,56 },	  // ISOLANI_START+16
-	{ 72,72 },	  // ISOLANI_START+17
-	{ 80,80 },	  // ISOLANI_START+18
-	{ 86,86 },	  // ISOLANI_START+19
-	{ 83,83 },	  // ISOLANI_START+20
-	{ 79,79 },	  // ISOLANI_START+21
-	{ 68,68 },	  // ISOLANI_START+22
-	{ 56,56 },	  // ISOLANI_START+23
-	{ 55,55 },	  // ISOLANI_START+24
-	{ 70,70 },	  // ISOLANI_START+25
-	{ 85,85 },	  // ISOLANI_START+26
-	{ 87,87 },	  // ISOLANI_START+27
-	{ 90,90 },	  // ISOLANI_START+28
-	{ 80,80 },	  // ISOLANI_START+29
-	{ 66,66 },	  // ISOLANI_START+30
-	{ 50,50 },	  // ISOLANI_START+31
-	{ 59,59 },	  // ISOLANI_START+32
-	{ 74,74 },	  // ISOLANI_START+33
-	{ 83,83 },	  // ISOLANI_START+34
-	{ 85,85 },	  // ISOLANI_START+35
-	{ 79,79 },	  // ISOLANI_START+36
-	{ 74,74 },	  // ISOLANI_START+37
-	{ 46,46 },	  // ISOLANI_START+38
-	{ 47,47 },	  // ISOLANI_START+39
-	{ 63,63 },	  // ISOLANI_START+40
-	{ 80,80 },	  // ISOLANI_START+41
-	{ 81,81 },	  // ISOLANI_START+42
-	{ 65,65 },	  // ISOLANI_START+43
-	{ 56,56 },	  // ISOLANI_START+44
-	{ 52,52 },	  // ISOLANI_START+45
-	{ 38,38 },	  // ISOLANI_START+46
-	{ 37,37 },	  // ISOLANI_START+47
-	{ 55,55 },	  // ISOLANI_START+48
-	{ 56,56 },	  // ISOLANI_START+49
-	{ 62,62 },	  // ISOLANI_START+50
-	{ 64,64 },    // ISOLANI_START+51
-	{ 0,0 },      // ISOLANI_START+52
-	{ 0,0 },	  // ISOLANI_START+53
-	{ 0,0 },	  // ISOLANI_START+54
-	{ 56,56 },	  // ISOLANI_START+55
-	{ 62,62 },	  // ISOLANI_START+56
-	{ 64,64 },    // ISOLANI_START+57
-	{ 0,0 },      // ISOLANI_START+58
-	{ 0,0 },	  // ISOLANI_START+59
-	{ 0,0 },	  // ISOLANI_START+60
-	{ 56,56 },	  // ISOLANI_START+61
-	{ 62,62 },	  // ISOLANI_START+62
-	{ 64,64 },    // ISOLANI_START+63
-	// Knight PST values
-	{ 44,44 },	  // BLOCKED_ISOLANI_START
-	{ 25,25 },	  // BLOCKED_ISOLANI_START+1
-	{ 50,50 },	  // BLOCKED_ISOLANI_START+2
-	{ 49,49 },	  // BLOCKED_ISOLANI_START+3
-	{ 51,51 },	  // BLOCKED_ISOLANI_START+4
-	{ 42,42 },	  // BLOCKED_ISOLANI_START+5
-	{ 31,31 },	  // BLOCKED_ISOLANI_START+6
-	{ 31,31 },	  // BLOCKED_ISOLANI_START+7
-	{ 42,42 },	  // BLOCKED_ISOLANI_START+8
-	{ 52,52 },	  // BLOCKED_ISOLANI_START+9
-	{ 65,65 },	  // BLOCKED_ISOLANI_START+10
-	{ 63,63 },	  // BLOCKED_ISOLANI_START+11
-	{ 62,62 },	  // BLOCKED_ISOLANI_START+12
-	{ 59,59 },	  // BLOCKED_ISOLANI_START+13
-	{ 42,42 },	  // BLOCKED_ISOLANI_START+14
-	{ 45,45 },	  // BLOCKED_ISOLANI_START+15
-	{ 56,56 },	  // BLOCKED_ISOLANI_START+16
-	{ 72,72 },	  // BLOCKED_ISOLANI_START+17
-	{ 80,80 },	  // BLOCKED_ISOLANI_START+18
-	{ 86,86 },	  // BLOCKED_ISOLANI_START+19
-	{ 83,83 },	  // BLOCKED_ISOLANI_START+20
-	{ 79,79 },	  // BLOCKED_ISOLANI_START+21
-	{ 68,68 },	  // BLOCKED_ISOLANI_START+22
-	{ 56,56 },	  // BLOCKED_ISOLANI_START+23
-	{ 55,55 },	  // BLOCKED_ISOLANI_START+24
-	{ 70,70 },	  // BLOCKED_ISOLANI_START+25
-	{ 85,85 },	  // BLOCKED_ISOLANI_START+26
-	{ 87,87 },	  // BLOCKED_ISOLANI_START+27
-	{ 90,90 },	  // BLOCKED_ISOLANI_START+28
-	{ 80,80 },	  // BLOCKED_ISOLANI_START+29
-	{ 66,66 },	  // BLOCKED_ISOLANI_START+30
-	{ 50,50 },	  // BLOCKED_ISOLANI_START+31
-	{ 59,59 },	  // BLOCKED_ISOLANI_START+32
-	{ 74,74 },	  // BLOCKED_ISOLANI_START+33
-	{ 83,83 },	  // BLOCKED_ISOLANI_START+34
-	{ 85,85 },	  // BLOCKED_ISOLANI_START+35
-	{ 79,79 },	  // BLOCKED_ISOLANI_START+36
-	{ 74,74 },	  // BLOCKED_ISOLANI_START+37
-	{ 46,46 },	  // BLOCKED_ISOLANI_START+38
-	{ 47,47 },	  // BLOCKED_ISOLANI_START+39
-	{ 63,63 },	  // BLOCKED_ISOLANI_START+40
-	{ 80,80 },	  // BLOCKED_ISOLANI_START+41
-	{ 81,81 },	  // BLOCKED_ISOLANI_START+42
-	{ 65,65 },	  // BLOCKED_ISOLANI_START+43
-	{ 56,56 },	  // BLOCKED_ISOLANI_START+44
-	{ 52,52 },	  // BLOCKED_ISOLANI_START+45
-	{ 38,38 },	  // BLOCKED_ISOLANI_START+46
-	{ 37,37 },	  // BLOCKED_ISOLANI_START+47
-	{ 55,55 },	  // BLOCKED_ISOLANI_START+48
-	{ 56,56 },	  // BLOCKED_ISOLANI_START+49
-	{ 62,62 },	  // BLOCKED_ISOLANI_START+50
-	{ 64,64 },    // BLOCKED_ISOLANI_START+51
-	{ 0,0 },      // BLOCKED_ISOLANI_START+52
-	{ 0,0 },	  // BLOCKED_ISOLANI_START+53
-	{ 0,0 },	  // BLOCKED_ISOLANI_START+54
-	{ 56,56 },	  // BLOCKED_ISOLANI_START+55
-	{ 62,62 },	  // BLOCKED_ISOLANI_START+56
-	{ 64,64 },    // BLOCKED_ISOLANI_START+57
-	{ 0,0 },      // BLOCKED_ISOLANI_START+58
-	{ 0,0 },	  // BLOCKED_ISOLANI_START+59
-	{ 0,0 },	  // BLOCKED_ISOLANI_START+60
-	{ 56,56 },	  // BLOCKED_ISOLANI_START+61
-	{ 62,62 },	  // BLOCKED_ISOLANI_START+62
-	{ 64,64 },    // BLOCKED_ISOLANI_START+63
-	
-	{ -6,-10},    //FORWARD_BLOCKED_BACKWARD
-	{ -8, -12},   //FORWARD_CONTROLLED_BACKWARD
-	{ -3,-2},     //FREE_TO_ADV_BACKWARD
-	{ 0,0 },      //DOUBLE_PAWN_FILE_START,
-	{ 0,0 },	  //DOUBLE_PAWN_FILE_END = DOUBLE_PAWN_FILE_START + 7,
-	{ 0, 0 },	  //PAWN_SHIELD_BONUS,
-	{ 0,0 },	  //DIRECTLY_ON_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
-	{ 0,0 },	  //DIRECTLY_ON_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
-	{ 0,0 },	  //NEXT_TO_OPEN_FILE_PENALTY,
-	{ 0,0 },	  //DIRECTLY_ON_SEMI_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
-	{ 0,0 },	  //DIRECTLY_ON_SEMI_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
-	{ 0,0 },	  //NEXT_TO_SEMI_OPEN_FILE_PENALTY,
-	{ 0,0 },	  //NEXT_TO_OPEN_DIAGONAL_PENALTY_START,
-	{ 0,0 },	  //NEXT_TO_OPEN_DIAGONAL_PENALTY_END = NEXT_TO_OPEN_DIAGONAL_PENALTY_START + 6,
-	{ 0,0 },	  //MOBILITY_START,
-	{ 0,0 },	  //MOBILITY_END = MOBILITY_START + 3,
-	{ 0,0 },	  //ROOK_BEHIND_FREE_PAWN_START,
-	{ 0,0 },	  //ROOK_BEHIND_FREE_PAWN_END = ROOK_BEHIND_FREE_PAWN_START + 7,
-	{ 0,0 },	  //ROOK_ON_OPEN_FILE,
-	{ 0,0 },	  //ROOK_ON_SEMI_OPEN_FILE,
-	{ 0,0 },	  //CONNECTED_ROOKS,
-	{ 0,0 },	  //BISHOP_PAIR,
-	{ 0,0 },	  //BAD_BISHOP_BLOCKED,
-	{ 0,0 },	  //BAD_BISHOP_UNBLOCKED,
-	{ 0,0 },	  //TRAPPED_BISHOP,
-	{ 0,0 },	  //TRAPPED_KNIGHT,
-	{ 0,0 },	  //FIANCHETTO_BISHOP,
-	{ 0,0 },	  //BROKEN_FIANCHETTO,
-	{ 0,0 },	  //BISHOP_OUTPOST_NO_OPPOSITE_BISHOP,
-	{ 0,0 },	  //BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP,
-	{ 0,0 },	  //KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP,
-	{ 0,0 },	  //KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP,
-
-
-
+        {100,100},        // PAWN
+        {324,282},        // KNIGHT
+        {324,283},        // BISHOP
+        {438,504},        // ROOK
+        {989,908},        // QUEEN
+        // Positional weights
+        // PAWN Values
+        {0,0},    // PAWN_PST_START
+        {0,0},    // PAWN_PST_START+1
+        {0,0},    // PAWN_PST_START+2
+        {0,0},    // PAWN_PST_START+3
+        {0,0},    // PAWN_PST_START+4
+        {0,0},    // PAWN_PST_START+5
+        {0,0},    // PAWN_PST_START+6
+        {0,0},    // PAWN_PST_START+7
+        {-30,-12},        // PAWN_PST_START+8
+        {-20,-6},         // PAWN_PST_START+9
+        {-27,-5},         // PAWN_PST_START+10
+        {-24,-6},         // PAWN_PST_START+11
+        {-19,3},          // PAWN_PST_START+12
+        {2,-4},   // PAWN_PST_START+13
+        {22,-8},          // PAWN_PST_START+14
+        {-23,-27},        // PAWN_PST_START+15
+        {-29,-17},        // PAWN_PST_START+16
+        {-25,-9},         // PAWN_PST_START+17
+        {-19,-12},        // PAWN_PST_START+18
+        {-17,-11},        // PAWN_PST_START+19
+        {-8,-8},          // PAWN_PST_START+20
+        {-4,-12},         // PAWN_PST_START+21
+        {15,-12},         // PAWN_PST_START+22
+        {-8,-27},         // PAWN_PST_START+23
+        {-32,-12},        // PAWN_PST_START+24
+        {-15,-4},         // PAWN_PST_START+25
+        {-13,-14},        // PAWN_PST_START+26
+        {-4,-12},         // PAWN_PST_START+27
+        {2,-13},          // PAWN_PST_START+28
+        {1,-16},          // PAWN_PST_START+29
+        {7,-9},   // PAWN_PST_START+30
+        {-18,-22},        // PAWN_PST_START+31
+        {-26,-1},         // PAWN_PST_START+32
+        {-4,4},   // PAWN_PST_START+33
+        {-11,-4},         // PAWN_PST_START+34
+        {5,-17},          // PAWN_PST_START+35
+        {21,-17},         // PAWN_PST_START+36
+        {18,-14},         // PAWN_PST_START+37
+        {13,0},   // PAWN_PST_START+38
+        {-16,-12},        // PAWN_PST_START+39
+        {-29,10},         // PAWN_PST_START+40
+        {-7,24},          // PAWN_PST_START+41
+        {13,7},   // PAWN_PST_START+42
+        {19,6},   // PAWN_PST_START+43
+        {44,-7},          // PAWN_PST_START+44
+        {75,-3},          // PAWN_PST_START+45
+        {47,18},          // PAWN_PST_START+46
+        {2,5},    // PAWN_PST_START+47
+        {31,44},          // PAWN_PST_START+48
+        {34,42},          // PAWN_PST_START+49
+        {31,36},          // PAWN_PST_START+50
+        {43,21},          // PAWN_PST_START+51
+        {35,19},          // PAWN_PST_START+52
+        {19,27},          // PAWN_PST_START+53
+        {-30,43},         // PAWN_PST_START+54
+        {-41,45},         // PAWN_PST_START+55
+        {0,0},    // PAWN_PST_START+56
+        {0,0},    // PAWN_PST_START+57
+        {0,0},    // PAWN_PST_START+58
+        {0,0},    // PAWN_PST_START+59
+        {0,0},    // PAWN_PST_START+60
+        {0,0},    // PAWN_PST_START+61
+        {0,0},    // PAWN_PST_START+62
+        {0,0},    // PAWN_PST_START+63
+        // Knight PST values
+        {-93,-26},        // KNIGHT_PST_START
+        {-28,-39},        // KNIGHT_PST_START+1
+        {-42,-10},        // KNIGHT_PST_START+2
+        {-20,-9},         // KNIGHT_PST_START+3
+        {-16,-8},         // KNIGHT_PST_START+4
+        {-7,-16},         // KNIGHT_PST_START+5
+        {-26,-30},        // KNIGHT_PST_START+6
+        {-61,-26},        // KNIGHT_PST_START+7
+        {-44,-16},        // KNIGHT_PST_START+8
+        {-29,-5},         // KNIGHT_PST_START+9
+        {-9,-1},          // KNIGHT_PST_START+10
+        {3,5},    // KNIGHT_PST_START+11
+        {1,6},    // KNIGHT_PST_START+12
+        {7,-6},   // KNIGHT_PST_START+13
+        {-10,-10},        // KNIGHT_PST_START+14
+        {-11,-16},        // KNIGHT_PST_START+15
+        {-20,-21},        // KNIGHT_PST_START+16
+        {2,5},    // KNIGHT_PST_START+17
+        {13,12},          // KNIGHT_PST_START+18
+        {22,23},          // KNIGHT_PST_START+19
+        {31,20},          // KNIGHT_PST_START+20
+        {23,12},          // KNIGHT_PST_START+21
+        {21,5},   // KNIGHT_PST_START+22
+        {-5,-20},         // KNIGHT_PST_START+23
+        {-17,-7},         // KNIGHT_PST_START+24
+        {-2,13},          // KNIGHT_PST_START+25
+        {21,25},          // KNIGHT_PST_START+26
+        {21,29},          // KNIGHT_PST_START+27
+        {32,31},          // KNIGHT_PST_START+28
+        {23,27},          // KNIGHT_PST_START+29
+        {35,12},          // KNIGHT_PST_START+30
+        {2,-6},   // KNIGHT_PST_START+31
+        {-4,-4},          // KNIGHT_PST_START+32
+        {10,12},          // KNIGHT_PST_START+33
+        {32,25},          // KNIGHT_PST_START+34
+        {46,33},          // KNIGHT_PST_START+35
+        {36,33},          // KNIGHT_PST_START+36
+        {63,26},          // KNIGHT_PST_START+37
+        {30,18},          // KNIGHT_PST_START+38
+        {35,-5},          // KNIGHT_PST_START+39
+        {-27,-9},         // KNIGHT_PST_START+40
+        {8,9},    // KNIGHT_PST_START+41
+        {42,22},          // KNIGHT_PST_START+42
+        {54,22},          // KNIGHT_PST_START+43
+        {97,12},          // KNIGHT_PST_START+44
+        {98,13},          // KNIGHT_PST_START+45
+        {50,4},   // KNIGHT_PST_START+46
+        {32,-17},         // KNIGHT_PST_START+47
+        {-18,-21},        // KNIGHT_PST_START+48
+        {-14,-3},         // KNIGHT_PST_START+49
+        {27,4},   // KNIGHT_PST_START+50
+        {53,16},          // KNIGHT_PST_START+51
+        {36,12},          // KNIGHT_PST_START+52
+        {94,-13},         // KNIGHT_PST_START+53
+        {-9,-4},          // KNIGHT_PST_START+54
+        {12,-28},         // KNIGHT_PST_START+55
+        {-159,-42},       // KNIGHT_PST_START+56
+        {-110,-10},       // KNIGHT_PST_START+57
+        {-91,12},         // KNIGHT_PST_START+58
+        {-19,-2},         // KNIGHT_PST_START+59
+        {33,-3},          // KNIGHT_PST_START+60
+        {-76,4},          // KNIGHT_PST_START+61
+        {-74,-12},        // KNIGHT_PST_START+62
+        {-99,-57},        // KNIGHT_PST_START+63
+        // BISHOP PST values
+        {12,-17},         // BISHOP_PST_START
+        {16,-6},          // BISHOP_PST_START+1
+        {-1,-12},         // BISHOP_PST_START+2
+        {-8,-4},          // BISHOP_PST_START+3
+        {-8,0},   // BISHOP_PST_START+4
+        {-4,-6},          // BISHOP_PST_START+5
+        {2,-8},   // BISHOP_PST_START+6
+        {7,-18},          // BISHOP_PST_START+7
+        {9,-10},          // BISHOP_PST_START+8
+        {-20,-50},        // BISHOP_PST_START+9
+        {19,-8},          // BISHOP_PST_START+10
+        {2,0},    // BISHOP_PST_START+11
+        {7,-2},   // BISHOP_PST_START+12
+        {15,-8},          // BISHOP_PST_START+13
+        {-5,-51},         // BISHOP_PST_START+14
+        {15,-28},         // BISHOP_PST_START+15
+        {4,-3},   // BISHOP_PST_START+16
+        {21,3},   // BISHOP_PST_START+17
+        {13,7},   // BISHOP_PST_START+18
+        {11,6},   // BISHOP_PST_START+19
+        {12,9},   // BISHOP_PST_START+20
+        {20,2},   // BISHOP_PST_START+21
+        {23,0},   // BISHOP_PST_START+22
+        {22,-6},          // BISHOP_PST_START+23
+        {-7,-3},          // BISHOP_PST_START+24
+        {3,5},    // BISHOP_PST_START+25
+        {7,7},    // BISHOP_PST_START+26
+        {21,7},   // BISHOP_PST_START+27
+        {26,2},   // BISHOP_PST_START+28
+        {3,7},    // BISHOP_PST_START+29
+        {7,2},    // BISHOP_PST_START+30
+        {9,-7},   // BISHOP_PST_START+31
+        {-13,5},          // BISHOP_PST_START+32
+        {5,6},    // BISHOP_PST_START+33
+        {8,6},    // BISHOP_PST_START+34
+        {32,5},   // BISHOP_PST_START+35
+        {24,7},   // BISHOP_PST_START+36
+        {23,3},   // BISHOP_PST_START+37
+        {13,6},   // BISHOP_PST_START+38
+        {2,4},    // BISHOP_PST_START+39
+        {-8,2},   // BISHOP_PST_START+40
+        {0,9},    // BISHOP_PST_START+41
+        {18,3},   // BISHOP_PST_START+42
+        {20,3},   // BISHOP_PST_START+43
+        {28,1},   // BISHOP_PST_START+44
+        {45,7},   // BISHOP_PST_START+45
+        {36,4},   // BISHOP_PST_START+46
+        {25,1},   // BISHOP_PST_START+47
+        {-27,4},          // BISHOP_PST_START+48
+        {-5,4},   // BISHOP_PST_START+49
+        {-6,6},   // BISHOP_PST_START+50
+        {-21,9},          // BISHOP_PST_START+51
+        {-1,6},   // BISHOP_PST_START+52
+        {14,2},   // BISHOP_PST_START+53
+        {-10,5},          // BISHOP_PST_START+54
+        {-1,-4},          // BISHOP_PST_START+55
+        {-32,4},          // BISHOP_PST_START+56
+        {-54,15},         // BISHOP_PST_START+57
+        {-81,13},         // BISHOP_PST_START+58
+        {-91,21},         // BISHOP_PST_START+59
+        {-74,15},         // BISHOP_PST_START+60
+        {-73,14},         // BISHOP_PST_START+61
+        {-2,1},   // BISHOP_PST_START+62
+        {-47,5},          // BISHOP_PST_START+63
+        // ROOK PST values
+        {-19,-10},        // ROOK_PST_START
+        {-17,-8},         // ROOK_PST_START+1
+        {-10,-6},         // ROOK_PST_START+2
+        {-2,-11},         // ROOK_PST_START+3
+        {-2,-11},         // ROOK_PST_START+4
+        {-1,-7},          // ROOK_PST_START+5
+        {13,-17},         // ROOK_PST_START+6
+        {-8,-24},         // ROOK_PST_START+7
+        {-48,-9},         // ROOK_PST_START+8
+        {-32,-10},        // ROOK_PST_START+9
+        {-25,-7},         // ROOK_PST_START+10
+        {-24,-8},         // ROOK_PST_START+11
+        {-19,-11},        // ROOK_PST_START+12
+        {0,-17},          // ROOK_PST_START+13
+        {11,-23},         // ROOK_PST_START+14
+        {-32,-15},        // ROOK_PST_START+15
+        {-41,-8},         // ROOK_PST_START+16
+        {-35,-3},         // ROOK_PST_START+17
+        {-37,-2},         // ROOK_PST_START+18
+        {-29,-4},         // ROOK_PST_START+19
+        {-23,-6},         // ROOK_PST_START+20
+        {-14,-9},         // ROOK_PST_START+21
+        {20,-18},         // ROOK_PST_START+22
+        {-7,-20},         // ROOK_PST_START+23
+        {-39,1},          // ROOK_PST_START+24
+        {-43,8},          // ROOK_PST_START+25
+        {-38,9},          // ROOK_PST_START+26
+        {-29,5},          // ROOK_PST_START+27
+        {-28,3},          // ROOK_PST_START+28
+        {-21,3},          // ROOK_PST_START+29
+        {0,-3},   // ROOK_PST_START+30
+        {-11,-8},         // ROOK_PST_START+31
+        {-32,9},          // ROOK_PST_START+32
+        {-20,9},          // ROOK_PST_START+33
+        {-17,11},         // ROOK_PST_START+34
+        {-1,7},   // ROOK_PST_START+35
+        {-10,5},          // ROOK_PST_START+36
+        {13,0},   // ROOK_PST_START+37
+        {21,-4},          // ROOK_PST_START+38
+        {6,-3},   // ROOK_PST_START+39
+        {-34,14},         // ROOK_PST_START+40
+        {-2,8},   // ROOK_PST_START+41
+        {-6,13},          // ROOK_PST_START+42
+        {8,6},    // ROOK_PST_START+43
+        {32,0},   // ROOK_PST_START+44
+        {56,-1},          // ROOK_PST_START+45
+        {90,-13},         // ROOK_PST_START+46
+        {34,-4},          // ROOK_PST_START+47
+        {-13,17},         // ROOK_PST_START+48
+        {-21,22},         // ROOK_PST_START+49
+        {6,20},   // ROOK_PST_START+50
+        {30,16},          // ROOK_PST_START+51
+        {20,18},          // ROOK_PST_START+52
+        {65,1},   // ROOK_PST_START+53
+        {36,5},   // ROOK_PST_START+54
+        {58,-2},          // ROOK_PST_START+55
+        {22,10},          // ROOK_PST_START+56
+        {14,14},          // ROOK_PST_START+57
+        {4,18},   // ROOK_PST_START+58
+        {12,14},          // ROOK_PST_START+59
+        {22,12},          // ROOK_PST_START+60
+        {63,9},   // ROOK_PST_START+61
+        {62,8},   // ROOK_PST_START+62
+        {71,7},   // ROOK_PST_START+63
+        // Queen PST values
+        {0,-44},          // QUEEN_PST_START
+        {-5,-43},         // QUEEN_PST_START+1
+        {6,-50},          // QUEEN_PST_START+2
+        {11,-35},         // QUEEN_PST_START+3
+        {7,-45},          // QUEEN_PST_START+4
+        {-14,-37},        // QUEEN_PST_START+5
+        {3,-59},          // QUEEN_PST_START+6
+        {-2,-55},         // QUEEN_PST_START+7
+        {-9,-33},         // QUEEN_PST_START+8
+        {1,-34},          // QUEEN_PST_START+9
+        {8,-41},          // QUEEN_PST_START+10
+        {6,-29},          // QUEEN_PST_START+11
+        {6,-30},          // QUEEN_PST_START+12
+        {17,-52},         // QUEEN_PST_START+13
+        {23,-66},         // QUEEN_PST_START+14
+        {22,-62},         // QUEEN_PST_START+15
+        {-8,-29},         // QUEEN_PST_START+16
+        {3,-20},          // QUEEN_PST_START+17
+        {0,-12},          // QUEEN_PST_START+18
+        {-4,-16},         // QUEEN_PST_START+19
+        {-3,-12},         // QUEEN_PST_START+20
+        {5,-2},   // QUEEN_PST_START+21
+        {21,-14},         // QUEEN_PST_START+22
+        {15,-23},         // QUEEN_PST_START+23
+        {-12,-20},        // QUEEN_PST_START+24
+        {-14,-3},         // QUEEN_PST_START+25
+        {-12,-7},         // QUEEN_PST_START+26
+        {-15,16},         // QUEEN_PST_START+27
+        {-13,14},         // QUEEN_PST_START+28
+        {-5,19},          // QUEEN_PST_START+29
+        {2,10},   // QUEEN_PST_START+30
+        {9,17},   // QUEEN_PST_START+31
+        {-18,-17},        // QUEEN_PST_START+32
+        {-18,0},          // QUEEN_PST_START+33
+        {-21,4},          // QUEEN_PST_START+34
+        {-21,21},         // QUEEN_PST_START+35
+        {-20,40},         // QUEEN_PST_START+36
+        {-2,43},          // QUEEN_PST_START+37
+        {8,42},   // QUEEN_PST_START+38
+        {14,30},          // QUEEN_PST_START+39
+        {-24,-10},        // QUEEN_PST_START+40
+        {-23,-4},         // QUEEN_PST_START+41
+        {-29,18},         // QUEEN_PST_START+42
+        {-12,22},         // QUEEN_PST_START+43
+        {1,41},   // QUEEN_PST_START+44
+        {45,43},          // QUEEN_PST_START+45
+        {59,28},          // QUEEN_PST_START+46
+        {44,32},          // QUEEN_PST_START+47
+        {-23,0},          // QUEEN_PST_START+48
+        {-61,30},         // QUEEN_PST_START+49
+        {-33,30},         // QUEEN_PST_START+50
+        {-46,52},         // QUEEN_PST_START+51
+        {-30,66},         // QUEEN_PST_START+52
+        {24,44},          // QUEEN_PST_START+53
+        {-20,49},         // QUEEN_PST_START+54
+        {35,25},          // QUEEN_PST_START+55
+        {-32,14},         // QUEEN_PST_START+56
+        {-29,22},         // QUEEN_PST_START+57
+        {-13,30},         // QUEEN_PST_START+58
+        {16,22},          // QUEEN_PST_START+59
+        {17,33},          // QUEEN_PST_START+60
+        {63,22},          // QUEEN_PST_START+61
+        {72,8},   // QUEEN_PST_START+62
+        {27,22},          // QUEEN_PST_START+63
+        // Knight PST values
+        {2,-50},          // KING_PST_START
+        {32,-27},         // KING_PST_START+1
+        {18,-15},         // KING_PST_START+2
+        {-59,-7},         // KING_PST_START+3
+        {6,-34},          // KING_PST_START+4
+        {-47,-13},        // KING_PST_START+5
+        {20,-27},         // KING_PST_START+6
+        {30,-67},         // KING_PST_START+7
+        {23,-22},         // KING_PST_START+8
+        {-11,0},          // KING_PST_START+9
+        {-27,12},         // KING_PST_START+10
+        {-56,16},         // KING_PST_START+11
+        {-45,13},         // KING_PST_START+12
+        {-44,8},          // KING_PST_START+13
+        {-2,-6},          // KING_PST_START+14
+        {12,-27},         // KING_PST_START+15
+        {-49,-14},        // KING_PST_START+16
+        {-38,13},         // KING_PST_START+17
+        {-56,26},         // KING_PST_START+18
+        {-63,33},         // KING_PST_START+19
+        {-54,30},         // KING_PST_START+20
+        {-54,19},         // KING_PST_START+21
+        {-32,7},          // KING_PST_START+22
+        {-49,-10},        // KING_PST_START+23
+        {-75,-12},        // KING_PST_START+24
+        {-40,19},         // KING_PST_START+25
+        {-34,35},         // KING_PST_START+26
+        {-68,47},         // KING_PST_START+27
+        {-59,41},         // KING_PST_START+28
+        {-53,29},         // KING_PST_START+29
+        {-39,17},         // KING_PST_START+30
+        {-112,-1},        // KING_PST_START+31
+        {-75,-3},         // KING_PST_START+32
+        {-6,24},          // KING_PST_START+33
+        {-13,40},         // KING_PST_START+34
+        {-39,46},         // KING_PST_START+35
+        {-50,45},         // KING_PST_START+36
+        {-20,37},         // KING_PST_START+37
+        {-37,29},         // KING_PST_START+38
+        {-101,2},         // KING_PST_START+39
+        {-86,-3},         // KING_PST_START+40
+        {55,25},          // KING_PST_START+41
+        {49,32},          // KING_PST_START+42
+        {0,40},   // KING_PST_START+43
+        {42,33},          // KING_PST_START+44
+        {80,32},          // KING_PST_START+45
+        {47,31},          // KING_PST_START+46
+        {-53,-2},         // KING_PST_START+47
+        {-43,-25},        // KING_PST_START+48
+        {31,19},          // KING_PST_START+49
+        {67,20},          // KING_PST_START+50
+        {96,16},          // KING_PST_START+51
+        {38,25},          // KING_PST_START+52
+        {42,25},          // KING_PST_START+53
+        {27,29},          // KING_PST_START+54
+        {-11,-19},        // KING_PST_START+55
+        {143,-113},       // KING_PST_START+56
+        {129,-48},        // KING_PST_START+57
+        {157,-32},        // KING_PST_START+58
+        {43,-3},          // KING_PST_START+59
+        {54,-14},         // KING_PST_START+60
+        {61,-13},         // KING_PST_START+61
+        {112,-23},        // KING_PST_START+62
+        {107,-107},       // KING_PST_START+63
+        //PAWN EVAL
+        // PASSED PST values
+        {0,0},    // PASSED_PAWNS_START
+        {0,0},    // PASSED_PAWNS_START+1
+        {0,0},    // PASSED_PAWNS_START+2
+        {0,0},    // PASSED_PAWNS_START+3
+        {0,0},    // PASSED_PAWNS_START+4
+        {0,0},    // PASSED_PAWNS_START+5
+        {0,0},    // PASSED_PAWNS_START+6
+        {0,0},    // PASSED_PAWNS_START+7
+        {-21,4},          // PASSED_PAWNS_START+8
+        {-18,1},          // PASSED_PAWNS_START+9
+        {-22,-2},         // PASSED_PAWNS_START+10
+        {-26,-2},         // PASSED_PAWNS_START+11
+        {-12,-11},        // PASSED_PAWNS_START+12
+        {-12,-8},         // PASSED_PAWNS_START+13
+        {5,-7},   // PASSED_PAWNS_START+14
+        {-5,5},   // PASSED_PAWNS_START+15
+        {-15,6},          // PASSED_PAWNS_START+16
+        {-24,7},          // PASSED_PAWNS_START+17
+        {-27,1},          // PASSED_PAWNS_START+18
+        {-31,-1},         // PASSED_PAWNS_START+19
+        {-18,-3},         // PASSED_PAWNS_START+20
+        {-25,1},          // PASSED_PAWNS_START+21
+        {-20,9},          // PASSED_PAWNS_START+22
+        {1,4},    // PASSED_PAWNS_START+23
+        {-5,27},          // PASSED_PAWNS_START+24
+        {-12,20},         // PASSED_PAWNS_START+25
+        {-20,16},         // PASSED_PAWNS_START+26
+        {-15,8},          // PASSED_PAWNS_START+27
+        {-22,11},         // PASSED_PAWNS_START+28
+        {-23,19},         // PASSED_PAWNS_START+29
+        {-30,26},         // PASSED_PAWNS_START+30
+        {-16,26},         // PASSED_PAWNS_START+31
+        {11,48},          // PASSED_PAWNS_START+32
+        {16,37},          // PASSED_PAWNS_START+33
+        {20,28},          // PASSED_PAWNS_START+34
+        {9,26},   // PASSED_PAWNS_START+35
+        {2,26},   // PASSED_PAWNS_START+36
+        {-1,30},          // PASSED_PAWNS_START+37
+        {2,35},   // PASSED_PAWNS_START+38
+        {-9,42},          // PASSED_PAWNS_START+39
+        {48,94},          // PASSED_PAWNS_START+40
+        {48,73},          // PASSED_PAWNS_START+41
+        {35,65},          // PASSED_PAWNS_START+42
+        {15,42},          // PASSED_PAWNS_START+43
+        {-1,51},          // PASSED_PAWNS_START+44
+        {2,60},   // PASSED_PAWNS_START+45
+        {-15,64},         // PASSED_PAWNS_START+46
+        {-25,83},         // PASSED_PAWNS_START+47
+        {79,84},          // PASSED_PAWNS_START+48
+        {82,81},          // PASSED_PAWNS_START+49
+        {79,76},          // PASSED_PAWNS_START+50
+        {91,61},          // PASSED_PAWNS_START+51
+        {83,59},          // PASSED_PAWNS_START+52
+        {67,67},          // PASSED_PAWNS_START+53
+        {18,83},          // PASSED_PAWNS_START+54
+        {6,85},   // PASSED_PAWNS_START+55
+        {0,0},    // PASSED_PAWNS_START+56
+        {0,0},    // PASSED_PAWNS_START+57
+        {0,0},    // PASSED_PAWNS_START+58
+        {0,0},    // PASSED_PAWNS_START+59
+        {0,0},    // PASSED_PAWNS_START+60
+        {0,0},    // PASSED_PAWNS_START+61
+        {0,0},    // PASSED_PAWNS_START+62
+        {0,0},    // PASSED_PAWNS_START+63
+        // Knight PST values
+        {0,0},    // ISOLANI_START
+        {0,0},    // ISOLANI_START+1
+        {0,0},    // ISOLANI_START+2
+        {0,0},    // ISOLANI_START+3
+        {0,0},    // ISOLANI_START+4
+        {0,0},    // ISOLANI_START+5
+        {0,0},    // ISOLANI_START+6
+        {0,0},    // ISOLANI_START+7
+        {-8,-7},          // ISOLANI_START+8
+        {-18,-13},        // ISOLANI_START+9
+        {-19,-14},        // ISOLANI_START+10
+        {-33,-8},         // ISOLANI_START+11
+        {-33,-12},        // ISOLANI_START+12
+        {-24,-9},         // ISOLANI_START+13
+        {-12,-12},        // ISOLANI_START+14
+        {-1,2},   // ISOLANI_START+15
+        {-8,-7},          // ISOLANI_START+16
+        {-16,-16},        // ISOLANI_START+17
+        {-31,-14},        // ISOLANI_START+18
+        {-27,-14},        // ISOLANI_START+19
+        {-33,-13},        // ISOLANI_START+20
+        {-26,-9},         // ISOLANI_START+21
+        {-30,-11},        // ISOLANI_START+22
+        {-14,0},          // ISOLANI_START+23
+        {-2,-6},          // ISOLANI_START+24
+        {-11,-19},        // ISOLANI_START+25
+        {-18,-14},        // ISOLANI_START+26
+        {-27,-19},        // ISOLANI_START+27
+        {-24,-18},        // ISOLANI_START+28
+        {-18,-8},         // ISOLANI_START+29
+        {-16,-13},        // ISOLANI_START+30
+        {-2,-3},          // ISOLANI_START+31
+        {9,-8},   // ISOLANI_START+32
+        {-3,-26},         // ISOLANI_START+33
+        {-5,-19},         // ISOLANI_START+34
+        {-11,-9},         // ISOLANI_START+35
+        {-16,-12},        // ISOLANI_START+36
+        {-1,-15},         // ISOLANI_START+37
+        {24,-28},         // ISOLANI_START+38
+        {22,-6},          // ISOLANI_START+39
+        {51,46},          // ISOLANI_START+40
+        {50,1},   // ISOLANI_START+41
+        {9,21},   // ISOLANI_START+42
+        {7,23},   // ISOLANI_START+43
+        {14,11},          // ISOLANI_START+44
+        {19,1},   // ISOLANI_START+45
+        {63,-30},         // ISOLANI_START+46
+        {65,19},          // ISOLANI_START+47
+        {0,0},    // ISOLANI_START+48
+        {0,0},    // ISOLANI_START+49
+        {0,0},    // ISOLANI_START+50
+        {0,0},    // ISOLANI_START+51
+        {0,0},    // ISOLANI_START+52
+        {0,0},    // ISOLANI_START+53
+        {0,0},    // ISOLANI_START+54
+        {0,0},    // ISOLANI_START+55
+        {0,0},    // ISOLANI_START+56
+        {0,0},    // ISOLANI_START+57
+        {0,0},    // ISOLANI_START+58
+        {0,0},    // ISOLANI_START+59
+        {0,0},    // ISOLANI_START+60
+        {0,0},    // ISOLANI_START+61
+        {0,0},    // ISOLANI_START+62
+        {0,0},    // ISOLANI_START+63
+        // Knight PST values
+        {0,0},    // BLOCKED_ISOLANI_START
+        {0,0},    // BLOCKED_ISOLANI_START+1
+        {0,0},    // BLOCKED_ISOLANI_START+2
+        {0,0},    // BLOCKED_ISOLANI_START+3
+        {0,0},    // BLOCKED_ISOLANI_START+4
+        {0,0},    // BLOCKED_ISOLANI_START+5
+        {0,0},    // BLOCKED_ISOLANI_START+6
+        {0,0},    // BLOCKED_ISOLANI_START+7
+        {-16,-12},        // BLOCKED_ISOLANI_START+8
+        {-31,-12},        // BLOCKED_ISOLANI_START+9
+        {-27,-16},        // BLOCKED_ISOLANI_START+10
+        {-43,-3},         // BLOCKED_ISOLANI_START+11
+        {-29,-10},        // BLOCKED_ISOLANI_START+12
+        {-42,0},          // BLOCKED_ISOLANI_START+13
+        {-35,-5},         // BLOCKED_ISOLANI_START+14
+        {-1,2},   // BLOCKED_ISOLANI_START+15
+        {-8,1},   // BLOCKED_ISOLANI_START+16
+        {-20,-6},         // BLOCKED_ISOLANI_START+17
+        {-40,-3},         // BLOCKED_ISOLANI_START+18
+        {-14,-5},         // BLOCKED_ISOLANI_START+19
+        {-28,-7},         // BLOCKED_ISOLANI_START+20
+        {-29,-2},         // BLOCKED_ISOLANI_START+21
+        {-57,1},          // BLOCKED_ISOLANI_START+22
+        {-21,7},          // BLOCKED_ISOLANI_START+23
+        {-6,2},   // BLOCKED_ISOLANI_START+24
+        {-20,-6},         // BLOCKED_ISOLANI_START+25
+        {-21,-5},         // BLOCKED_ISOLANI_START+26
+        {-21,-12},        // BLOCKED_ISOLANI_START+27
+        {-21,-10},        // BLOCKED_ISOLANI_START+28
+        {-22,-3},         // BLOCKED_ISOLANI_START+29
+        {-22,-3},         // BLOCKED_ISOLANI_START+30
+        {-8,8},   // BLOCKED_ISOLANI_START+31
+        {0,-5},   // BLOCKED_ISOLANI_START+32
+        {-11,-20},        // BLOCKED_ISOLANI_START+33
+        {-18,-18},        // BLOCKED_ISOLANI_START+34
+        {-23,-13},        // BLOCKED_ISOLANI_START+35
+        {-26,-11},        // BLOCKED_ISOLANI_START+36
+        {-6,-12},         // BLOCKED_ISOLANI_START+37
+        {1,-14},          // BLOCKED_ISOLANI_START+38
+        {-4,-1},          // BLOCKED_ISOLANI_START+39
+        {1,-16},          // BLOCKED_ISOLANI_START+40
+        {-4,-43},         // BLOCKED_ISOLANI_START+41
+        {-16,-26},        // BLOCKED_ISOLANI_START+42
+        {-5,-31},         // BLOCKED_ISOLANI_START+43
+        {-12,-29},        // BLOCKED_ISOLANI_START+44
+        {-20,-21},        // BLOCKED_ISOLANI_START+45
+        {3,-26},          // BLOCKED_ISOLANI_START+46
+        {2,-19},          // BLOCKED_ISOLANI_START+47
+        {0,0},    // BLOCKED_ISOLANI_START+48
+        {0,0},    // BLOCKED_ISOLANI_START+49
+        {0,0},    // BLOCKED_ISOLANI_START+50
+        {0,0},    // BLOCKED_ISOLANI_START+51
+        {0,0},    // BLOCKED_ISOLANI_START+52
+        {0,0},    // BLOCKED_ISOLANI_START+53
+        {0,0},    // BLOCKED_ISOLANI_START+54
+        {0,0},    // BLOCKED_ISOLANI_START+55
+        {0,0},    // BLOCKED_ISOLANI_START+56
+        {0,0},    // BLOCKED_ISOLANI_START+57
+        {0,0},    // BLOCKED_ISOLANI_START+58
+        {0,0},    // BLOCKED_ISOLANI_START+59
+        {0,0},    // BLOCKED_ISOLANI_START+60
+        {0,0},    // BLOCKED_ISOLANI_START+61
+        {0,0},    // BLOCKED_ISOLANI_START+62
+        {0,0},    // BLOCKED_ISOLANI_START+63
+        {-12,-7},         // FORWARD_BLOCKED_BACKWARD
+        {-9,-7},          // FORWARD_CONTROLLED_BACKWARD
+        {-7,-3},          // FREE_TO_ADV_BACKWARD
+        // DOUBLE_PAWN_FILE values
+        {-28,-25},        // DOUBLE_PAWN_FILE_START
+        {-6,-18},         // DOUBLE_PAWN_FILE_START+1
+        {-3,-15},         // DOUBLE_PAWN_FILE_START+2
+        {-2,-16},         // DOUBLE_PAWN_FILE_START+3
+        {-9,-12},         // DOUBLE_PAWN_FILE_START+4
+        {-8,-14},         // DOUBLE_PAWN_FILE_START+5
+        {-13,-18},        // DOUBLE_PAWN_FILE_START+6
+        {-28,-29},        // DOUBLE_PAWN_FILE_START+7
+        {15,-8},          // PAWN_SHIELD_BONUS,
+        {-67,-13},        // DIRECTLY_ON_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
+        {-64,-7},         // DIRECTLY_ON_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
+        {-29,-11},        // NEXT_TO_OPEN_FILE_PENALTY,
+        {7,3},    // DIRECTLY_ON_SEMI_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
+        {9,-11},          // DIRECTLY_ON_SEMI_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
+        {5,-5},   // NEXT_TO_SEMI_OPEN_FILE_PENALTY,
+        // NEXT_TO_OPEN_DIAGONAL_PENALTY values
+        {-9,-20},         // NEXT_TO_OPEN_DIAGONAL_PENALTY_START
+        {2,-4},   // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+1
+        {7,14},   // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+2
+        {10,10},          // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+3
+        {108,25},         // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+4
+        {4,0},    // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+5
+        {0,0},    // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+6
+        // MOBILITY values
+        {0,0},    // MOBILITY_START
+        {0,0},    // MOBILITY_START+1
+        {4,4},    // MOBILITY_START+2
+        {3,2},    // MOBILITY_START+3
+        // ROOK_BEHIND_FREE_PAWN values
+        {2,3},    // ROOK_BEHIND_FREE_PAWN_START
+        {-22,0},          // ROOK_BEHIND_FREE_PAWN_START+1
+        {-20,-3},         // ROOK_BEHIND_FREE_PAWN_START+2
+        {-6,6},   // ROOK_BEHIND_FREE_PAWN_START+3
+        {0,9},    // ROOK_BEHIND_FREE_PAWN_START+4
+        {10,-3},          // ROOK_BEHIND_FREE_PAWN_START+5
+        {-3,-12},         // ROOK_BEHIND_FREE_PAWN_START+6
+        {0,0},    // ROOK_BEHIND_FREE_PAWN_START+7
+        {29,-1},          // ROOK_ON_OPEN_FILE,
+        {13,-10},         // ROOK_ON_SEMI_OPEN_FILE,
+        {-4,4},   // CONNECTED_ROOKS,
+        {19,48},          // BISHOP_PAIR,
+        {-3,-13},         // BAD_BISHOP_BLOCKED,
+        {-1,-1},          // BAD_BISHOP_UNBLOCKED,
+        {-91,-42},        // TRAPPED_BISHOP,
+        {-42,-56},        // TRAPPED_KNIGHT,
+        {39,45},          // FIANCHETTO_BISHOP,
+        {34,38},          // BROKEN_FIANCHETTO,
+        {44,4},   // BISHOP_OUTPOST_NO_OPPOSITE_BISHOP,
+        {30,12},          // BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP,
+        {38,11},          // KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP,
+        {25,14},          // KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP,
 };
