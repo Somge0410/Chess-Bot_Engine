@@ -1,5 +1,5 @@
 #include "evaluation.h"
-
+#include <memory>
 static thread_local std::unique_ptr<std::array<PawnEvalEntry, PAWN_HASH_SIZE>> pawn_evaluation_table;
 PawnEvalEntry& get_pawn_entry(size_t idx) {
 	if (!pawn_evaluation_table) {
