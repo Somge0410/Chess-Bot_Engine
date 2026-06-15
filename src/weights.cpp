@@ -1,10 +1,10 @@
 #include "evaluation.h"
 EvaluationResult EvalWeights[PARAM_COUNT] = {
         {100, 152},        // PAWN
-        { 331,427 },        // KNIGHT
-        { 326,428 },        // BISHOP
-        { 436,760 },        // ROOK
-        { 965,1388 },       // QUEEN
+        { 302,388 },        // KNIGHT
+        { 298,392 },        // BISHOP
+        { 397,692 },        // ROOK
+        { 878,1264 },       // QUEEN
         // Positional weights
         // PAWN Values
     { 0,0 },    // PAWN_PST_START
@@ -15,54 +15,54 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
     { 0,0 },    // PAWN_PST_START+5
     { 0,0 },    // PAWN_PST_START+6
     { 0,0 },    // PAWN_PST_START+7
-    { -33,-22 },        // PAWN_PST_START+8
-    { -16,-8 },         // PAWN_PST_START+9
-    { -20,-11 },        // PAWN_PST_START+10
-    { -21,-14 },        // PAWN_PST_START+11
-    { -6,1 },   // PAWN_PST_START+12
-    { 5,-14 },          // PAWN_PST_START+13
-    { 21,-14 },         // PAWN_PST_START+14
-    { -25,-41 },        // PAWN_PST_START+15
-    { -36,-27 },        // PAWN_PST_START+16
-    { -26,-11 },        // PAWN_PST_START+17
-    { -14,-21 },        // PAWN_PST_START+18
-    { -14,-16 },        // PAWN_PST_START+19
-    { 0,-15 },          // PAWN_PST_START+20
-    { -1,-24 },         // PAWN_PST_START+21
-    { 15,-18 },         // PAWN_PST_START+22
-    { -5,-47 },         // PAWN_PST_START+23
-    { -38,-22 },        // PAWN_PST_START+24
-    { -13,-7 },         // PAWN_PST_START+25
-    { -8,-20 },         // PAWN_PST_START+26
-    { 9,-23 },          // PAWN_PST_START+27
-    { 12,-23 },         // PAWN_PST_START+28
-    { 7,-29 },          // PAWN_PST_START+29
-    { 3,-11 },          // PAWN_PST_START+30
-    { -18,-41 },        // PAWN_PST_START+31
-    { -31,-2 },         // PAWN_PST_START+32
-    { -2,4 },   // PAWN_PST_START+33
-    { -4,-10 },         // PAWN_PST_START+34
-    { 2,-25 },          // PAWN_PST_START+35
-    { 30,-30 },         // PAWN_PST_START+36
-    { 20,-25 },         // PAWN_PST_START+37
-    { 15,0 },   // PAWN_PST_START+38
-    { -7,-26 },         // PAWN_PST_START+39
-    { -25,9 },          // PAWN_PST_START+40
-    { -8,34 },          // PAWN_PST_START+41
-    { 23,-1 },          // PAWN_PST_START+42
-    { 27,-9 },          // PAWN_PST_START+43
-    { 49,-29 },         // PAWN_PST_START+44
-    { 79,-15 },         // PAWN_PST_START+45
-    { 53,31 },          // PAWN_PST_START+46
-    { 14,8 },   // PAWN_PST_START+47
-    { 6,87 },   // PAWN_PST_START+48
-    { 13,82 },          // PAWN_PST_START+49
-    { 11,77 },          // PAWN_PST_START+50
-    { 25,47 },          // PAWN_PST_START+51
-    { 18,43 },          // PAWN_PST_START+52
-    { 1,58 },   // PAWN_PST_START+53
-    { -34,80 },         // PAWN_PST_START+54
-    { -55,89 },         // PAWN_PST_START+55
+    { -39,-34 },        // PAWN_PST_START+8
+    { -24,-22 },        // PAWN_PST_START+9
+    { -27,-24 },        // PAWN_PST_START+10
+    { -28,-27 },        // PAWN_PST_START+11
+    { -14,-13 },        // PAWN_PST_START+12
+    { -4,-27 },         // PAWN_PST_START+13
+    { 10,-27 },         // PAWN_PST_START+14
+    { -32,-51 },        // PAWN_PST_START+15
+    { -42,-39 },        // PAWN_PST_START+16
+    { -32,-24 },        // PAWN_PST_START+17
+    { -22,-33 },        // PAWN_PST_START+18
+    { -22,-29 },        // PAWN_PST_START+19
+    { -9,-28 },         // PAWN_PST_START+20
+    { -10,-36 },        // PAWN_PST_START+21
+    { 4,-31 },          // PAWN_PST_START+22
+    { -14,-57 },        // PAWN_PST_START+23
+    { -44,-34 },        // PAWN_PST_START+24
+    { -21,-20 },        // PAWN_PST_START+25
+    { -16,-33 },        // PAWN_PST_START+26
+    { -1,-35 },         // PAWN_PST_START+27
+    { 2,-35 },          // PAWN_PST_START+28
+    { -2,-41 },         // PAWN_PST_START+29
+    { -7,-25 },         // PAWN_PST_START+30
+    { -25,-51 },        // PAWN_PST_START+31
+    { -37,-16 },        // PAWN_PST_START+32
+    { -10,-10 },        // PAWN_PST_START+33
+    { -12,-23 },        // PAWN_PST_START+34
+    { -7,-37 },         // PAWN_PST_START+35
+    { 19,-42 },         // PAWN_PST_START+36
+    { 9,-37 },          // PAWN_PST_START+37
+    { 5,-14 },          // PAWN_PST_START+38
+    { -15,-38 },        // PAWN_PST_START+39
+    { -33,-4 },         // PAWN_PST_START+40
+    { -16,17 },         // PAWN_PST_START+41
+    { 11,-14 },         // PAWN_PST_START+42
+    { 14,-17 },         // PAWN_PST_START+43
+    { 34,-36 },         // PAWN_PST_START+44
+    { 63,-28 },         // PAWN_PST_START+45
+    { 41,14 },          // PAWN_PST_START+46
+    { 4,-7 },   // PAWN_PST_START+47
+    { 65,157 },         // PAWN_PST_START+48
+    { 74,151 },         // PAWN_PST_START+49
+    { 67,144 },         // PAWN_PST_START+50
+    { 80,102 },         // PAWN_PST_START+51
+    { 68,94 },          // PAWN_PST_START+52
+    { 46,113 },         // PAWN_PST_START+53
+    { -9,147 },         // PAWN_PST_START+54
+    { -40,159 },        // PAWN_PST_START+55
     { 0,0 },    // PAWN_PST_START+56
     { 0,0 },    // PAWN_PST_START+57
     { 0,0 },    // PAWN_PST_START+58
@@ -72,330 +72,330 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
     { 0,0 },    // PAWN_PST_START+62
     { 0,0 },    // PAWN_PST_START+63
     // Knight PST values
-{ -82,-14 },        // KNIGHT_PST_START
-{ -34,-40 },        // KNIGHT_PST_START+1
-{ -38,-9 },         // KNIGHT_PST_START+2
-{ -20,-11 },        // KNIGHT_PST_START+3
-{ -17,-7 },         // KNIGHT_PST_START+4
-{ -5,-21 },         // KNIGHT_PST_START+5
-{ -31,-34 },        // KNIGHT_PST_START+6
-{ -40,-32 },        // KNIGHT_PST_START+7
-{ -47,-18 },        // KNIGHT_PST_START+8
-{ -34,-5 },         // KNIGHT_PST_START+9
-{ -13,12 },         // KNIGHT_PST_START+10
-{ 5,9 },    // KNIGHT_PST_START+11
-{ 5,7 },    // KNIGHT_PST_START+12
-{ 10,3 },   // KNIGHT_PST_START+13
-{ -3,-18 },         // KNIGHT_PST_START+14
-{ -11,-14 },        // KNIGHT_PST_START+15
-{ -31,-8 },         // KNIGHT_PST_START+16
-{ -4,17 },          // KNIGHT_PST_START+17
-{ 13,24 },          // KNIGHT_PST_START+18
-{ 19,38 },          // KNIGHT_PST_START+19
-{ 35,34 },          // KNIGHT_PST_START+20
-{ 26,21 },          // KNIGHT_PST_START+21
-{ 25,8 },   // KNIGHT_PST_START+22
-{ -9,-10 },         // KNIGHT_PST_START+23
-{ -21,-1 },         // KNIGHT_PST_START+24
-{ -2,17 },          // KNIGHT_PST_START+25
-{ 22,38 },          // KNIGHT_PST_START+26
-{ 21,41 },          // KNIGHT_PST_START+27
-{ 36,44 },          // KNIGHT_PST_START+28
-{ 29,30 },          // KNIGHT_PST_START+29
-{ 30,12 },          // KNIGHT_PST_START+30
-{ -3,-9 },          // KNIGHT_PST_START+31
+{ -74,-14 },        // KNIGHT_PST_START
+{ -32,-36 },        // KNIGHT_PST_START+1
+{ -36,-8 },         // KNIGHT_PST_START+2
+{ -19,-10 },        // KNIGHT_PST_START+3
+{ -16,-6 },         // KNIGHT_PST_START+4
+{ -6,-19 },         // KNIGHT_PST_START+5
+{ -29,-30 },        // KNIGHT_PST_START+6
+{ -36,-31 },        // KNIGHT_PST_START+7
+{ -44,-16 },        // KNIGHT_PST_START+8
+{ -32,-4 },         // KNIGHT_PST_START+9
+{ -13,11 },         // KNIGHT_PST_START+10
+{ 4,9 },    // KNIGHT_PST_START+11
+{ 4,7 },    // KNIGHT_PST_START+12
+{ 8,3 },    // KNIGHT_PST_START+13
+{ -3,-16 },         // KNIGHT_PST_START+14
+{ -11,-13 },        // KNIGHT_PST_START+15
+{ -29,-7 },         // KNIGHT_PST_START+16
+{ -4,15 },          // KNIGHT_PST_START+17
+{ 11,22 },          // KNIGHT_PST_START+18
+{ 17,35 },          // KNIGHT_PST_START+19
+{ 31,31 },          // KNIGHT_PST_START+20
+{ 23,19 },          // KNIGHT_PST_START+21
+{ 22,8 },   // KNIGHT_PST_START+22
+{ -9,-8 },          // KNIGHT_PST_START+23
+{ -20,-1 },         // KNIGHT_PST_START+24
+{ -3,16 },          // KNIGHT_PST_START+25
+{ 19,35 },          // KNIGHT_PST_START+26
+{ 18,38 },          // KNIGHT_PST_START+27
+{ 32,41 },          // KNIGHT_PST_START+28
+{ 26,28 },          // KNIGHT_PST_START+29
+{ 26,12 },          // KNIGHT_PST_START+30
+{ -4,-8 },          // KNIGHT_PST_START+31
 { -11,4 },          // KNIGHT_PST_START+32
-{ 8,24 },   // KNIGHT_PST_START+33
-{ 32,36 },          // KNIGHT_PST_START+34
-{ 58,38 },          // KNIGHT_PST_START+35
-{ 43,37 },          // KNIGHT_PST_START+36
-{ 71,31 },          // KNIGHT_PST_START+37
-{ 27,22 },          // KNIGHT_PST_START+38
-{ 36,-13 },         // KNIGHT_PST_START+39
-{ -14,-11 },        // KNIGHT_PST_START+40
-{ 20,9 },   // KNIGHT_PST_START+41
-{ 44,31 },          // KNIGHT_PST_START+42
-{ 52,32 },          // KNIGHT_PST_START+43
-{ 100,11 },         // KNIGHT_PST_START+44
-{ 98,0 },   // KNIGHT_PST_START+45
-{ 55,-3 },          // KNIGHT_PST_START+46
-{ 22,-24 },         // KNIGHT_PST_START+47
-{ -31,-25 },        // KNIGHT_PST_START+48
-{ -10,-1 },         // KNIGHT_PST_START+49
-{ 21,9 },   // KNIGHT_PST_START+50
-{ 53,4 },   // KNIGHT_PST_START+51
-{ 16,2 },   // KNIGHT_PST_START+52
-{ 94,-20 },         // KNIGHT_PST_START+53
-{ -5,-7 },          // KNIGHT_PST_START+54
-{ 6,-44 },          // KNIGHT_PST_START+55
-{ -142,-62 },       // KNIGHT_PST_START+56
-{ -129,-22 },       // KNIGHT_PST_START+57
-{ -69,0 },          // KNIGHT_PST_START+58
-{ -40,-10 },        // KNIGHT_PST_START+59
-{ 9,-7 },   // KNIGHT_PST_START+60
-{ -61,-35 },        // KNIGHT_PST_START+61
-{ -104,-26 },       // KNIGHT_PST_START+62
-{ -80,-85 },        // KNIGHT_PST_START+63
+{ 6,22 },   // KNIGHT_PST_START+33
+{ 28,33 },          // KNIGHT_PST_START+34
+{ 52,35 },          // KNIGHT_PST_START+35
+{ 38,34 },          // KNIGHT_PST_START+36
+{ 64,29 },          // KNIGHT_PST_START+37
+{ 24,20 },          // KNIGHT_PST_START+38
+{ 32,-11 },         // KNIGHT_PST_START+39
+{ -13,-10 },        // KNIGHT_PST_START+40
+{ 17,9 },   // KNIGHT_PST_START+41
+{ 39,29 },          // KNIGHT_PST_START+42
+{ 47,29 },          // KNIGHT_PST_START+43
+{ 90,10 },          // KNIGHT_PST_START+44
+{ 88,0 },   // KNIGHT_PST_START+45
+{ 49,-3 },          // KNIGHT_PST_START+46
+{ 19,-22 },         // KNIGHT_PST_START+47
+{ -29,-23 },        // KNIGHT_PST_START+48
+{ -10,0 },          // KNIGHT_PST_START+49
+{ 18,9 },   // KNIGHT_PST_START+50
+{ 48,4 },   // KNIGHT_PST_START+51
+{ 14,2 },   // KNIGHT_PST_START+52
+{ 85,-18 },         // KNIGHT_PST_START+53
+{ -5,-6 },          // KNIGHT_PST_START+54
+{ 5,-40 },          // KNIGHT_PST_START+55
+{ -128,-60 },       // KNIGHT_PST_START+56
+{ -103,-25 },       // KNIGHT_PST_START+57
+{ -63,0 },          // KNIGHT_PST_START+58
+{ -37,-9 },         // KNIGHT_PST_START+59
+{ 7,-6 },   // KNIGHT_PST_START+60
+{ -56,-32 },        // KNIGHT_PST_START+61
+{ -70,-30 },        // KNIGHT_PST_START+62
+{ -72,-81 },        // KNIGHT_PST_START+63
 // BISHOP PST values
-{ 1,-19 },          // BISHOP_PST_START
-{ 18,-4 },          // BISHOP_PST_START+1
-{ 6,-12 },          // BISHOP_PST_START+2
-{ -2,-1 },          // BISHOP_PST_START+3
-{ 6,2 },    // BISHOP_PST_START+4
-{ -4,2 },   // BISHOP_PST_START+5
-{ 10,-15 },         // BISHOP_PST_START+6
-{ 14,-42 },         // BISHOP_PST_START+7
-{ 8,-2 },   // BISHOP_PST_START+8
-{ -14,-74 },        // BISHOP_PST_START+9
-{ 19,-10 },         // BISHOP_PST_START+10
-{ 1,8 },    // BISHOP_PST_START+11
-{ 12,3 },   // BISHOP_PST_START+12
-{ 24,-3 },          // BISHOP_PST_START+13
-{ 5,-77 },          // BISHOP_PST_START+14
-{ 17,-25 },         // BISHOP_PST_START+15
-{ 5,3 },    // BISHOP_PST_START+16
-{ 20,15 },          // BISHOP_PST_START+17
-{ 18,16 },          // BISHOP_PST_START+18
-{ 8,15 },   // BISHOP_PST_START+19
-{ 16,21 },          // BISHOP_PST_START+20
-{ 24,11 },          // BISHOP_PST_START+21
-{ 26,6 },   // BISHOP_PST_START+22
-{ 24,-8 },          // BISHOP_PST_START+23
-{ -9,2 },   // BISHOP_PST_START+24
-{ -7,14 },          // BISHOP_PST_START+25
-{ 2,13 },   // BISHOP_PST_START+26
-{ 26,12 },          // BISHOP_PST_START+27
-{ 21,6 },   // BISHOP_PST_START+28
-{ 4,12 },   // BISHOP_PST_START+29
-{ -1,7 },   // BISHOP_PST_START+30
-{ 7,-10 },          // BISHOP_PST_START+31
-{ -11,9 },          // BISHOP_PST_START+32
-{ -3,12 },          // BISHOP_PST_START+33
-{ 10,8 },   // BISHOP_PST_START+34
-{ 19,14 },          // BISHOP_PST_START+35
-{ 27,5 },   // BISHOP_PST_START+36
-{ 15,8 },   // BISHOP_PST_START+37
-{ 7,4 },    // BISHOP_PST_START+38
-{ -7,5 },   // BISHOP_PST_START+39
-{ -7,6 },   // BISHOP_PST_START+40
-{ 7,6 },    // BISHOP_PST_START+41
-{ 0,6 },    // BISHOP_PST_START+42
-{ 18,0 },   // BISHOP_PST_START+43
-{ 11,0 },   // BISHOP_PST_START+44
-{ 45,4 },   // BISHOP_PST_START+45
-{ 32,-2 },          // BISHOP_PST_START+46
-{ 28,3 },   // BISHOP_PST_START+47
-{ -8,-4 },          // BISHOP_PST_START+48
-{ -4,-3 },          // BISHOP_PST_START+49
-{ -9,5 },   // BISHOP_PST_START+50
-{ -22,6 },          // BISHOP_PST_START+51
-{ 3,-4 },   // BISHOP_PST_START+52
-{ 7,-6 },   // BISHOP_PST_START+53
-{ -11,4 },          // BISHOP_PST_START+54
-{ 1,-13 },          // BISHOP_PST_START+55
-{ -34,-1 },         // BISHOP_PST_START+56
-{ -58,19 },         // BISHOP_PST_START+57
-{ -49,7 },          // BISHOP_PST_START+58
-{ -99,23 },         // BISHOP_PST_START+59
-{ -73,12 },         // BISHOP_PST_START+60
-{ -60,8 },          // BISHOP_PST_START+61
-{ -21,-4 },         // BISHOP_PST_START+62
-{ -63,-4 },         // BISHOP_PST_START+63
+{ 0,-19 },          // BISHOP_PST_START
+{ 16,-5 },          // BISHOP_PST_START+1
+{ 5,-13 },          // BISHOP_PST_START+2
+{ -3,-3 },          // BISHOP_PST_START+3
+{ 4,0 },    // BISHOP_PST_START+4
+{ -5,0 },   // BISHOP_PST_START+5
+{ 8,-15 },          // BISHOP_PST_START+6
+{ 12,-40 },         // BISHOP_PST_START+7
+{ 6,-4 },   // BISHOP_PST_START+8
+{ 16,-7 },          // BISHOP_PST_START+9
+{ 17,-11 },         // BISHOP_PST_START+10
+{ 0,6 },    // BISHOP_PST_START+11
+{ 10,1 },   // BISHOP_PST_START+12
+{ 21,-5 },          // BISHOP_PST_START+13
+{ 33,-11 },         // BISHOP_PST_START+14
+{ 14,-25 },         // BISHOP_PST_START+15
+{ 4,1 },    // BISHOP_PST_START+16
+{ 17,12 },          // BISHOP_PST_START+17
+{ 15,12 },          // BISHOP_PST_START+18
+{ 7,12 },   // BISHOP_PST_START+19
+{ 13,17 },          // BISHOP_PST_START+20
+{ 21,9 },   // BISHOP_PST_START+21
+{ 23,4 },   // BISHOP_PST_START+22
+{ 21,-10 },         // BISHOP_PST_START+23
+{ -9,0 },   // BISHOP_PST_START+24
+{ -7,11 },          // BISHOP_PST_START+25
+{ 1,10 },   // BISHOP_PST_START+26
+{ 23,9 },   // BISHOP_PST_START+27
+{ 18,4 },   // BISHOP_PST_START+28
+{ 3,9 },    // BISHOP_PST_START+29
+{ -2,4 },   // BISHOP_PST_START+30
+{ 5,-11 },          // BISHOP_PST_START+31
+{ -11,6 },          // BISHOP_PST_START+32
+{ -3,9 },   // BISHOP_PST_START+33
+{ 8,6 },    // BISHOP_PST_START+34
+{ 16,11 },          // BISHOP_PST_START+35
+{ 24,3 },   // BISHOP_PST_START+36
+{ 13,5 },   // BISHOP_PST_START+37
+{ 5,2 },    // BISHOP_PST_START+38
+{ -7,2 },   // BISHOP_PST_START+39
+{ -7,4 },   // BISHOP_PST_START+40
+{ 6,4 },    // BISHOP_PST_START+41
+{ -1,4 },   // BISHOP_PST_START+42
+{ 15,-2 },          // BISHOP_PST_START+43
+{ 9,-2 },   // BISHOP_PST_START+44
+{ 40,2 },   // BISHOP_PST_START+45
+{ 29,-3 },          // BISHOP_PST_START+46
+{ 24,1 },   // BISHOP_PST_START+47
+{ -9,-5 },          // BISHOP_PST_START+48
+{ -5,-4 },          // BISHOP_PST_START+49
+{ -9,3 },   // BISHOP_PST_START+50
+{ -21,3 },          // BISHOP_PST_START+51
+{ 2,-6 },   // BISHOP_PST_START+52
+{ 5,-7 },   // BISHOP_PST_START+53
+{ -11,2 },          // BISHOP_PST_START+54
+{ 0,-14 },          // BISHOP_PST_START+55
+{ -32,-3 },         // BISHOP_PST_START+56
+{ -53,15 },         // BISHOP_PST_START+57
+{ -45,5 },          // BISHOP_PST_START+58
+{ -90,19 },         // BISHOP_PST_START+59
+{ -66,8 },          // BISHOP_PST_START+60
+{ -55,5 },          // BISHOP_PST_START+61
+{ -19,-6 },         // BISHOP_PST_START+62
+{ -58,-6 },         // BISHOP_PST_START+63
 // ROOK PST values
-{ -12,-7 },         // ROOK_PST_START
-{ -12,-6 },         // ROOK_PST_START+1
+{ -11,-6 },         // ROOK_PST_START
+{ -11,-5 },         // ROOK_PST_START+1
 { -6,1 },   // ROOK_PST_START+2
-{ 2,-8 },   // ROOK_PST_START+3
-{ 9,-14 },          // ROOK_PST_START+4
-{ 9,-10 },          // ROOK_PST_START+5
-{ 20,-23 },         // ROOK_PST_START+6
-{ 1,-29 },          // ROOK_PST_START+7
-{ -34,-7 },         // ROOK_PST_START+8
-{ -29,-3 },         // ROOK_PST_START+9
-{ -16,-2 },         // ROOK_PST_START+10
-{ -14,-4 },         // ROOK_PST_START+11
-{ -4,-12 },         // ROOK_PST_START+12
-{ 14,-22 },         // ROOK_PST_START+13
-{ 31,-35 },         // ROOK_PST_START+14
-{ -13,-24 },        // ROOK_PST_START+15
-{ -35,3 },          // ROOK_PST_START+16
-{ -33,0 },          // ROOK_PST_START+17
-{ -29,0 },          // ROOK_PST_START+18
-{ -25,0 },          // ROOK_PST_START+19
-{ -10,-8 },         // ROOK_PST_START+20
-{ 2,-15 },          // ROOK_PST_START+21
-{ 37,-36 },         // ROOK_PST_START+22
-{ 9,-32 },          // ROOK_PST_START+23
-{ -37,10 },         // ROOK_PST_START+24
-{ -42,10 },         // ROOK_PST_START+25
-{ -34,10 },         // ROOK_PST_START+26
-{ -26,6 },          // ROOK_PST_START+27
-{ -22,2 },          // ROOK_PST_START+28
-{ -15,-1 },         // ROOK_PST_START+29
-{ 11,-16 },         // ROOK_PST_START+30
-{ -10,-14 },        // ROOK_PST_START+31
-{ -36,19 },         // ROOK_PST_START+32
-{ -24,14 },         // ROOK_PST_START+33
-{ -24,19 },         // ROOK_PST_START+34
-{ -19,12 },         // ROOK_PST_START+35
-{ -17,-1 },         // ROOK_PST_START+36
-{ 13,-10 },         // ROOK_PST_START+37
-{ 19,-8 },          // ROOK_PST_START+38
-{ 9,-12 },          // ROOK_PST_START+39
-{ -36,18 },         // ROOK_PST_START+40
-{ -8,14 },          // ROOK_PST_START+41
-{ -14,17 },         // ROOK_PST_START+42
-{ -11,10 },         // ROOK_PST_START+43
-{ 20,-4 },          // ROOK_PST_START+44
-{ 46,-12 },         // ROOK_PST_START+45
-{ 84,-18 },         // ROOK_PST_START+46
-{ 47,-20 },         // ROOK_PST_START+47
-{ -19,21 },         // ROOK_PST_START+48
-{ -23,33 },         // ROOK_PST_START+49
-{ 1,33 },   // ROOK_PST_START+50
-{ 24,21 },          // ROOK_PST_START+51
-{ 10,21 },          // ROOK_PST_START+52
-{ 51,6 },   // ROOK_PST_START+53
-{ 40,4 },   // ROOK_PST_START+54
-{ 66,-10 },         // ROOK_PST_START+55
-{ 6,13 },   // ROOK_PST_START+56
-{ -13,20 },         // ROOK_PST_START+57
-{ -4,26 },          // ROOK_PST_START+58
-{ -3,21 },          // ROOK_PST_START+59
-{ 6,14 },   // ROOK_PST_START+60
-{ 38,11 },          // ROOK_PST_START+61
-{ 38,6 },   // ROOK_PST_START+62
-{ 49,5 },   // ROOK_PST_START+63
+{ 2,-7 },   // ROOK_PST_START+3
+{ 8,-12 },          // ROOK_PST_START+4
+{ 8,-9 },   // ROOK_PST_START+5
+{ 18,-21 },         // ROOK_PST_START+6
+{ 0,-27 },          // ROOK_PST_START+7
+{ -31,-6 },         // ROOK_PST_START+8
+{ -27,-2 },         // ROOK_PST_START+9
+{ -14,-2 },         // ROOK_PST_START+10
+{ -13,-4 },         // ROOK_PST_START+11
+{ -4,-11 },         // ROOK_PST_START+12
+{ 12,-20 },         // ROOK_PST_START+13
+{ 28,-32 },         // ROOK_PST_START+14
+{ -12,-22 },        // ROOK_PST_START+15
+{ -32,2 },          // ROOK_PST_START+16
+{ -31,0 },          // ROOK_PST_START+17
+{ -26,0 },          // ROOK_PST_START+18
+{ -23,0 },          // ROOK_PST_START+19
+{ -9,-8 },          // ROOK_PST_START+20
+{ 2,-14 },          // ROOK_PST_START+21
+{ 34,-33 },         // ROOK_PST_START+22
+{ 8,-30 },          // ROOK_PST_START+23
+{ -34,9 },          // ROOK_PST_START+24
+{ -38,9 },          // ROOK_PST_START+25
+{ -31,9 },          // ROOK_PST_START+26
+{ -23,5 },          // ROOK_PST_START+27
+{ -20,2 },          // ROOK_PST_START+28
+{ -14,-1 },         // ROOK_PST_START+29
+{ 10,-14 },         // ROOK_PST_START+30
+{ -9,-12 },         // ROOK_PST_START+31
+{ -33,17 },         // ROOK_PST_START+32
+{ -22,12 },         // ROOK_PST_START+33
+{ -22,17 },         // ROOK_PST_START+34
+{ -17,11 },         // ROOK_PST_START+35
+{ -16,0 },          // ROOK_PST_START+36
+{ 12,-9 },          // ROOK_PST_START+37
+{ 17,-7 },          // ROOK_PST_START+38
+{ 8,-10 },          // ROOK_PST_START+39
+{ -33,16 },         // ROOK_PST_START+40
+{ -7,13 },          // ROOK_PST_START+41
+{ -13,16 },         // ROOK_PST_START+42
+{ -10,9 },          // ROOK_PST_START+43
+{ 18,-3 },          // ROOK_PST_START+44
+{ 42,-11 },         // ROOK_PST_START+45
+{ 77,-16 },         // ROOK_PST_START+46
+{ 42,-18 },         // ROOK_PST_START+47
+{ -17,19 },         // ROOK_PST_START+48
+{ -21,30 },         // ROOK_PST_START+49
+{ 1,30 },   // ROOK_PST_START+50
+{ 21,19 },          // ROOK_PST_START+51
+{ 9,19 },   // ROOK_PST_START+52
+{ 46,6 },   // ROOK_PST_START+53
+{ 37,4 },   // ROOK_PST_START+54
+{ 60,-9 },          // ROOK_PST_START+55
+{ 5,12 },   // ROOK_PST_START+56
+{ -11,19 },         // ROOK_PST_START+57
+{ -4,24 },          // ROOK_PST_START+58
+{ -3,19 },          // ROOK_PST_START+59
+{ 6,12 },   // ROOK_PST_START+60
+{ 36,9 },   // ROOK_PST_START+61
+{ 35,6 },   // ROOK_PST_START+62
+{ 45,4 },   // ROOK_PST_START+63
 // Queen PST values
-{ -7,-42 },         // QUEEN_PST_START
-{ -8,-41 },         // QUEEN_PST_START+1
-{ 3,-39 },          // QUEEN_PST_START+2
-{ 11,-28 },         // QUEEN_PST_START+3
-{ 8,-43 },          // QUEEN_PST_START+4
-{ -7,-39 },         // QUEEN_PST_START+5
-{ 5,-62 },          // QUEEN_PST_START+6
-{ 5,-72 },          // QUEEN_PST_START+7
-{ -7,-30 },         // QUEEN_PST_START+8
-{ -1,-31 },         // QUEEN_PST_START+9
-{ 7,-35 },          // QUEEN_PST_START+10
-{ 11,-27 },         // QUEEN_PST_START+11
-{ 9,-23 },          // QUEEN_PST_START+12
-{ 20,-45 },         // QUEEN_PST_START+13
-{ 25,-75 },         // QUEEN_PST_START+14
-{ 35,-99 },         // QUEEN_PST_START+15
-{ -7,-27 },         // QUEEN_PST_START+16
-{ 1,-13 },          // QUEEN_PST_START+17
-{ -4,-6 },          // QUEEN_PST_START+18
-{ -5,-9 },          // QUEEN_PST_START+19
+{ -7,-38 },         // QUEEN_PST_START
+{ -7,-37 },         // QUEEN_PST_START+1
+{ 2,-35 },          // QUEEN_PST_START+2
+{ 10,-26 },         // QUEEN_PST_START+3
+{ 7,-39 },          // QUEEN_PST_START+4
+{ -7,-35 },         // QUEEN_PST_START+5
+{ 5,-56 },          // QUEEN_PST_START+6
+{ 3,-62 },          // QUEEN_PST_START+7
+{ -7,-28 },         // QUEEN_PST_START+8
+{ -1,-28 },         // QUEEN_PST_START+9
+{ 6,-32 },          // QUEEN_PST_START+10
+{ 10,-25 },         // QUEEN_PST_START+11
+{ 8,-21 },          // QUEEN_PST_START+12
+{ 18,-41 },         // QUEEN_PST_START+13
+{ 23,-68 },         // QUEEN_PST_START+14
+{ 32,-91 },         // QUEEN_PST_START+15
+{ -6,-25 },         // QUEEN_PST_START+16
+{ 1,-12 },          // QUEEN_PST_START+17
+{ -3,-5 },          // QUEEN_PST_START+18
+{ -5,-8 },          // QUEEN_PST_START+19
 { -1,0 },   // QUEEN_PST_START+20
-{ 9,7 },    // QUEEN_PST_START+21
-{ 25,-7 },          // QUEEN_PST_START+22
-{ 18,-21 },         // QUEEN_PST_START+23
-{ -13,-10 },        // QUEEN_PST_START+24
-{ -23,16 },         // QUEEN_PST_START+25
-{ -17,-2 },         // QUEEN_PST_START+26
-{ -11,23 },         // QUEEN_PST_START+27
-{ -7,16 },          // QUEEN_PST_START+28
-{ -8,24 },          // QUEEN_PST_START+29
-{ -1,21 },          // QUEEN_PST_START+30
-{ 10,14 },          // QUEEN_PST_START+31
-{ -22,-7 },         // QUEEN_PST_START+32
-{ -16,1 },          // QUEEN_PST_START+33
-{ -17,14 },         // QUEEN_PST_START+34
-{ -19,29 },         // QUEEN_PST_START+35
-{ -17,46 },         // QUEEN_PST_START+36
-{ -1,38 },          // QUEEN_PST_START+37
-{ 2,43 },   // QUEEN_PST_START+38
-{ 10,30 },          // QUEEN_PST_START+39
-{ -10,-21 },        // QUEEN_PST_START+40
-{ -13,-10 },        // QUEEN_PST_START+41
-{ -22,30 },         // QUEEN_PST_START+42
-{ -7,33 },          // QUEEN_PST_START+43
-{ -2,52 },          // QUEEN_PST_START+44
-{ 43,39 },          // QUEEN_PST_START+45
-{ 53,11 },          // QUEEN_PST_START+46
-{ 59,-2 },          // QUEEN_PST_START+47
-{ -8,-25 },         // QUEEN_PST_START+48
-{ -39,15 },         // QUEEN_PST_START+49
-{ -38,52 },         // QUEEN_PST_START+50
-{ -42,66 },         // QUEEN_PST_START+51
-{ -38,88 },         // QUEEN_PST_START+52
-{ 11,45 },          // QUEEN_PST_START+53
-{ -12,36 },         // QUEEN_PST_START+54
-{ 46,9 },   // QUEEN_PST_START+55
-{ -29,-8 },         // QUEEN_PST_START+56
-{ -45,19 },         // QUEEN_PST_START+57
-{ -18,33 },         // QUEEN_PST_START+58
-{ 17,17 },          // QUEEN_PST_START+59
-{ 8,33 },   // QUEEN_PST_START+60
-{ 31,21 },          // QUEEN_PST_START+61
-{ 65,-31 },         // QUEEN_PST_START+62
+{ 8,7 },    // QUEEN_PST_START+21
+{ 23,-6 },          // QUEEN_PST_START+22
+{ 16,-20 },         // QUEEN_PST_START+23
+{ -12,-9 },         // QUEEN_PST_START+24
+{ -21,14 },         // QUEEN_PST_START+25
+{ -15,-2 },         // QUEEN_PST_START+26
+{ -10,21 },         // QUEEN_PST_START+27
+{ -7,15 },          // QUEEN_PST_START+28
+{ -8,21 },          // QUEEN_PST_START+29
+{ -1,19 },          // QUEEN_PST_START+30
+{ 9,13 },   // QUEEN_PST_START+31
+{ -20,-7 },         // QUEEN_PST_START+32
+{ -15,1 },          // QUEEN_PST_START+33
+{ -16,13 },         // QUEEN_PST_START+34
+{ -18,27 },         // QUEEN_PST_START+35
+{ -16,42 },         // QUEEN_PST_START+36
+{ -1,35 },          // QUEEN_PST_START+37
+{ 2,40 },   // QUEEN_PST_START+38
+{ 9,27 },   // QUEEN_PST_START+39
+{ -9,-19 },         // QUEEN_PST_START+40
+{ -12,-9 },         // QUEEN_PST_START+41
+{ -21,27 },         // QUEEN_PST_START+42
+{ -7,30 },          // QUEEN_PST_START+43
+{ -2,48 },          // QUEEN_PST_START+44
+{ 39,36 },          // QUEEN_PST_START+45
+{ 48,10 },          // QUEEN_PST_START+46
+{ 53,-2 },          // QUEEN_PST_START+47
+{ -7,-22 },         // QUEEN_PST_START+48
+{ -36,14 },         // QUEEN_PST_START+49
+{ -35,48 },         // QUEEN_PST_START+50
+{ -39,61 },         // QUEEN_PST_START+51
+{ -34,81 },         // QUEEN_PST_START+52
+{ 10,41 },          // QUEEN_PST_START+53
+{ -11,32 },         // QUEEN_PST_START+54
+{ 42,8 },   // QUEEN_PST_START+55
+{ -27,-8 },         // QUEEN_PST_START+56
+{ -40,17 },         // QUEEN_PST_START+57
+{ -16,29 },         // QUEEN_PST_START+58
+{ 16,15 },          // QUEEN_PST_START+59
+{ 8,29 },   // QUEEN_PST_START+60
+{ 33,16 },          // QUEEN_PST_START+61
+{ 57,-27 },         // QUEEN_PST_START+62
 { -2,7 },   // QUEEN_PST_START+63
 // Knight PST values
-{ 18,-96 },         // KING_PST_START
-{ 41,-54 },         // KING_PST_START+1
-{ 35,-35 },         // KING_PST_START+2
-{ -38,-17 },        // KING_PST_START+3
-{ 28,-51 },         // KING_PST_START+4
-{ -17,-34 },        // KING_PST_START+5
-{ 25,-49 },         // KING_PST_START+6
-{ 36,-103 },        // KING_PST_START+7
-{ 37,-54 },         // KING_PST_START+8
-{ -4,-7 },          // KING_PST_START+9
-{ -20,10 },         // KING_PST_START+10
-{ -35,15 },         // KING_PST_START+11
-{ -40,15 },         // KING_PST_START+12
-{ -25,1 },          // KING_PST_START+13
-{ 1,-13 },          // KING_PST_START+14
-{ 10,-46 },         // KING_PST_START+15
-{ -52,-36 },        // KING_PST_START+16
-{ -38,12 },         // KING_PST_START+17
-{ -89,41 },         // KING_PST_START+18
-{ -86,48 },         // KING_PST_START+19
-{ -86,46 },         // KING_PST_START+20
-{ -90,30 },         // KING_PST_START+21
-{ -63,15 },         // KING_PST_START+22
-{ -75,-17 },        // KING_PST_START+23
-{ -110,-22 },       // KING_PST_START+24
-{ -97,29 },         // KING_PST_START+25
-{ -112,58 },        // KING_PST_START+26
-{ -128,73 },        // KING_PST_START+27
-{ -133,69 },        // KING_PST_START+28
-{ -127,51 },        // KING_PST_START+29
-{ -144,39 },        // KING_PST_START+30
-{ -185,7 },         // KING_PST_START+31
-{ -97,-19 },        // KING_PST_START+32
-{ -69,38 },         // KING_PST_START+33
-{ -94,67 },         // KING_PST_START+34
-{ -117,81 },        // KING_PST_START+35
-{ -122,80 },        // KING_PST_START+36
-{ -117,69 },        // KING_PST_START+37
-{ -127,55 },        // KING_PST_START+38
-{ -154,7 },         // KING_PST_START+39
-{ -125,-11 },       // KING_PST_START+40
-{ 35,33 },          // KING_PST_START+41
-{ -14,58 },         // KING_PST_START+42
-{ -50,76 },         // KING_PST_START+43
-{ -20,71 },         // KING_PST_START+44
-{ 39,59 },          // KING_PST_START+45
-{ 2,53 },   // KING_PST_START+46
-{ -60,-1 },         // KING_PST_START+47
-{ -73,-32 },        // KING_PST_START+48
-{ 22,24 },          // KING_PST_START+49
-{ -10,46 },         // KING_PST_START+50
-{ 71,32 },          // KING_PST_START+51
-{ 4,51 },   // KING_PST_START+52
-{ -28,62 },         // KING_PST_START+53
-{ 14,44 },          // KING_PST_START+54
-{ -27,-14 },        // KING_PST_START+55
-{ 98,-154 },        // KING_PST_START+56
-{ 122,-71 },        // KING_PST_START+57
-{ 139,-42 },        // KING_PST_START+58
-{ -19,10 },         // KING_PST_START+59
-{ -40,1 },          // KING_PST_START+60
-{ -28,-2 },         // KING_PST_START+61
-{ 66,-28 },         // KING_PST_START+62
-{ 173,-167 },       // KING_PST_START+63
+{ 36,-86 },         // KING_PST_START
+{ 57,-48 },         // KING_PST_START+1
+{ 51,-30 },         // KING_PST_START+2
+{ -15,-14 },        // KING_PST_START+3
+{ 45,-45 },         // KING_PST_START+4
+{ 4,-29 },          // KING_PST_START+5
+{ 42,-43 },         // KING_PST_START+6
+{ 52,-92 },         // KING_PST_START+7
+{ 54,-48 },         // KING_PST_START+8
+{ 15,-5 },          // KING_PST_START+9
+{ 2,11 },   // KING_PST_START+10
+{ -13,15 },         // KING_PST_START+11
+{ -17,16 },         // KING_PST_START+12
+{ -3,2 },   // KING_PST_START+13
+{ 21,-11 },         // KING_PST_START+14
+{ 28,-40 },         // KING_PST_START+15
+{ -27,-31 },        // KING_PST_START+16
+{ -15,13 },         // KING_PST_START+17
+{ -62,39 },         // KING_PST_START+18
+{ -59,45 },         // KING_PST_START+19
+{ -59,43 },         // KING_PST_START+20
+{ -62,28 },         // KING_PST_START+21
+{ -38,15 },         // KING_PST_START+22
+{ -49,-14 },        // KING_PST_START+23
+{ -80,-18 },        // KING_PST_START+24
+{ -68,27 },         // KING_PST_START+25
+{ -82,55 },         // KING_PST_START+26
+{ -97,68 },         // KING_PST_START+27
+{ -102,64 },        // KING_PST_START+28
+{ -96,48 },         // KING_PST_START+29
+{ -111,37 },        // KING_PST_START+30
+{ -148,7 },         // KING_PST_START+31
+{ -66,-16 },        // KING_PST_START+32
+{ -44,36 },         // KING_PST_START+33
+{ -66,62 },         // KING_PST_START+34
+{ -88,76 },         // KING_PST_START+35
+{ -91,74 },         // KING_PST_START+36
+{ -87,65 },         // KING_PST_START+37
+{ -96,52 },         // KING_PST_START+38
+{ -119,7 },         // KING_PST_START+39
+{ -79,-11 },        // KING_PST_START+40
+{ 43,33 },          // KING_PST_START+41
+{ -1,56 },          // KING_PST_START+42
+{ -30,71 },         // KING_PST_START+43
+{ -2,67 },          // KING_PST_START+44
+{ 49,56 },          // KING_PST_START+45
+{ 20,50 },          // KING_PST_START+46
+{ -29,0 },          // KING_PST_START+47
+{ -36,-30 },        // KING_PST_START+48
+{ 19,27 },          // KING_PST_START+49
+{ -1,45 },          // KING_PST_START+50
+{ 51,37 },          // KING_PST_START+51
+{ 10,51 },          // KING_PST_START+52
+{ -2,57 },          // KING_PST_START+53
+{ 23,43 },          // KING_PST_START+54
+{ -3,-12 },         // KING_PST_START+55
+{ 1,-115 },         // KING_PST_START+56
+{ 36,-42 },         // KING_PST_START+57
+{ 52,-17 },         // KING_PST_START+58
+{ -7,12 },          // KING_PST_START+59
+{ -7,0 },   // KING_PST_START+60
+{ -1,-1 },          // KING_PST_START+61
+{ 26,-13 },         // KING_PST_START+62
+{ 6,-117 },         // KING_PST_START+63
 //PAWN EVAL
 // PASSED PST values
 { 0,0 },    // PASSED_PAWNS_START
@@ -406,54 +406,54 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
 { 0,0 },    // PASSED_PAWNS_START+5
 { 0,0 },    // PASSED_PAWNS_START+6
 { 0,0 },    // PASSED_PAWNS_START+7
-{ -21,4 },          // PASSED_PAWNS_START+8
-{ -13,-2 },         // PASSED_PAWNS_START+9
-{ -26,-7 },         // PASSED_PAWNS_START+10
-{ -36,-2 },         // PASSED_PAWNS_START+11
-{ -12,-28 },        // PASSED_PAWNS_START+12
-{ -11,-14 },        // PASSED_PAWNS_START+13
-{ 9,-15 },          // PASSED_PAWNS_START+14
+{ -19,4 },          // PASSED_PAWNS_START+8
+{ -12,-2 },         // PASSED_PAWNS_START+9
+{ -23,-6 },         // PASSED_PAWNS_START+10
+{ -32,-2 },         // PASSED_PAWNS_START+11
+{ -11,-26 },        // PASSED_PAWNS_START+12
+{ -10,-13 },        // PASSED_PAWNS_START+13
+{ 8,-14 },          // PASSED_PAWNS_START+14
 { -6,4 },   // PASSED_PAWNS_START+15
-{ -10,7 },          // PASSED_PAWNS_START+16
-{ -17,5 },          // PASSED_PAWNS_START+17
-{ -31,0 },          // PASSED_PAWNS_START+18
-{ -28,-8 },         // PASSED_PAWNS_START+19
-{ -21,-10 },        // PASSED_PAWNS_START+20
-{ -25,0 },          // PASSED_PAWNS_START+21
-{ -17,14 },         // PASSED_PAWNS_START+22
-{ -1,8 },   // PASSED_PAWNS_START+23
-{ -10,52 },         // PASSED_PAWNS_START+24
-{ -13,32 },         // PASSED_PAWNS_START+25
-{ -23,21 },         // PASSED_PAWNS_START+26
-{ -16,9 },          // PASSED_PAWNS_START+27
-{ -24,12 },         // PASSED_PAWNS_START+28
-{ -22,27 },         // PASSED_PAWNS_START+29
-{ -22,36 },         // PASSED_PAWNS_START+30
-{ -22,49 },         // PASSED_PAWNS_START+31
-{ 5,89 },   // PASSED_PAWNS_START+32
-{ 11,69 },          // PASSED_PAWNS_START+33
-{ 18,45 },          // PASSED_PAWNS_START+34
-{ 10,38 },          // PASSED_PAWNS_START+35
-{ -6,39 },          // PASSED_PAWNS_START+36
-{ -2,49 },          // PASSED_PAWNS_START+37
-{ -12,64 },         // PASSED_PAWNS_START+38
-{ -31,89 },         // PASSED_PAWNS_START+39
-{ 15,167 },         // PASSED_PAWNS_START+40
-{ 39,137 },         // PASSED_PAWNS_START+41
-{ 19,118 },         // PASSED_PAWNS_START+42
-{ 1,82 },   // PASSED_PAWNS_START+43
-{ -8,93 },          // PASSED_PAWNS_START+44
-{ -8,107 },         // PASSED_PAWNS_START+45
-{ -24,112 },        // PASSED_PAWNS_START+46
-{ -71,152 },        // PASSED_PAWNS_START+47
-{ 53,139 },         // PASSED_PAWNS_START+48
-{ 60,132 },         // PASSED_PAWNS_START+49
-{ 57,128 },         // PASSED_PAWNS_START+50
-{ 72,99 },          // PASSED_PAWNS_START+51
-{ 65,95 },          // PASSED_PAWNS_START+52
-{ 47,109 },         // PASSED_PAWNS_START+53
-{ 12,132 },         // PASSED_PAWNS_START+54
-{ -9,141 },         // PASSED_PAWNS_START+55
+{ -9,6 },   // PASSED_PAWNS_START+16
+{ -15,4 },          // PASSED_PAWNS_START+17
+{ -28,0 },          // PASSED_PAWNS_START+18
+{ -26,-8 },         // PASSED_PAWNS_START+19
+{ -19,-9 },         // PASSED_PAWNS_START+20
+{ -23,0 },          // PASSED_PAWNS_START+21
+{ -16,13 },         // PASSED_PAWNS_START+22
+{ -1,7 },   // PASSED_PAWNS_START+23
+{ -9,47 },          // PASSED_PAWNS_START+24
+{ -12,29 },         // PASSED_PAWNS_START+25
+{ -21,19 },         // PASSED_PAWNS_START+26
+{ -15,8 },          // PASSED_PAWNS_START+27
+{ -22,11 },         // PASSED_PAWNS_START+28
+{ -20,24 },         // PASSED_PAWNS_START+29
+{ -20,33 },         // PASSED_PAWNS_START+30
+{ -20,44 },         // PASSED_PAWNS_START+31
+{ 5,81 },   // PASSED_PAWNS_START+32
+{ 10,63 },          // PASSED_PAWNS_START+33
+{ 17,41 },          // PASSED_PAWNS_START+34
+{ 9,35 },   // PASSED_PAWNS_START+35
+{ -6,35 },          // PASSED_PAWNS_START+36
+{ -2,45 },          // PASSED_PAWNS_START+37
+{ -11,59 },         // PASSED_PAWNS_START+38
+{ -28,81 },         // PASSED_PAWNS_START+39
+{ 15,150 },         // PASSED_PAWNS_START+40
+{ 35,125 },         // PASSED_PAWNS_START+41
+{ 18,106 },         // PASSED_PAWNS_START+42
+{ 3,69 },   // PASSED_PAWNS_START+43
+{ -5,81 },          // PASSED_PAWNS_START+44
+{ -8,98 },          // PASSED_PAWNS_START+45
+{ -23,102 },        // PASSED_PAWNS_START+46
+{ -64,138 },        // PASSED_PAWNS_START+47
+{ -19,34 },         // PASSED_PAWNS_START+48
+{ -16,29 },         // PASSED_PAWNS_START+49
+{ -14,28 },         // PASSED_PAWNS_START+50
+{ 0,17 },   // PASSED_PAWNS_START+51
+{ -2,18 },          // PASSED_PAWNS_START+52
+{ -11,25 },         // PASSED_PAWNS_START+53
+{ -20,32 },         // PASSED_PAWNS_START+54
+{ -27,36 },         // PASSED_PAWNS_START+55
 { 0,0 },    // PASSED_PAWNS_START+56
 { 0,0 },    // PASSED_PAWNS_START+57
 { 0,0 },    // PASSED_PAWNS_START+58
@@ -471,46 +471,46 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
 { 0,0 },    // ISOLANI_START+5
 { 0,0 },    // ISOLANI_START+6
 { 0,0 },    // ISOLANI_START+7
-{ -10,-9 },         // ISOLANI_START+8
-{ -25,-19 },        // ISOLANI_START+9
-{ -17,-20 },        // ISOLANI_START+10
-{ -42,-12 },        // ISOLANI_START+11
-{ -49,-19 },        // ISOLANI_START+12
-{ -23,-11 },        // ISOLANI_START+13
-{ -12,-22 },        // ISOLANI_START+14
-{ -14,6 },          // ISOLANI_START+15
-{ -10,-9 },         // ISOLANI_START+16
-{ -19,-31 },        // ISOLANI_START+17
-{ -36,-21 },        // ISOLANI_START+18
-{ -30,-27 },        // ISOLANI_START+19
-{ -40,-23 },        // ISOLANI_START+20
-{ -28,-12 },        // ISOLANI_START+21
-{ -32,-23 },        // ISOLANI_START+22
-{ -26,4 },          // ISOLANI_START+23
+{ -9,-8 },          // ISOLANI_START+8
+{ -23,-17 },        // ISOLANI_START+9
+{ -15,-19 },        // ISOLANI_START+10
+{ -38,-11 },        // ISOLANI_START+11
+{ -44,-17 },        // ISOLANI_START+12
+{ -21,-10 },        // ISOLANI_START+13
+{ -11,-20 },        // ISOLANI_START+14
+{ -13,6 },          // ISOLANI_START+15
+{ -9,-8 },          // ISOLANI_START+16
+{ -17,-28 },        // ISOLANI_START+17
+{ -33,-19 },        // ISOLANI_START+18
+{ -27,-25 },        // ISOLANI_START+19
+{ -36,-21 },        // ISOLANI_START+20
+{ -26,-11 },        // ISOLANI_START+21
+{ -29,-21 },        // ISOLANI_START+22
+{ -23,4 },          // ISOLANI_START+23
 { -1,-9 },          // ISOLANI_START+24
-{ -15,-28 },        // ISOLANI_START+25
-{ -37,-20 },        // ISOLANI_START+26
-{ -40,-26 },        // ISOLANI_START+27
-{ -34,-27 },        // ISOLANI_START+28
-{ -29,-11 },        // ISOLANI_START+29
-{ -17,-26 },        // ISOLANI_START+30
-{ -4,-4 },          // ISOLANI_START+31
-{ 17,-12 },         // ISOLANI_START+32
-{ -3,-42 },         // ISOLANI_START+33
-{ -7,-25 },         // ISOLANI_START+34
-{ -4,-19 },         // ISOLANI_START+35
-{ -23,-22 },        // ISOLANI_START+36
-{ 0,-23 },          // ISOLANI_START+37
-{ 35,-48 },         // ISOLANI_START+38
-{ 23,-1 },          // ISOLANI_START+39
-{ 52,178 },         // ISOLANI_START+40
-{ 83,41 },          // ISOLANI_START+41
-{ 8,96 },   // ISOLANI_START+42
-{ 14,104 },         // ISOLANI_START+43
-{ -17,98 },         // ISOLANI_START+44
-{ 28,34 },          // ISOLANI_START+45
-{ 129,-39 },        // ISOLANI_START+46
-{ 64,42 },          // ISOLANI_START+47
+{ -14,-26 },        // ISOLANI_START+25
+{ -34,-18 },        // ISOLANI_START+26
+{ -36,-23 },        // ISOLANI_START+27
+{ -31,-25 },        // ISOLANI_START+28
+{ -27,-10 },        // ISOLANI_START+29
+{ -15,-24 },        // ISOLANI_START+30
+{ -3,-3 },          // ISOLANI_START+31
+{ 16,-11 },         // ISOLANI_START+32
+{ -3,-38 },         // ISOLANI_START+33
+{ -7,-22 },         // ISOLANI_START+34
+{ -4,-17 },         // ISOLANI_START+35
+{ -21,-20 },        // ISOLANI_START+36
+{ 0,-21 },          // ISOLANI_START+37
+{ 32,-44 },         // ISOLANI_START+38
+{ 21,-1 },          // ISOLANI_START+39
+{ 73,91 },          // ISOLANI_START+40
+{ 62,34 },          // ISOLANI_START+41
+{ 26,49 },          // ISOLANI_START+42
+{ 32,49 },          // ISOLANI_START+43
+{ 4,58 },   // ISOLANI_START+44
+{ 27,26 },          // ISOLANI_START+45
+{ 69,2 },   // ISOLANI_START+46
+{ 62,30 },          // ISOLANI_START+47
 { 0,0 },    // ISOLANI_START+48
 { 0,0 },    // ISOLANI_START+49
 { 0,0 },    // ISOLANI_START+50
@@ -536,46 +536,46 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
 { 0,0 },    // BLOCKED_ISOLANI_START+5
 { 0,0 },    // BLOCKED_ISOLANI_START+6
 { 0,0 },    // BLOCKED_ISOLANI_START+7
-{ -13,-22 },        // BLOCKED_ISOLANI_START+8
-{ -29,-20 },        // BLOCKED_ISOLANI_START+9
-{ -24,-21 },        // BLOCKED_ISOLANI_START+10
-{ -54,-7 },         // BLOCKED_ISOLANI_START+11
-{ -40,-22 },        // BLOCKED_ISOLANI_START+12
-{ -34,-2 },         // BLOCKED_ISOLANI_START+13
-{ -30,-11 },        // BLOCKED_ISOLANI_START+14
-{ -23,8 },          // BLOCKED_ISOLANI_START+15
-{ -14,9 },          // BLOCKED_ISOLANI_START+16
-{ -18,-10 },        // BLOCKED_ISOLANI_START+17
-{ -38,-5 },         // BLOCKED_ISOLANI_START+18
-{ -7,-8 },          // BLOCKED_ISOLANI_START+19
-{ -20,-19 },        // BLOCKED_ISOLANI_START+20
-{ -26,-6 },         // BLOCKED_ISOLANI_START+21
-{ -64,-6 },         // BLOCKED_ISOLANI_START+22
-{ -29,12 },         // BLOCKED_ISOLANI_START+23
-{ -8,7 },   // BLOCKED_ISOLANI_START+24
-{ -20,-8 },         // BLOCKED_ISOLANI_START+25
-{ -36,-3 },         // BLOCKED_ISOLANI_START+26
-{ -22,-18 },        // BLOCKED_ISOLANI_START+27
-{ -21,-17 },        // BLOCKED_ISOLANI_START+28
-{ -26,-2 },         // BLOCKED_ISOLANI_START+29
-{ -30,-3 },         // BLOCKED_ISOLANI_START+30
-{ -8,13 },          // BLOCKED_ISOLANI_START+31
-{ -6,-4 },          // BLOCKED_ISOLANI_START+32
-{ -14,-29 },        // BLOCKED_ISOLANI_START+33
-{ -26,-22 },        // BLOCKED_ISOLANI_START+34
-{ -27,-17 },        // BLOCKED_ISOLANI_START+35
-{ -31,-18 },        // BLOCKED_ISOLANI_START+36
-{ -16,-18 },        // BLOCKED_ISOLANI_START+37
-{ 6,-29 },          // BLOCKED_ISOLANI_START+38
-{ -15,-2 },         // BLOCKED_ISOLANI_START+39
-{ 20,-39 },         // BLOCKED_ISOLANI_START+40
-{ 8,-79 },          // BLOCKED_ISOLANI_START+41
-{ -21,-38 },        // BLOCKED_ISOLANI_START+42
-{ -11,-35 },        // BLOCKED_ISOLANI_START+43
-{ -39,-26 },        // BLOCKED_ISOLANI_START+44
-{ -15,-27 },        // BLOCKED_ISOLANI_START+45
-{ 7,-36 },          // BLOCKED_ISOLANI_START+46
-{ -11,-28 },        // BLOCKED_ISOLANI_START+47
+{ -12,-20 },        // BLOCKED_ISOLANI_START+8
+{ -27,-18 },        // BLOCKED_ISOLANI_START+9
+{ -22,-19 },        // BLOCKED_ISOLANI_START+10
+{ -50,-5 },         // BLOCKED_ISOLANI_START+11
+{ -37,-19 },        // BLOCKED_ISOLANI_START+12
+{ -31,-2 },         // BLOCKED_ISOLANI_START+13
+{ -28,-10 },        // BLOCKED_ISOLANI_START+14
+{ -21,7 },          // BLOCKED_ISOLANI_START+15
+{ -13,8 },          // BLOCKED_ISOLANI_START+16
+{ -16,-9 },         // BLOCKED_ISOLANI_START+17
+{ -35,-5 },         // BLOCKED_ISOLANI_START+18
+{ -6,-8 },          // BLOCKED_ISOLANI_START+19
+{ -18,-17 },        // BLOCKED_ISOLANI_START+20
+{ -24,-6 },         // BLOCKED_ISOLANI_START+21
+{ -58,-5 },         // BLOCKED_ISOLANI_START+22
+{ -27,11 },         // BLOCKED_ISOLANI_START+23
+{ -7,6 },   // BLOCKED_ISOLANI_START+24
+{ -18,-7 },         // BLOCKED_ISOLANI_START+25
+{ -33,-3 },         // BLOCKED_ISOLANI_START+26
+{ -20,-17 },        // BLOCKED_ISOLANI_START+27
+{ -19,-15 },        // BLOCKED_ISOLANI_START+28
+{ -24,-2 },         // BLOCKED_ISOLANI_START+29
+{ -27,-3 },         // BLOCKED_ISOLANI_START+30
+{ -8,12 },          // BLOCKED_ISOLANI_START+31
+{ -6,-3 },          // BLOCKED_ISOLANI_START+32
+{ -13,-26 },        // BLOCKED_ISOLANI_START+33
+{ -24,-20 },        // BLOCKED_ISOLANI_START+34
+{ -24,-15 },        // BLOCKED_ISOLANI_START+35
+{ -28,-16 },        // BLOCKED_ISOLANI_START+36
+{ -15,-17 },        // BLOCKED_ISOLANI_START+37
+{ 6,-26 },          // BLOCKED_ISOLANI_START+38
+{ -14,-2 },         // BLOCKED_ISOLANI_START+39
+{ 19,-37 },         // BLOCKED_ISOLANI_START+40
+{ 7,-72 },          // BLOCKED_ISOLANI_START+41
+{ -18,-36 },        // BLOCKED_ISOLANI_START+42
+{ -7,-38 },         // BLOCKED_ISOLANI_START+43
+{ -32,-29 },        // BLOCKED_ISOLANI_START+44
+{ -14,-25 },        // BLOCKED_ISOLANI_START+45
+{ 5,-32 },          // BLOCKED_ISOLANI_START+46
+{ -10,-26 },        // BLOCKED_ISOLANI_START+47
 { 0,0 },    // BLOCKED_ISOLANI_START+48
 { 0,0 },    // BLOCKED_ISOLANI_START+49
 { 0,0 },    // BLOCKED_ISOLANI_START+50
@@ -592,59 +592,60 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
 { 0,0 },    // BLOCKED_ISOLANI_START+61
 { 0,0 },    // BLOCKED_ISOLANI_START+62
 { 0,0 },    // BLOCKED_ISOLANI_START+63
-{ -14,-13 },        // FORWARD_BLOCKED_BACKWARD
-{ -11,-11 },        // FORWARD_CONTROLLED_BACKWARD
-{ -8,-6 },          // FREE_TO_ADV_BACKWARD
+{ -13,-12 },        // FORWARD_BLOCKED_BACKWARD
+{ -10,-10 },        // FORWARD_CONTROLLED_BACKWARD
+{ -8,-5 },          // FREE_TO_ADV_BACKWARD
 // DOUBLE_PAWN_FILE values
-{ -27,-39 },        // DOUBLE_PAWN_FILE_START
-{ 0,-28 },          // DOUBLE_PAWN_FILE_START+1
-{ 1,-26 },          // DOUBLE_PAWN_FILE_START+2
-{ 1,-20 },          // DOUBLE_PAWN_FILE_START+3
-{ -6,-13 },         // DOUBLE_PAWN_FILE_START+4
-{ -7,-23 },         // DOUBLE_PAWN_FILE_START+5
-{ -6,-31 },         // DOUBLE_PAWN_FILE_START+6
-{ -20,-47 },        // DOUBLE_PAWN_FILE_START+7
-{ 23,-14 },         // PAWN_SHIELD_BONUS,
-{ -85,-15 },        // DIRECTLY_ON_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
-{ -84,-7 },         // DIRECTLY_ON_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
-{ -36,-18 },        // NEXT_TO_OPEN_FILE_PENALTY,
-{ 15,2 },   // DIRECTLY_ON_SEMI_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
-{ 9,-18 },          // DIRECTLY_ON_SEMI_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
-{ 4,-12 },          // NEXT_TO_SEMI_OPEN_FILE_PENALTY,
+{ -25,-35 },        // DOUBLE_PAWN_FILE_START
+{ -1,-25 },         // DOUBLE_PAWN_FILE_START+1
+{ 1,-23 },          // DOUBLE_PAWN_FILE_START+2
+{ 1,-18 },          // DOUBLE_PAWN_FILE_START+3
+{ -5,-11 },         // DOUBLE_PAWN_FILE_START+4
+{ -7,-21 },         // DOUBLE_PAWN_FILE_START+5
+{ -6,-28 },         // DOUBLE_PAWN_FILE_START+6
+{ -18,-43 },        // DOUBLE_PAWN_FILE_START+7
+{ 21,-13 },         // PAWN_SHIELD_BONUS,
+{ -77,-13 },        // DIRECTLY_ON_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
+{ -76,-7 },         // DIRECTLY_ON_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
+{ -33,-17 },        // NEXT_TO_OPEN_FILE_PENALTY,
+{ 14,2 },   // DIRECTLY_ON_SEMI_OPEN_FILE_NEXT_TO_OPEN_PENALTY,
+{ 8,-17 },          // DIRECTLY_ON_SEMI_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY,
+{ 4,-11 },          // NEXT_TO_SEMI_OPEN_FILE_PENALTY,
 // NEXT_TO_OPEN_DIAGONAL_PENALTY values
-{ -27,-59 },        // NEXT_TO_OPEN_DIAGONAL_PENALTY_START
-{ -1,-10 },         // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+1
-{ 14,17 },          // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+2
-{ 31,3 },   // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+3
-{ 66,99 },          // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+4
-{ 8,0 },    // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+5
+{ -24,-54 },        // NEXT_TO_OPEN_DIAGONAL_PENALTY_START
+{ -1,-9 },          // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+1
+{ 13,16 },          // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+2
+{ 28,4 },   // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+3
+{ 12,7 },   // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+4
+{ 0,0 },    // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+5
 { 0,0 },    // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+6
 // MOBILITY values
 { 0,0 },    // MOBILITY_START
 { 0,0 },    // MOBILITY_START+1
-{ 6,5 },    // MOBILITY_START+2
-{ 4,3 },    // MOBILITY_START+3
+{ 5,4 },    // MOBILITY_START+2
+{ 3,3 },    // MOBILITY_START+3
 // ROOK_BEHIND_FREE_PAWN values
-{ 2,6 },    // ROOK_BEHIND_FREE_PAWN_START
-{ -33,5 },          // ROOK_BEHIND_FREE_PAWN_START+1
-{ -35,4 },          // ROOK_BEHIND_FREE_PAWN_START+2
-{ -15,9 },          // ROOK_BEHIND_FREE_PAWN_START+3
-{ -5,14 },          // ROOK_BEHIND_FREE_PAWN_START+4
-{ 12,-4 },          // ROOK_BEHIND_FREE_PAWN_START+5
-{ -5,-34 },         // ROOK_BEHIND_FREE_PAWN_START+6
+{ 1,6 },    // ROOK_BEHIND_FREE_PAWN_START
+{ -30,5 },          // ROOK_BEHIND_FREE_PAWN_START+1
+{ -32,4 },          // ROOK_BEHIND_FREE_PAWN_START+2
+{ -14,8 },          // ROOK_BEHIND_FREE_PAWN_START+3
+{ -4,12 },          // ROOK_BEHIND_FREE_PAWN_START+4
+{ 10,-4 },          // ROOK_BEHIND_FREE_PAWN_START+5
+{ -4,-31 },         // ROOK_BEHIND_FREE_PAWN_START+6
 { 0,0 },    // ROOK_BEHIND_FREE_PAWN_START+7
-{ 33,-2 },          // ROOK_ON_OPEN_FILE,
-{ 28,-20 },         // ROOK_ON_SEMI_OPEN_FILE,
+{ 30,-1 },          // ROOK_ON_OPEN_FILE,
+{ 26,-18 },         // ROOK_ON_SEMI_OPEN_FILE,
 { 2,0 },    // CONNECTED_ROOKS,
-{ 25,71 },          // BISHOP_PAIR,
-{ -5,-18 },         // BAD_BISHOP_BLOCKED,
-{ 0,-3 },   // BAD_BISHOP_UNBLOCKED,
-{ -123,-99 },       // TRAPPED_BISHOP,
-{ -59,-119 },       // TRAPPED_KNIGHT,
-{ 37,71 },          // FIANCHETTO_BISHOP,
-{ 28,65 },          // BROKEN_FIANCHETTO,
-{ 57,3 },   // BISHOP_OUTPOST_NO_OPPOSITE_BISHOP,
-{ 35,18 },          // BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP,
-{ 44,16 },          // KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP,
-{ 34,20 },          // KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP,
+{ 23,64 },          // BISHOP_PAIR,
+{ -4,-16 },         // BAD_BISHOP_BLOCKED,
+{ 0,-2 },   // BAD_BISHOP_UNBLOCKED,
+{ -103,-93 },       // TRAPPED_BISHOP,
+{ -59,-99 },        // TRAPPED_KNIGHT,
+{ 4,3 },    // FIANCHETTO_BISHOP,
+{ -4,-3 },          // BROKEN_FIANCHETTO,
+{ 52,3 },   // BISHOP_OUTPOST_NO_OPPOSITE_BISHOP,
+{ 32,16 },          // BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP,
+{ 40,15 },          // KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP,
+{ 31,18 },          // KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP,
 };
+
