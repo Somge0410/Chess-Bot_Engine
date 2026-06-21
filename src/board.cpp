@@ -230,7 +230,7 @@ EvaluationResult Board::initialize_material_score()const {
     return score;
 }
 EvaluationResult Board::initialize_positional_score()const {
-    EvaluationResult score;
+    EvaluationResult score = { 0,0 };
         for (int color=0;color<2;++color){
             for (int piece=0;piece<6;++piece){
                 uint64_t bitboard=pieces[color][piece];
