@@ -236,15 +236,10 @@ EvaluationResult Board::initialize_positional_score()const {
                 uint64_t bitboard=pieces[color][piece];
                 while (bitboard) {
                     int square = get_lsb(bitboard);
-                    if (color == 0) {
                     
-						score.mg_score += get_mg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
+					score.mg_score += get_mg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
                     score.eg_score += get_eg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
-                    }
-                    else {
-						score.mg_score -= get_mg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
-						score.eg_score -= get_eg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
-                    }
+                    
 
                     bitboard &=bitboard-1;
                 }
