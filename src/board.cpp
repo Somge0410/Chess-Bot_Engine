@@ -242,8 +242,8 @@ EvaluationResult Board::initialize_positional_score()const {
                     score.eg_score += get_eg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
                     }
                     else {
-						score.mg_score -= get_mg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), flip_square(square));
-						score.eg_score -= get_eg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), flip_square(square));
+						score.mg_score -= get_mg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
+						score.eg_score -= get_eg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
                     }
 
                     bitboard &=bitboard-1;
