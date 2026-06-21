@@ -1,6 +1,6 @@
 #include "evaluation.h"
 #include "pst.h"
-EvaluationResult EvalWeights[PARAM_COUNT1] = {
+EvaluationResult EvalWeights[PARAM_COUNT] = {
         {100, 152},      // PAWN
         { 304,387 },      // KNIGHT
         { 299,389 },      // BISHOP
