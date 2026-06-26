@@ -23,6 +23,7 @@ int evaluate(const Board& board, Trace* trace, uint8_t terms_mask) {
 
 	eval_material<isTracing>(score, board, trace);
 	eval_positional<isTracing>(score, board, trace);
+	return tapered(score, board.get_game_phase());
 	eval_pawns<isTracing>(score, ctx, trace);
 	if (terms_mask != EvalAll) return tapered(score, board.get_game_phase());
 	eval_king_safety<isTracing>(score, ctx, trace);
