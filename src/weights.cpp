@@ -60,209 +60,209 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         {-118,   11}, {  20,   28}, { -35,   44}, { -73,   56}, { -33,   54}, {  46,   45}, {  28,   41}, { -41,   16},
         { -79,   -4}, { -10,   22}, { -40,   34}, {  36,   23}, { -17,   40}, { -13,   49}, {  33,   36}, {   5,    5},
         {  71, -100}, {  87,  -54}, {  90,  -35}, { -56,    7}, { -34,   -1}, {  34,   -5}, { 108,  -21}, { 209, -114},
-        { 0,0 },  // PASSED_PAWNS_START+0
-        { 0,0 },  // PASSED_PAWNS_START+1
-        { 0,0 },  // PASSED_PAWNS_START+2
-        { 0,0 },  // PASSED_PAWNS_START+3
-        { 0,0 },  // PASSED_PAWNS_START+4
-        { 0,0 },  // PASSED_PAWNS_START+5
-        { 0,0 },  // PASSED_PAWNS_START+6
-        { 0,0 },  // PASSED_PAWNS_START+7
-        { -13,-23 },      // PASSED_PAWNS_START+8
-        { -8,-14 },       // PASSED_PAWNS_START+9
-        { -18,-7 },       // PASSED_PAWNS_START+10
-        { -26,-9 },       // PASSED_PAWNS_START+11
-        { -12,-29 },      // PASSED_PAWNS_START+12
-        { -1,-15 },       // PASSED_PAWNS_START+13
-        { 14,-17 },       // PASSED_PAWNS_START+14
-        { -5,-16 },       // PASSED_PAWNS_START+15
-        { -6,-19 },       // PASSED_PAWNS_START+16
-        { -18,-7 },       // PASSED_PAWNS_START+17
-        { -25,-1 },       // PASSED_PAWNS_START+18
-        { -25,-15 },      // PASSED_PAWNS_START+19
-        { -26,-5 },       // PASSED_PAWNS_START+20
-        { -5,-6 },        // PASSED_PAWNS_START+21
-        { -20,9 },        // PASSED_PAWNS_START+22
-        { 7,-15 },        // PASSED_PAWNS_START+23
-        { 7,21 }, // PASSED_PAWNS_START+24
-        { -7,21 },        // PASSED_PAWNS_START+25
-        { -18,20 },       // PASSED_PAWNS_START+26
-        { -11,10 },       // PASSED_PAWNS_START+27
-        { -19,16 },       // PASSED_PAWNS_START+28
-        { -1,20 },        // PASSED_PAWNS_START+29
-        { -18,33 },       // PASSED_PAWNS_START+30
-        { -5,23 },        // PASSED_PAWNS_START+31
-        { 30,46 },        // PASSED_PAWNS_START+32
-        { 21,48 },        // PASSED_PAWNS_START+33
-        { 25,33 },        // PASSED_PAWNS_START+34
-        { 19,23 },        // PASSED_PAWNS_START+35
-        { 6,31 }, // PASSED_PAWNS_START+36
-        { 19,41 },        // PASSED_PAWNS_START+37
-        { -11,59 },       // PASSED_PAWNS_START+38
-        { -6,54 },        // PASSED_PAWNS_START+39
-        { 41,48 },        // PASSED_PAWNS_START+40
-        { 47,38 },        // PASSED_PAWNS_START+41
-        { 20,23 },        // PASSED_PAWNS_START+42
-        { 3,5 },  // PASSED_PAWNS_START+43
-        { 15,10 },        // PASSED_PAWNS_START+44
-        { 20,52 },        // PASSED_PAWNS_START+45
-        { -3,50 },        // PASSED_PAWNS_START+46
-        { -12,66 },       // PASSED_PAWNS_START+47
-        { 1,14 }, // PASSED_PAWNS_START+48
-        { -5,12 },        // PASSED_PAWNS_START+49
-        { -2,9 }, // PASSED_PAWNS_START+50
-        { -3,5 }, // PASSED_PAWNS_START+51
-        { -8,9 }, // PASSED_PAWNS_START+52
-        { -2,14 },        // PASSED_PAWNS_START+53
-        { 4,11 }, // PASSED_PAWNS_START+54
-        { 5,10 }, // PASSED_PAWNS_START+55
-        { 0,0 },  // PASSED_PAWNS_START+56
-        { 0,0 },  // PASSED_PAWNS_START+57
-        { 0,0 },  // PASSED_PAWNS_START+58
-        { 0,0 },  // PASSED_PAWNS_START+59
-        { 0,0 },  // PASSED_PAWNS_START+60
-        { 0,0 },  // PASSED_PAWNS_START+61
-        { 0,0 },  // PASSED_PAWNS_START+62
-        { 0,0 },  // PASSED_PAWNS_START+63
-        { 0,0 },  // ISOLANI_START+0
-        { 0,0 },  // ISOLANI_START+1
-        { 0,0 },  // ISOLANI_START+2
-        { 0,0 },  // ISOLANI_START+3
-        { 0,0 },  // ISOLANI_START+4
-        { 0,0 },  // ISOLANI_START+5
-        { 0,0 },  // ISOLANI_START+6
-        { 0,0 },  // ISOLANI_START+7
-        { -1,-8 },        // ISOLANI_START+8
-        { -25,-12 },      // ISOLANI_START+9
-        { -15,-17 },      // ISOLANI_START+10
-        { -47,-22 },      // ISOLANI_START+11
-        { -52,-23 },      // ISOLANI_START+12
-        { -25,-11 },      // ISOLANI_START+13
-        { -17,-17 },      // ISOLANI_START+14
-        { -8,1 }, // ISOLANI_START+15
-        { -7,-9 },        // ISOLANI_START+16
-        { -25,-23 },      // ISOLANI_START+17
-        { -37,-20 },      // ISOLANI_START+18
-        { -36,-41 },      // ISOLANI_START+19
-        { -49,-23 },      // ISOLANI_START+20
-        { -25,-18 },      // ISOLANI_START+21
-        { -47,-20 },      // ISOLANI_START+22
-        { -20,-5 },       // ISOLANI_START+23
-        { 9,-13 },        // ISOLANI_START+24
-        { -15,-18 },      // ISOLANI_START+25
-        { -31,-20 },      // ISOLANI_START+26
-        { -32,-33 },      // ISOLANI_START+27
-        { -23,-30 },      // ISOLANI_START+28
-        { -23,-17 },      // ISOLANI_START+29
-        { -17,-21 },      // ISOLANI_START+30
-        { 12,-15 },       // ISOLANI_START+31
-        { 29,-29 },       // ISOLANI_START+32
-        { 2,-44 },        // ISOLANI_START+33
-        { 0,-29 },        // ISOLANI_START+34
-        { 5,-41 },        // ISOLANI_START+35
-        { -3,-33 },       // ISOLANI_START+36
-        { 13,-32 },       // ISOLANI_START+37
-        { 42,-50 },       // ISOLANI_START+38
-        { 52,-26 },       // ISOLANI_START+39
-        { 82,105 },       // ISOLANI_START+40
-        { 79,-14 },       // ISOLANI_START+41
-        { 28,8 }, // ISOLANI_START+42
-        { 40,46 },        // ISOLANI_START+43
-        { 7,31 }, // ISOLANI_START+44
-        { 55,-19 },       // ISOLANI_START+45
-        { 168,-108 },     // ISOLANI_START+46
-        { 146,-65 },      // ISOLANI_START+47
-        { 0,0 },  // ISOLANI_START+48
-        { 0,0 },  // ISOLANI_START+49
-        { 0,0 },  // ISOLANI_START+50
-        { 0,0 },  // ISOLANI_START+51
-        { 0,0 },  // ISOLANI_START+52
-        { 0,0 },  // ISOLANI_START+53
-        { 0,0 },  // ISOLANI_START+54
-        { 0,0 },  // ISOLANI_START+55
-        { 0,0 },  // ISOLANI_START+56
-        { 0,0 },  // ISOLANI_START+57
-        { 0,0 },  // ISOLANI_START+58
-        { 0,0 },  // ISOLANI_START+59
-        { 0,0 },  // ISOLANI_START+60
-        { 0,0 },  // ISOLANI_START+61
-        { 0,0 },  // ISOLANI_START+62
-        { 0,0 },  // ISOLANI_START+63
-        { 0,0 },  // BLOCKED_ISOLANI_START+0
-        { 0,0 },  // BLOCKED_ISOLANI_START+1
-        { 0,0 },  // BLOCKED_ISOLANI_START+2
-        { 0,0 },  // BLOCKED_ISOLANI_START+3
-        { 0,0 },  // BLOCKED_ISOLANI_START+4
-        { 0,0 },  // BLOCKED_ISOLANI_START+5
-        { 0,0 },  // BLOCKED_ISOLANI_START+6
-        { 0,0 },  // BLOCKED_ISOLANI_START+7
-        { 2,-8 }, // BLOCKED_ISOLANI_START+8
-        { -24,0 },        // BLOCKED_ISOLANI_START+9
-        { -23,9 },        // BLOCKED_ISOLANI_START+10
-        { -48,-1 },       // BLOCKED_ISOLANI_START+11
-        { -44,-1 },       // BLOCKED_ISOLANI_START+12
-        { -40,6 },        // BLOCKED_ISOLANI_START+13
-        { -43,9 },        // BLOCKED_ISOLANI_START+14
-        { -12,16 },       // BLOCKED_ISOLANI_START+15
-        { -9,19 },        // BLOCKED_ISOLANI_START+16
-        { -27,-1 },       // BLOCKED_ISOLANI_START+17
-        { -42,-2 },       // BLOCKED_ISOLANI_START+18
-        { -12,-14 },      // BLOCKED_ISOLANI_START+19
-        { -36,-20 },      // BLOCKED_ISOLANI_START+20
-        { -28,-14 },      // BLOCKED_ISOLANI_START+21
-        { -90,-4 },       // BLOCKED_ISOLANI_START+22
-        { -24,9 },        // BLOCKED_ISOLANI_START+23
-        { -1,11 },        // BLOCKED_ISOLANI_START+24
-        { -18,0 },        // BLOCKED_ISOLANI_START+25
-        { -39,-5 },       // BLOCKED_ISOLANI_START+26
-        { -25,-30 },      // BLOCKED_ISOLANI_START+27
-        { -22,-25 },      // BLOCKED_ISOLANI_START+28
-        { -29,-7 },       // BLOCKED_ISOLANI_START+29
-        { -30,2 },        // BLOCKED_ISOLANI_START+30
-        { 3,12 }, // BLOCKED_ISOLANI_START+31
-        { -1,-8 },        // BLOCKED_ISOLANI_START+32
-        { -12,-28 },      // BLOCKED_ISOLANI_START+33
-        { -30,-32 },      // BLOCKED_ISOLANI_START+34
-        { -23,-32 },      // BLOCKED_ISOLANI_START+35
-        { -20,-35 },      // BLOCKED_ISOLANI_START+36
-        { -21,-30 },      // BLOCKED_ISOLANI_START+37
-        { 12,-31 },       // BLOCKED_ISOLANI_START+38
-        { -4,-14 },       // BLOCKED_ISOLANI_START+39
-        { 16,-119 },      // BLOCKED_ISOLANI_START+40
-        { 12,-156 },      // BLOCKED_ISOLANI_START+41
-        { -37,-114 },     // BLOCKED_ISOLANI_START+42
-        { -21,-109 },     // BLOCKED_ISOLANI_START+43
-        { -23,-117 },     // BLOCKED_ISOLANI_START+44
-        { -13,-82 },      // BLOCKED_ISOLANI_START+45
-        { 32,-82 },       // BLOCKED_ISOLANI_START+46
-        { 26,-90 },       // BLOCKED_ISOLANI_START+47
-        { 0,0 },  // BLOCKED_ISOLANI_START+48
-        { 0,0 },  // BLOCKED_ISOLANI_START+49
-        { 0,0 },  // BLOCKED_ISOLANI_START+50
-        { 0,0 },  // BLOCKED_ISOLANI_START+51
-        { 0,0 },  // BLOCKED_ISOLANI_START+52
-        { 0,0 },  // BLOCKED_ISOLANI_START+53
-        { 0,0 },  // BLOCKED_ISOLANI_START+54
-        { 0,0 },  // BLOCKED_ISOLANI_START+55
-        { 0,0 },  // BLOCKED_ISOLANI_START+56
-        { 0,0 },  // BLOCKED_ISOLANI_START+57
-        { 0,0 },  // BLOCKED_ISOLANI_START+58
-        { 0,0 },  // BLOCKED_ISOLANI_START+59
-        { 0,0 },  // BLOCKED_ISOLANI_START+60
-        { 0,0 },  // BLOCKED_ISOLANI_START+61
-        { 0,0 },  // BLOCKED_ISOLANI_START+62
-        { 0,0 },  // BLOCKED_ISOLANI_START+63
-        { -9,-17 },       // FORWARD_BLOCKED_BACKWARD
-        { -7,-14 },       // FORWARD_CONTROLLED_BACKWARD
-        { -4,-11 },       // FREE_TO_ADV_BACKWARD
-        { -21,-57 },      // DOUBLE_PAWN_FILE_START+0
-        { 6,-35 },        // DOUBLE_PAWN_FILE_START+1
-        { 2,-27 },        // DOUBLE_PAWN_FILE_START+2
-        { 1,-24 },        // DOUBLE_PAWN_FILE_START+3
-        { -6,-13 },       // DOUBLE_PAWN_FILE_START+4
-        { 1,-30 },        // DOUBLE_PAWN_FILE_START+5
-        { -9,-33 },       // DOUBLE_PAWN_FILE_START+6
-        { -22,-66 },      // DOUBLE_PAWN_FILE_START+7
+         {0,0},  // PASSED_PAWNS_START+0
+        {0,0},  // PASSED_PAWNS_START+1
+        {0,0},  // PASSED_PAWNS_START+2
+        {0,0},  // PASSED_PAWNS_START+3
+        {0,0},  // PASSED_PAWNS_START+4
+        {0,0},  // PASSED_PAWNS_START+5
+        {0,0},  // PASSED_PAWNS_START+6
+        {0,0},  // PASSED_PAWNS_START+7
+        {-21,-7},       // PASSED_PAWNS_START+8
+        {-11,-5},       // PASSED_PAWNS_START+9
+        {-13,-10},      // PASSED_PAWNS_START+10
+        {-36,-11},      // PASSED_PAWNS_START+11
+        {-15,-10},      // PASSED_PAWNS_START+12
+        {-6,-11},       // PASSED_PAWNS_START+13
+        {-11,-13},      // PASSED_PAWNS_START+14
+        {0,-16},        // PASSED_PAWNS_START+15
+        {-15,-12},      // PASSED_PAWNS_START+16
+        {-4,-11},       // PASSED_PAWNS_START+17
+        {-13,-9},       // PASSED_PAWNS_START+18
+        {-24,-9},       // PASSED_PAWNS_START+19
+        {-20,-10},      // PASSED_PAWNS_START+20
+        {-12,-10},      // PASSED_PAWNS_START+21
+        {-7,-12},       // PASSED_PAWNS_START+22
+        {-1,-16},       // PASSED_PAWNS_START+23
+        {-10,-13},      // PASSED_PAWNS_START+24
+        {-5,-11},       // PASSED_PAWNS_START+25
+        {-10,-12},      // PASSED_PAWNS_START+26
+        {-14,-13},      // PASSED_PAWNS_START+27
+        {-14,-12},      // PASSED_PAWNS_START+28
+        {-9,-12},       // PASSED_PAWNS_START+29
+        {-8,-14},       // PASSED_PAWNS_START+30
+        {-1,-14},       // PASSED_PAWNS_START+31
+        {-3,-17},       // PASSED_PAWNS_START+32
+        {-6,-14},       // PASSED_PAWNS_START+33
+        {0,-18},        // PASSED_PAWNS_START+34
+        {-2,-18},       // PASSED_PAWNS_START+35
+        {0,-16},        // PASSED_PAWNS_START+36
+        {0,-16},        // PASSED_PAWNS_START+37
+        {-5,-12},       // PASSED_PAWNS_START+38
+        {-2,-13},       // PASSED_PAWNS_START+39
+        {5,-19},        // PASSED_PAWNS_START+40
+        {-2,-18},       // PASSED_PAWNS_START+41
+        {-8,-19},       // PASSED_PAWNS_START+42
+        {12,-21},       // PASSED_PAWNS_START+43
+        {11,-20},       // PASSED_PAWNS_START+44
+        {-9,-19},       // PASSED_PAWNS_START+45
+        {-6,-16},       // PASSED_PAWNS_START+46
+        {8,-16},        // PASSED_PAWNS_START+47
+        {8,-32},        // PASSED_PAWNS_START+48
+        {7,-35},        // PASSED_PAWNS_START+49
+        {-8,-27},       // PASSED_PAWNS_START+50
+        {-3,-32},       // PASSED_PAWNS_START+51
+        {-12,-25},      // PASSED_PAWNS_START+52
+        {-6,-36},       // PASSED_PAWNS_START+53
+        {0,-26},        // PASSED_PAWNS_START+54
+        {4,-23},        // PASSED_PAWNS_START+55
+        {0,0},  // PASSED_PAWNS_START+56
+        {0,0},  // PASSED_PAWNS_START+57
+        {0,0},  // PASSED_PAWNS_START+58
+        {0,0},  // PASSED_PAWNS_START+59
+        {0,0},  // PASSED_PAWNS_START+60
+        {0,0},  // PASSED_PAWNS_START+61
+        {0,0},  // PASSED_PAWNS_START+62
+        {0,0},  // PASSED_PAWNS_START+63
+        {0,0},  // ISOLANI_START+0
+        {0,0},  // ISOLANI_START+1
+        {0,0},  // ISOLANI_START+2
+        {0,0},  // ISOLANI_START+3
+        {0,0},  // ISOLANI_START+4
+        {0,0},  // ISOLANI_START+5
+        {0,0},  // ISOLANI_START+6
+        {0,0},  // ISOLANI_START+7
+        {5,-3}, // ISOLANI_START+8
+        {16,-1},        // ISOLANI_START+9
+        {8,1},  // ISOLANI_START+10
+        {3,8},  // ISOLANI_START+11
+        {14,14},        // ISOLANI_START+12
+        {15,-1},        // ISOLANI_START+13
+        {5,5},  // ISOLANI_START+14
+        {-12,1},        // ISOLANI_START+15
+        {5,-5}, // ISOLANI_START+16
+        {27,0}, // ISOLANI_START+17
+        {11,3}, // ISOLANI_START+18
+        {10,18},        // ISOLANI_START+19
+        {3,12}, // ISOLANI_START+20
+        {5,1},  // ISOLANI_START+21
+        {17,11},        // ISOLANI_START+22
+        {-15,2},        // ISOLANI_START+23
+        {-1,-7},        // ISOLANI_START+24
+        {21,-1},        // ISOLANI_START+25
+        {2,-2}, // ISOLANI_START+26
+        {9,6},  // ISOLANI_START+27
+        {-4,8}, // ISOLANI_START+28
+        {-9,1}, // ISOLANI_START+29
+        {0,10}, // ISOLANI_START+30
+        {-31,3},        // ISOLANI_START+31
+        {-9,14},        // ISOLANI_START+32
+        {8,14}, // ISOLANI_START+33
+        {-2,5}, // ISOLANI_START+34
+        {3,17}, // ISOLANI_START+35
+        {-8,12},        // ISOLANI_START+36
+        {-15,7},        // ISOLANI_START+37
+        {-7,21},        // ISOLANI_START+38
+        {-49,19},       // ISOLANI_START+39
+        {-33,51},       // ISOLANI_START+40
+        {3,69}, // ISOLANI_START+41
+        {-19,65},       // ISOLANI_START+42
+        {10,30},        // ISOLANI_START+43
+        {-3,48},        // ISOLANI_START+44
+        {-24,18},       // ISOLANI_START+45
+        {-55,85},       // ISOLANI_START+46
+        {-90,76},       // ISOLANI_START+47
+        {0,0},  // ISOLANI_START+48
+        {0,0},  // ISOLANI_START+49
+        {0,0},  // ISOLANI_START+50
+        {0,0},  // ISOLANI_START+51
+        {0,0},  // ISOLANI_START+52
+        {0,0},  // ISOLANI_START+53
+        {0,0},  // ISOLANI_START+54
+        {0,0},  // ISOLANI_START+55
+        {0,0},  // ISOLANI_START+56
+        {0,0},  // ISOLANI_START+57
+        {0,0},  // ISOLANI_START+58
+        {0,0},  // ISOLANI_START+59
+        {0,0},  // ISOLANI_START+60
+        {0,0},  // ISOLANI_START+61
+        {0,0},  // ISOLANI_START+62
+        {0,0},  // ISOLANI_START+63
+        {0,0},  // BLOCKED_ISOLANI_START+0
+        {0,0},  // BLOCKED_ISOLANI_START+1
+        {0,0},  // BLOCKED_ISOLANI_START+2
+        {0,0},  // BLOCKED_ISOLANI_START+3
+        {0,0},  // BLOCKED_ISOLANI_START+4
+        {0,0},  // BLOCKED_ISOLANI_START+5
+        {0,0},  // BLOCKED_ISOLANI_START+6
+        {0,0},  // BLOCKED_ISOLANI_START+7
+        {-15,-24},      // BLOCKED_ISOLANI_START+8
+        {-7,-19},       // BLOCKED_ISOLANI_START+9
+        {3,-29},        // BLOCKED_ISOLANI_START+10
+        {-18,-19},      // BLOCKED_ISOLANI_START+11
+        {-10,-9},       // BLOCKED_ISOLANI_START+12
+        {6,-18},        // BLOCKED_ISOLANI_START+13
+        {3,-19},        // BLOCKED_ISOLANI_START+14
+        {-27,-19},      // BLOCKED_ISOLANI_START+15
+        {-3,-18},       // BLOCKED_ISOLANI_START+16
+        {16,-10},       // BLOCKED_ISOLANI_START+17
+        {0,-5}, // BLOCKED_ISOLANI_START+18
+        {4,8},  // BLOCKED_ISOLANI_START+19
+        {5,7},  // BLOCKED_ISOLANI_START+20
+        {-1,3}, // BLOCKED_ISOLANI_START+21
+        {20,0}, // BLOCKED_ISOLANI_START+22
+        {-18,-9},       // BLOCKED_ISOLANI_START+23
+        {-3,-12},       // BLOCKED_ISOLANI_START+24
+        {12,-6},        // BLOCKED_ISOLANI_START+25
+        {0,-3}, // BLOCKED_ISOLANI_START+26
+        {10,8}, // BLOCKED_ISOLANI_START+27
+        {3,7},  // BLOCKED_ISOLANI_START+28
+        {-2,-4},        // BLOCKED_ISOLANI_START+29
+        {3,-1}, // BLOCKED_ISOLANI_START+30
+        {-27,-8},       // BLOCKED_ISOLANI_START+31
+        {-4,1}, // BLOCKED_ISOLANI_START+32
+        {13,6}, // BLOCKED_ISOLANI_START+33
+        {10,11},        // BLOCKED_ISOLANI_START+34
+        {11,11},        // BLOCKED_ISOLANI_START+35
+        {-2,15},        // BLOCKED_ISOLANI_START+36
+        {14,5}, // BLOCKED_ISOLANI_START+37
+        {-7,10},        // BLOCKED_ISOLANI_START+38
+        {-29,8},        // BLOCKED_ISOLANI_START+39
+        {-4,76},        // BLOCKED_ISOLANI_START+40
+        {0,95}, // BLOCKED_ISOLANI_START+41
+        {8,78}, // BLOCKED_ISOLANI_START+42
+        {37,50},        // BLOCKED_ISOLANI_START+43
+        {-3,67},        // BLOCKED_ISOLANI_START+44
+        {-18,43},       // BLOCKED_ISOLANI_START+45
+        {-32,51},       // BLOCKED_ISOLANI_START+46
+        {-58,67},       // BLOCKED_ISOLANI_START+47
+        {0,0},  // BLOCKED_ISOLANI_START+48
+        {0,0},  // BLOCKED_ISOLANI_START+49
+        {0,0},  // BLOCKED_ISOLANI_START+50
+        {0,0},  // BLOCKED_ISOLANI_START+51
+        {0,0},  // BLOCKED_ISOLANI_START+52
+        {0,0},  // BLOCKED_ISOLANI_START+53
+        {0,0},  // BLOCKED_ISOLANI_START+54
+        {0,0},  // BLOCKED_ISOLANI_START+55
+        {0,0},  // BLOCKED_ISOLANI_START+56
+        {0,0},  // BLOCKED_ISOLANI_START+57
+        {0,0},  // BLOCKED_ISOLANI_START+58
+        {0,0},  // BLOCKED_ISOLANI_START+59
+        {0,0},  // BLOCKED_ISOLANI_START+60
+        {0,0},  // BLOCKED_ISOLANI_START+61
+        {0,0},  // BLOCKED_ISOLANI_START+62
+        {0,0},  // BLOCKED_ISOLANI_START+63
+        {-3,-1},        // FORWARD_BLOCKED_BACKWARD
+        {0,2},  // FORWARD_CONTROLLED_BACKWARD
+        {4,5},  // FREE_TO_ADV_BACKWARD
+        {-11,30},       // DOUBLE_PAWN_FILE_START+0
+        {5,17}, // DOUBLE_PAWN_FILE_START+1
+        {11,6}, // DOUBLE_PAWN_FILE_START+2
+        {-4,8}, // DOUBLE_PAWN_FILE_START+3
+        {-4,3}, // DOUBLE_PAWN_FILE_START+4
+        {12,0}, // DOUBLE_PAWN_FILE_START+5
+        {8,14}, // DOUBLE_PAWN_FILE_START+6
+        {32,15},        // DOUBLE_PAWN_FILE_START+7
         { 6,-8 }, // PAWN_SHIELD_BONUS
         { -95,-7 },       // DIRECTLY_ON_OPEN_FILE_NEXT_TO_OPEN_PENALTY
         { -92,3 },        // DIRECTLY_ON_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY
