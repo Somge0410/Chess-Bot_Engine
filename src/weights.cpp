@@ -292,15 +292,15 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         { 30,-1 },        // ROOK_ON_OPEN_FILE
         { 13,-10 },       // ROOK_ON_SEMI_OPEN_FILE
         { 0,2 },  // CONNECTED_ROOKS
-        { 13,77 },        // BISHOP_PAIR
+        { 22,52 },        // BISHOP_PAIR
         { -5,-20 },       // BAD_BISHOP_BLOCKED
         { -3,-2 },        // BAD_BISHOP_UNBLOCKED
         { -130,-98 },     // TRAPPED_BISHOP
         { -24,-88 },      // TRAPPED_KNIGHT
         { 5,-4 }, // FIANCHETTO_BISHOP
         { 1,-9 }, // BROKEN_FIANCHETTO
-        { 35,0 }, // BISHOP_OUTPOST_NO_OPPOSITE_BISHOP
-        { 19,15 },        // BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP
-        { 35,9 }, // KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP
-        { 26,17 },        // KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP
+        { 51,3 }, // BISHOP_OUTPOST_NO_OPPOSITE_BISHOP
+        { 33,14 },        // BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP
+        { 39, 14}, // KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP
+        { 31,15 },        // KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP
 };
