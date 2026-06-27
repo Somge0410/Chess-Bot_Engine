@@ -29,8 +29,6 @@ int evaluate(const Board& board, Trace* trace, uint8_t terms_mask) {
 
 	eval_mobility<isTracing>(score, ctx, trace);
 	eval_rook_activity<isTracing>(score, ctx, trace);
-
-	return tapered(score, board.get_game_phase());
 	eval_minor_pieces<isTracing>(score, ctx, trace);
 	return tapered(score, board.get_game_phase());
 
