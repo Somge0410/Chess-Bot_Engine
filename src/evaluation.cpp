@@ -1,5 +1,5 @@
 #include "evaluation.h"
-
+#include <memory>
 static thread_local std::unique_ptr<std::array<PawnEvalEntry, PAWN_HASH_SIZE>> pawn_evaluation_table;
 PawnEvalEntry& get_pawn_entry(size_t idx) {
 	if (!pawn_evaluation_table) {
@@ -22,9 +22,11 @@ int evaluate(const Board& board, Trace* trace, uint8_t terms_mask) {
 	EvalContext ctx(board);
 
 	eval_material<isTracing>(score, board, trace);
-	//eval_positional<isTracing>(score, board, trace);
+	eval_positional<isTracing>(score, board, trace);
 	eval_pawns<isTracing>(score, ctx, trace);
+	if (terms_mask != EvalAll) return tapered(score, board.get_game_phase());
 	eval_king_safety<isTracing>(score, ctx, trace);
+
 	eval_mobility<isTracing>(score, ctx, trace);
 	eval_rook_activity<isTracing>(score, ctx, trace);
 	eval_minor_pieces<isTracing>(score, ctx, trace);
