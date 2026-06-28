@@ -314,7 +314,7 @@ void eval_mobility(EvaluationResult& score, const EvalContext& ctx, Trace* trace
 					pieces &= pieces - 1;
 				}
 			}
-			addTerm<isTracing>(score,static_cast<EvalParam>(EvalParam::MOBILITY_START + to_int(pt)), mob_count, trace);
+			addTerm<isTracing>(score,static_cast<EvalParam>(EvalParam::MOBILITY_START + to_int(pt)-1), mob_count, trace);
 		}
 	}
 template<bool isTracing>
