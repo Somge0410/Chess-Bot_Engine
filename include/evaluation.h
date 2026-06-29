@@ -56,9 +56,9 @@ struct EvalContext {
 		if (file < 0 || file>7) return false;
 		return (files_with_no_color_pawns[to_int(color)] & bit8(file)) == 0;
 	}
-	bool color_has_free_pawn(int file,Color color) const {
+	bool color_has_free_pawn(int file, Color color) const {
 		if (file < 0 || file>7) return false;
-		return (files_with_no_color_pawns[to_int(color)] & bit8(file)) == 0 && (files_with_no_color_pawns[1 - to_int(color)] & bit8(file)) != 0;
+		return does_color_have_pawns_on_file(file, color) && !does_color_have_pawns_on_file(file - 1, flip_color(color)) && !does_color_have_pawns_on_file(file, flip_color(color)) && !does_color_have_pawns_on_file(file + 1, flip_color(color));
 	}
 	PieceType get_piece_on_square(int square) const {
 		return board.get_piece_on_square(square);
@@ -96,31 +96,31 @@ inline int tapered(EvaluationResult score, int game_phase) {
 
 
 
-struct Trace { 
-	int counts[PARAM_COUNT]= {0}; 
+struct Trace {
+	int counts[PARAM_COUNT] = { 0 };
 	void add(EvalParam param, int count = 1) {
 		counts[param] += count;
 	}
-};	
-static int get_trace_eval(Trace* trace, const EvaluationResult weights[PARAM_COUNT],int game_phase) {
-	EvaluationResult eval = {0,0};
+};
+static int get_trace_eval(Trace* trace, const EvaluationResult weights[PARAM_COUNT], int game_phase) {
+	EvaluationResult eval = { 0,0 };
 	for (int i = 0; i < PARAM_COUNT; i++) {
-		eval += weights[i] *trace->counts[i] ;
+		eval += weights[i] * trace->counts[i];
 	}
-	return tapered(eval,game_phase);
+	return tapered(eval, game_phase);
 }
 
 bool trace_eval_agree(const Board& board, const EvaluationResult weights[PARAM_COUNT]);
 
 template <bool isTracing>
-void addTerm(EvaluationResult& score,EvalParam param, int count=1, Trace* trace=nullptr) {
+void addTerm(EvaluationResult& score, EvalParam param, int count = 1, Trace* trace = nullptr) {
 	score += EvalWeights[param] * count;
 	if constexpr (isTracing) {
 		if (trace) trace->add(param, count);
 	}
 }
 
-template <bool isTracing=false>
+template <bool isTracing = false>
 int evaluate(const Board& board, Trace* trace = nullptr, uint8_t terms_mask = EvalAll);
 
 template <bool isTracing>
