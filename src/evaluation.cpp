@@ -272,7 +272,7 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 			}
 
 			//5. Open Diagonal Penalty
-			uint64_t bishop_attack_mask = get_bishop_attacks(king_squares[color], 0) & ~FILE_MASK[0] & ~FILE_MASK[1];
+			uint64_t bishop_attack_mask = get_bishop_attacks(king_squares[color], ctx.get_color_pieces(ecolor));
 			uint64_t op_bishop_queen_on_mask = bishop_attack_mask & (ctx.get_pieces(ecolor, PieceType::BISHOP) | ctx.get_pieces(ecolor, PieceType::QUEEN));
 			while (op_bishop_queen_on_mask) {
 				int sq = get_lsb(op_bishop_queen_on_mask);
@@ -304,13 +304,15 @@ void eval_mobility(EvaluationResult& score, const EvalContext& ctx, Trace* trace
 		for (PieceType pt : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
 			int mob_count = 0;
 			for (int color = 0; color < 2; color++) {
+				int ecolor = color == 0 ? 1 : 0;
+				uint64_t enemy_attacks = ctx.board.get_attacks_for_color(static_cast<Color>(ecolor));
 				uint64_t pieces = ctx.get_pieces(color, pt);
 				while (pieces) {
 					int sq = get_lsb(pieces);
 					if (color == 0)
-						mob_count += popcount(get_piece_attacks(pt, sq, ctx.get_all_pieces()) & ~ctx.get_color_pieces(color));
+						mob_count += popcount(get_piece_attacks(pt, sq, ctx.get_all_pieces()) & ~ctx.get_color_pieces(color) & ~ enemy_attacks);
 					else
-						mob_count -= popcount(get_piece_attacks(pt, sq, ctx.get_all_pieces()) & ~ctx.get_color_pieces(color));
+						mob_count -= popcount(get_piece_attacks(pt, sq, ctx.get_all_pieces()) & ~ctx.get_color_pieces(color) &~enemy_attacks);
 					pieces &= pieces - 1;
 				}
 			}
@@ -341,7 +343,7 @@ void eval_rook_activity(EvaluationResult& score, const EvalContext& ctx, Trace* 
 			}
 		}
 	}
-	semi_open_count += popcount(ctx.get_pieces(0, PieceType::ROOK) & no_black_pawns_files & ~no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::ROOK) & no_white_pawns_files & ~no_black_pawns_files);
+	semi_open_count += popcount(ctx.get_pieces(0, PieceType::ROOK) & ~no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::ROOK) & ~no_white_pawns_files & no_black_pawns_files);
 	open_count += popcount(ctx.get_pieces(0, PieceType::ROOK) & no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::ROOK) & no_white_pawns_files & no_black_pawns_files);
 
 	int white_rook_square = get_lsb(ctx.get_pieces(0, PieceType::ROOK));
