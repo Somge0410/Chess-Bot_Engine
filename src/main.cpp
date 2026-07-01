@@ -47,7 +47,8 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     Zobrist::initialize_keys();
-    Board board("q3r1qr/p2p1np1/1p5k/3b2N1/5B1P/2P5/P1Q2PP1/1R4K1 b - - 0 30");
+    Board board("k7/8/4P3/8/8/8/8/K3b3 w - - 0 1");
+	std::cout << "Evaluating board: " << evaluate(board) << std::endl;
 	trace_eval_agree(board, EvalWeights);
         std::ios::sync_with_stdio(false);
         std::cin.tie(nullptr);
