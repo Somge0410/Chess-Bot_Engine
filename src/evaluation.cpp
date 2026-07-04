@@ -105,7 +105,7 @@ void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	}
 }
 template <bool isTracing>
-void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace){
+void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	for (size_t color = 0; color < 2; color++) {
 		int ecolor = color == 0 ? 1 : 0;
 		uint64_t pawns = ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN);
@@ -114,15 +114,61 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace){
 			int pawn_square = get_lsb(pawns);
 			int file_index = pawn_square % 8;
 			int rank_index = color == 0 ? pawn_square / 8 : 7 - pawn_square / 8;
+			int bucket = PASSED_PAWN_BUCKET[color == 0 ? pawn_square : flip_square(pawn_square)];
 			if ((ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN) & PASSED_PAWN_MASK[color][pawn_square]) == 0)
 			{
 				ctx.passed[color] |= (1ULL << pawn_square);
 				if (color == 0) {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + pawn_square),1, trace);
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + bucket), 1, trace);
 				}
 				else {
-					addTerm<isTracing>(score,static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + flip_square(pawn_square)),-1, trace);
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + bucket), -1, trace);
 
+				}
+				//check if passed pawn is defended
+				uint64_t defenders = get_pawn_attacks(bit64(pawn_square),static_cast<Color>(ecolor));
+				int def_count = popcount(defenders & ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN));
+				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? def_count : -def_count, trace);
+				//check if blockated
+				int block_count = is_occupied(get_forward_square(pawn_square, static_cast<Color>(color)), ctx.board.get_all_pieces()) ? 1 : 0;
+				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::BLOCKED_FREE_PAWN_START + bucket), color == 0 ? block_count : -block_count, trace);
+				// check if enemy king can stop it
+				if (block_count == 0) {
+					int promo_square = get_promotion_square(pawn_square, static_cast<Color>(color));
+					int enemy_king_distance_to_promo_sq = king_distance(ctx.board.get_king_square(static_cast<Color>(ecolor)), promo_square);
+					int pawn_distance_to_promo_sq = color == 0 ? 7 - rank_index : rank_index;
+					if (ctx.board.get_turn() == static_cast<Color>(ecolor)) enemy_king_distance_to_promo_sq--;
+					if (enemy_king_distance_to_promo_sq > pawn_distance_to_promo_sq) {
+						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::CANT_REACHED_BY_ENEMY_KING_START + bucket), color == 0 ? 1 : -1, trace);
+					}
+				}
+				// Check if own king is close
+				int own_king_distance_to_pawn = king_distance(ctx.board.get_king_square(static_cast<Color>(color)), pawn_square);
+				if (own_king_distance_to_pawn <= 2) {
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::OWN_KING_IS_CLOSE_START + bucket), color == 0 ? 1 : -1, trace);
+				}
+				if (own_king_distance_to_pawn >= 5) {
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::OWN_KING_IS_FAR_START + bucket), color == 0 ? 1 : -1, trace);
+				}
+				//Check if Rook is behing pawn
+				uint64_t rooks = ctx.board.get_pieces(static_cast<Color>(color), PieceType::ROOK) & FORWARD_WAY_MASK[ecolor][pawn_square];
+				while (rooks) {
+					int rook_square = get_lsb(rooks);
+					if (bit64(pawn_square) & get_rook_attacks(rook_square, ctx.board.get_all_pieces())) {
+						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ROOK_BEHIND_FREE_PAWN_START + bucket), color == 0 ? 1 : -1, trace);
+						break;
+					}
+					rooks &= rooks - 1;
+				}
+				//Check if Opponent Rook is behind pawn
+				uint64_t op_rooks = ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::ROOK) & FORWARD_WAY_MASK[ecolor][pawn_square];
+				while (op_rooks) {
+					int rook_square = get_lsb(op_rooks);
+					if (bit64(pawn_square) & get_rook_attacks(rook_square, ctx.board.get_all_pieces())) {
+						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::OP_ROOK_BEHIND_FREE_PAWN_START + bucket), color == 0 ? 1 : -1, trace);
+						break;
+					}
+					op_rooks &= op_rooks - 1;
 				}
 				pawns &= pawns - 1;
 				continue;
@@ -130,12 +176,15 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace){
 			if ((ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN) & ADJACENT_FILE_MASK[file_index]) == 0)
 			{
 				ctx.isolated[color] |= (1ULL << pawn_square);
-				int forward_square = color == 0 ? pawn_square + 8 : pawn_square - 8;
-				int flipped_square = color == 0 ? pawn_square : flip_square(pawn_square);
-				if ((ctx.board.get_color_pieces(Color(ecolor)) & bit64(forward_square)) != 0) 
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::BLOCKED_ISOLANI_START + flipped_square), color == 0 ? 1 : -1, trace);
+				int bucket = ISOLATED_PAWN_BUCKET[color == 0 ? pawn_square : flip_square(pawn_square)];
+				if (is_occupied(get_forward_square(pawn_square, static_cast<Color>(color)), ctx.board.get_all_pieces()))
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::BLOCKED_ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
 				else
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ISOLANI_START + flipped_square), color == 0 ? 1 : -1, trace);
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
+				uint64_t defends = ctx.board.get_attacks_for_color(static_cast<Color>(color)) & bit64(pawn_square);
+				if (defends != 0) {
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? 1 : -1, trace);
+				}
 
 			}
 			pawns &= pawns - 1;
@@ -329,19 +378,7 @@ void eval_rook_activity(EvaluationResult& score, const EvalContext& ctx, Trace* 
 	for (size_t file = 0; file < 8; file++) {
 		if (!ctx.does_color_have_pawns_on_file(file, Color::WHITE)) no_white_pawns_files |= FILE_MASK[file];
 		if (!ctx.does_color_have_pawns_on_file(file, Color::BLACK)) no_black_pawns_files |= FILE_MASK[file];
-		for (Color  color :{Color::WHITE,Color::BLACK}) {
-			if (!ctx.color_has_free_pawn(file, color)) continue;
-			int passed =color==Color::BLACK ? get_lsb(ctx.get_pieces(color,PieceType::PAWN) & FILE_MASK[file]) : get_msb(ctx.get_pieces(color,PieceType::PAWN) & FILE_MASK[file]);
-			if (passed == NO_SQUARE) continue;
-			if(color == Color::WHITE){
-				int count = popcount(ctx.get_pieces(color,PieceType::ROOK) & FORWARD_WAY_MASK[1][passed]);
-				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ROOK_BEHIND_FREE_PAWN_START + rank(passed)), count, trace);
-			}
-			else{
-				int count = popcount(ctx.get_pieces(color, PieceType::ROOK) & FORWARD_WAY_MASK[0][passed]);
-				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ROOK_BEHIND_FREE_PAWN_START + flip_rank(passed)), -count, trace);
-			}
-		}
+		
 	}
 	semi_open_count += popcount(ctx.get_pieces(0, PieceType::ROOK) & ~no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::ROOK) & ~no_white_pawns_files & no_black_pawns_files);
 	open_count += popcount(ctx.get_pieces(0, PieceType::ROOK) & no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::ROOK) & no_white_pawns_files & no_black_pawns_files);

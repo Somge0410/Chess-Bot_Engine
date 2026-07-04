@@ -292,3 +292,41 @@ inline void gravity_update(int& h, int bonus) {
 	h += bonus-h*std::abs(bonus)/HISTORY_MAX;
 	h = std::clamp(h, -HISTORY_MAX, HISTORY_MAX);
 }
+inline int get_forward_square(int square, Color color) {
+    if (color == Color::WHITE) {
+        return square + 8;
+    } else {
+        return square - 8;
+		}
+}
+inline bool is_occupied(int square, uint64_t occupied) {
+	return (occupied & bit64(square)) != 0;
+}
+inline int get_promotion_square(int square, Color color) {
+    if (color == Color::WHITE) {
+        return square + 8 * (7 - rank(square));
+    }
+    else {
+        return square - 8 * rank(square);
+    }
+}
+constexpr uint8_t PASSED_PAWN_BUCKET[64] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 1, 2, 2, 3, 3,
+    0, 0, 1, 1, 2, 2, 3, 3,
+    4, 4, 5, 5, 6, 6, 7, 7,
+    4, 4, 5, 5, 6, 6, 7, 7,
+    8, 8, 9, 9, 10, 10, 11, 11,
+    12, 12, 13, 13, 14, 14, 15, 15,
+    0,0,0,0,0,0,0,0
+};
+constexpr uint8_t ISOLATED_PAWN_BUCKET[64] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 2, 3, 3, 2, 1, 0,
+    0, 1, 2, 3, 3, 2, 1, 0,
+    4, 5, 6, 7, 7, 6, 5, 4,
+    8, 9, 10, 11, 11, 10, 9, 8,
+    12, 13, 14, 15, 15, 14, 13, 12,
+    12, 13 ,14 ,15 ,15, 14 ,13 ,12 ,
+    0 ,0 ,0 ,0 ,0 ,0 ,0 ,0
+};
