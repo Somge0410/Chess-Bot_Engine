@@ -295,10 +295,10 @@ inline void gravity_update(int& h, int bonus) {
 }
 inline int get_forward_square(int square, Color color) {
     if (color == Color::WHITE) {
-        return square + 8;
+        return std::min(square + 8, 63);
     }
     else {
-        return square - 8;
+        return std::max(square - 8, 0);
     }
 }
 inline bool is_occupied(int square, uint64_t occupied) {
@@ -330,5 +330,15 @@ constexpr uint8_t ISOLATED_PAWN_BUCKET[64] = {
     8, 9, 10, 11, 11, 10, 9, 8,
     12, 13, 14, 15, 15, 14, 13, 12,
     12, 13 ,14 ,15 ,15, 14 ,13 ,12 ,
+    0 ,0 ,0 ,0 ,0 ,0 ,0 ,0
+};
+constexpr uint8_t BACKWARD_PAWN_BUCKET[64] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 2, 3, 3, 2, 1, 0,
+    0, 1, 2, 3, 3, 2, 1, 0,
+    4, 5, 6, 7, 7, 6, 5, 4,
+    4, 5, 6, 7, 7, 6, 5, 4,
+    8 ,9 ,10 ,11 ,11 ,10 ,9 ,8 ,
+    12 ,13 ,14 ,15 ,15 ,14 ,13 ,12 ,
     0 ,0 ,0 ,0 ,0 ,0 ,0 ,0
 };
