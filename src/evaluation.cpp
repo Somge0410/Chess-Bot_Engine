@@ -113,7 +113,7 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 		{
 			int pawn_square = get_lsb(pawns);
 			int file_index = pawn_square % 8;
-			int rank_index = color == 0 ? pawn_square / 8 : 7 - pawn_square / 8;
+			int rank_index = color == rank(pawn_square);
 			int bucket = PASSED_PAWN_BUCKET[color == 0 ? pawn_square : flip_square(pawn_square)];
 			if ((ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN) & PASSED_PAWN_MASK[color][pawn_square]) == 0)
 			{
@@ -136,7 +136,7 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 				if (block_count == 0) {
 					int promo_square = get_promotion_square(pawn_square, static_cast<Color>(color));
 					int enemy_king_distance_to_promo_sq = king_distance(ctx.board.get_king_square(static_cast<Color>(ecolor)), promo_square);
-					int pawn_distance_to_promo_sq = color == 0 ? 7 - rank_index : rank_index;
+					int pawn_distance_to_promo_sq =7 - rank_index;
 					if (ctx.board.get_turn() == static_cast<Color>(ecolor)) enemy_king_distance_to_promo_sq--;
 					if (enemy_king_distance_to_promo_sq > pawn_distance_to_promo_sq) {
 						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::CANT_REACHED_BY_ENEMY_KING_START + bucket), color == 0 ? 1 : -1, trace);
