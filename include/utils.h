@@ -48,20 +48,21 @@ inline int poplsb(uint64_t& bitboard) {
     }
     return lsb_index;
 }
-    
-inline void display_bitboard(uint64_t bitboard){
-    std::cout<<std::unitbuf <<"\n"
+
+inline void display_bitboard(uint64_t bitboard) {
+    std::cout << std::unitbuf << "\n"
         << "--------------------" << std::endl;
-    for (int rank=7; rank>=0;--rank){
-        for (int file=0;file<8;++file){
-            int square_index=rank*8+file;
-            if ((bitboard>>square_index)& 1){
-                std::cout<<"1 ";
-            }else{
-                std::cout <<". ";
+    for (int rank = 7; rank >= 0; --rank) {
+        for (int file = 0; file < 8; ++file) {
+            int square_index = rank * 8 + file;
+            if ((bitboard >> square_index) & 1) {
+                std::cout << "1 ";
+            }
+            else {
+                std::cout << ". ";
             }
         }
-        std::cout<< "  "<< rank+1<< std::endl;
+        std::cout << "  " << rank + 1 << std::endl;
     }
     std::cout << "\na b c d e f g h" << std::endl;
     std::cout << "--------------------" << std::endl;
@@ -74,7 +75,7 @@ static inline Color flip_color(Color color) {
     return (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
 }
 
-inline int popcount(uint64_t bitboard){
+inline int popcount(uint64_t bitboard) {
 #ifdef _MSC_VER
     return __popcnt64(bitboard);
 #else 
@@ -82,34 +83,34 @@ inline int popcount(uint64_t bitboard){
 #endif // _MSC_VER
 }
 
-inline int to_int(Color color){
+inline int to_int(Color color) {
     return static_cast<int>(color);
 }
-inline int to_int(PieceType piece_type){
+inline int to_int(PieceType piece_type) {
     return static_cast<int8_t>(piece_type);
 }
 
-inline void remove_castling_right(std::string& rights, char right_to_remove){
+inline void remove_castling_right(std::string& rights, char right_to_remove) {
     rights.erase(
-        std::remove(rights.begin(),rights.end(),right_to_remove),
+        std::remove(rights.begin(), rights.end(), right_to_remove),
         rights.end()
     );
 }
 
-inline char get_piece_char(const PieceType& piece,const Color& color){
-    return color==Color::WHITE ? PIECE_CHAR_LIST[to_int(piece)]:tolower(PIECE_CHAR_LIST[to_int(piece)]);
+inline char get_piece_char(const PieceType& piece, const Color& color) {
+    return color == Color::WHITE ? PIECE_CHAR_LIST[to_int(piece)] : tolower(PIECE_CHAR_LIST[to_int(piece)]);
 }
 
 
-inline int get_mg_pos_score(const Color& color, const PieceType& piece,const int& square){
-    if(color==Color::WHITE){
-        if(piece==PieceType::PAWN) return EvalWeights[PAWN_PST_START + square].mg_score;
-        else if( piece==PieceType::KNIGHT) return EvalWeights[KNIGHT_PST_START + square].mg_score;
-        else if(piece==PieceType::BISHOP) return EvalWeights[BISHOP_PST_START + square].mg_score;
-        else if(piece==PieceType::ROOK) return EvalWeights[ROOK_PST_START + square].mg_score;
-        else if(piece==PieceType::QUEEN) return EvalWeights[QUEEN_PST_START + square].mg_score;
-        else if(piece==PieceType::KING) return EvalWeights[KING_PST_START + square].mg_score;
-		else return 0;
+inline int get_mg_pos_score(const Color& color, const PieceType& piece, const int& square) {
+    if (color == Color::WHITE) {
+        if (piece == PieceType::PAWN) return EvalWeights[PAWN_PST_START + square].mg_score;
+        else if (piece == PieceType::KNIGHT) return EvalWeights[KNIGHT_PST_START + square].mg_score;
+        else if (piece == PieceType::BISHOP) return EvalWeights[BISHOP_PST_START + square].mg_score;
+        else if (piece == PieceType::ROOK) return EvalWeights[ROOK_PST_START + square].mg_score;
+        else if (piece == PieceType::QUEEN) return EvalWeights[QUEEN_PST_START + square].mg_score;
+        else if (piece == PieceType::KING) return EvalWeights[KING_PST_START + square].mg_score;
+        else return 0;
     }
     else {
         if (piece == PieceType::PAWN) return -EvalWeights[PAWN_PST_START + flip_square(square)].mg_score;
@@ -128,7 +129,7 @@ inline int get_eg_pos_score(const Color& color, const PieceType& piece, const in
         else if (piece == PieceType::BISHOP) return EvalWeights[BISHOP_PST_START + square].eg_score;
         else if (piece == PieceType::ROOK) return EvalWeights[ROOK_PST_START + square].eg_score;
         else if (piece == PieceType::QUEEN) return EvalWeights[QUEEN_PST_START + square].eg_score;
-        else if (piece == PieceType::KING) return EvalWeights[KING_PST_START + square].eg_score ;
+        else if (piece == PieceType::KING) return EvalWeights[KING_PST_START + square].eg_score;
         else return 0;
     }
     else {
@@ -141,14 +142,14 @@ inline int get_eg_pos_score(const Color& color, const PieceType& piece, const in
         else return 0;
     }
 }
-inline Move parse_move(const std::string& move_str, MoveList& move_list){
+inline Move parse_move(const std::string& move_str, MoveList& move_list) {
     for (const Move& move : move_list)
     {
-        if (move_str==to_san(move,move_list)) return move;
-        
+        if (move_str == to_san(move, move_list)) return move;
+
     }
     return Move();
-    
+
 }
 inline uint64_t get_knight_attacks(int square) {
     return KNIGHT_ATTACKS[square];
@@ -181,10 +182,10 @@ inline uint64_t get_piece_attacks(PieceType pt, int from_square, uint64_t occupi
 inline uint64_t get_pawn_attacks(uint64_t pawns, Color color) {
     if (Color::WHITE == color) {
         return ((pawns & NOT_FILE_A) << 7) | ((pawns & NOT_FILE_H) << 9);
-	}
+    }
     else {
-		return ((pawns & NOT_FILE_H) >> 7) | ((pawns & NOT_FILE_A) >> 9);
-    
+        return ((pawns & NOT_FILE_H) >> 7) | ((pawns & NOT_FILE_A) >> 9);
+
     }
 }
 inline uint64_t get_pawn_attackers(int to_square, Color attacker_color, uint64_t attacker_pawns) {
@@ -200,16 +201,16 @@ inline Move recover_move_from_int(uint16_t m_int) {
 }
 static inline int pick_best(MoveList& moves, int* scores, int start) {
     int best = start;
-    for(int i=start+1;i<(int)moves.size();++i){
-        if (scores[i]>scores[best]){
-            best=i;
+    for (int i = start + 1; i < (int)moves.size(); ++i) {
+        if (scores[i] > scores[best]) {
+            best = i;
         }
-	}
-    if(best!=start){
-        std::swap(moves[best],moves[start]);
-        std::swap(scores[best],scores[start]);
-	}
-	return start;
+    }
+    if (best != start) {
+        std::swap(moves[best], moves[start]);
+        std::swap(scores[best], scores[start]);
+    }
+    return start;
 }
 static inline int pick_best(MoveList& moves, int* scores, int start, int* see_scores) {
     int best = start;
@@ -220,12 +221,12 @@ static inline int pick_best(MoveList& moves, int* scores, int start, int* see_sc
             }
         }
     }
-        if (best != start) {
-            std::swap(moves[best], moves[start]);
-            std::swap(scores[best], scores[start]);
-            std::swap(see_scores[best], see_scores[start]);
-        }
-        return start;
+    if (best != start) {
+        std::swap(moves[best], moves[start]);
+        std::swap(scores[best], scores[start]);
+        std::swap(see_scores[best], see_scores[start]);
+    }
+    return start;
 }
 static inline uint64_t splitmix64(uint64_t& seed) {
     uint64_t z = (seed += 0x9E3779B97F4A7C15ULL);
@@ -233,7 +234,7 @@ static inline uint64_t splitmix64(uint64_t& seed) {
     z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
     return z ^ (z >> 31);
 }
-static inline bool pick_least_attacker(int tosq,Color side,int& outFromSq,PieceType& outPT, uint64_t occ, uint64_t piecesLocal[2][6]) {
+static inline bool pick_least_attacker(int tosq, Color side, int& outFromSq, PieceType& outPT, uint64_t occ, uint64_t piecesLocal[2][6]) {
     uint64_t bb = get_pawn_attackers(tosq, side, piecesLocal[to_int(side)][to_int(PieceType::PAWN)]);
     if (bb) { outPT = PieceType::PAWN; outFromSq = get_lsb(bb); return true; }
     bb = get_knight_attacks(tosq) & piecesLocal[to_int(side)][to_int(PieceType::KNIGHT)];
@@ -285,22 +286,23 @@ inline int flip_rank(int square) {
 }
 inline bool is_on_center_files(int king_square) {
     uint64_t center_file_mask = FILE_MASK[3] | FILE_MASK[4] | FILE_MASK[5];
-	return (bit64(king_square) & center_file_mask) != 0;
+    return (bit64(king_square) & center_file_mask) != 0;
 }
 inline void gravity_update(int& h, int bonus) {
     bonus = std::clamp(bonus, -HISTORY_MAX, HISTORY_MAX);
-	h += bonus-h*std::abs(bonus)/HISTORY_MAX;
-	h = std::clamp(h, -HISTORY_MAX, HISTORY_MAX);
+    h += bonus - h * std::abs(bonus) / HISTORY_MAX;
+    h = std::clamp(h, -HISTORY_MAX, HISTORY_MAX);
 }
 inline int get_forward_square(int square, Color color) {
     if (color == Color::WHITE) {
         return square + 8;
-    } else {
+    }
+    else {
         return square - 8;
-		}
+    }
 }
 inline bool is_occupied(int square, uint64_t occupied) {
-	return (occupied & bit64(square)) != 0;
+    return (occupied & bit64(square)) != 0;
 }
 inline int get_promotion_square(int square, Color color) {
     if (color == Color::WHITE) {
@@ -312,12 +314,12 @@ inline int get_promotion_square(int square, Color color) {
 }
 constexpr uint8_t PASSED_PAWN_BUCKET[64] = {
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 1, 2, 2, 3, 3,
-    0, 0, 1, 1, 2, 2, 3, 3,
-    4, 4, 5, 5, 6, 6, 7, 7,
-    4, 4, 5, 5, 6, 6, 7, 7,
-    8, 8, 9, 9, 10, 10, 11, 11,
-    12, 12, 13, 13, 14, 14, 15, 15,
+    0, 1, 2, 3, 3, 2, 1, 0,
+    0, 1, 2, 3, 3, 2, 1, 0,
+    4, 5, 6, 7, 7, 6, 5, 4,
+    4, 5, 6, 7, 7, 6, 5, 4,
+    8, 9, 10, 11, 11, 10, 9, 8,
+    12, 13, 14, 15, 15, 14, 13, 12,
     0,0,0,0,0,0,0,0
 };
 constexpr uint8_t ISOLATED_PAWN_BUCKET[64] = {
