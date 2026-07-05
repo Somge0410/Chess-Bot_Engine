@@ -113,7 +113,7 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 		{
 			int pawn_square = get_lsb(pawns);
 			int file_index = pawn_square % 8;
-			int rank_index = rank(pawn_square);
+			int rank_index = color == 0 ? pawn_square / 8 : 7 - pawn_square / 8;
 			int bucket = PASSED_PAWN_BUCKET[color == 0 ? pawn_square : flip_square(pawn_square)];
 			if ((ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN) & PASSED_PAWN_MASK[color][pawn_square]) == 0)
 			{
@@ -129,10 +129,6 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 				uint64_t defenders = get_pawn_attacks(bit64(pawn_square), static_cast<Color>(ecolor));
 				int def_count = popcount(defenders & ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN));
 				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? def_count : -def_count, trace);
-				defenders = ctx.board.get_attacks_for_color(static_cast<Color>(color)) & bit64(pawn_square);
-				if (defenders != 0) {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? 1 : -1, trace);
-				}
 				//check if blockated
 				int block_count = is_occupied(get_forward_square(pawn_square, static_cast<Color>(color)), ctx.board.get_all_pieces()) ? 1 : 0;
 				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::BLOCKED_FREE_PAWN_START + bucket), color == 0 ? block_count : -block_count, trace);
@@ -140,7 +136,7 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 				if (block_count == 0) {
 					int promo_square = get_promotion_square(pawn_square, static_cast<Color>(color));
 					int enemy_king_distance_to_promo_sq = king_distance(ctx.board.get_king_square(static_cast<Color>(ecolor)), promo_square);
-					int pawn_distance_to_promo_sq = (color == 0) ? (7 - rank_index) : rank_index;
+					int pawn_distance_to_promo_sq = color == 0 ? 7 - rank_index : rank_index;
 					if (ctx.board.get_turn() == static_cast<Color>(ecolor)) enemy_king_distance_to_promo_sq--;
 					if (enemy_king_distance_to_promo_sq > pawn_distance_to_promo_sq) {
 						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::CANT_REACHED_BY_ENEMY_KING_START + bucket), color == 0 ? 1 : -1, trace);
@@ -174,11 +170,6 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 					}
 					op_rooks &= op_rooks - 1;
 				}
-				//Check if pawn is isolated
-				if ((ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN) & ADJACENT_FILE_MASK[file_index]) == 0) {
-					ctx.isolated[color] |= (1ULL << pawn_square);
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ISOLATED_PASSED_PAWN_START + bucket), color == 0 ? 1 : -1, trace);
-				}
 				pawns &= pawns - 1;
 				continue;
 			}
@@ -192,7 +183,7 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
 				uint64_t defends = ctx.board.get_attacks_for_color(static_cast<Color>(color)) & bit64(pawn_square);
 				if (defends != 0) {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
+					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? 1 : -1, trace);
 				}
 
 			}
@@ -212,31 +203,38 @@ void eval_backward(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 		while (pawns)
 		{
 			int pawn_square = get_lsb(pawns);
-			int forward_square = get_forward_square(pawn_square, static_cast<Color>(color));
-			uint64_t forward_mask = bit64(forward_square);
-			uint64_t adjacent_backwards = PAWN_ATTACKS[ecolor][pawn_square];
-			bool has_adjacent_support = (ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN) & adjacent_backwards) != 0;
-			bool forward_blocked = (ctx.board.get_all_pieces() & forward_mask) != 0;
-			if (!has_adjacent_support) {
-				int bucket = BACKWARD_PAWN_BUCKET[color == 0 ? pawn_square : flip_square(pawn_square)];
-				if (forward_blocked) {
-					ctx.backward[color] |= (1ULL << pawn_square);
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::FORWARD_BLOCKED_BACKWARD_START + bucket), color == 0 ? 1 : -1, trace);
-				}
-				else if ((PAWN_ATTACKS[color][forward_square] & ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN)) != 0)
-				{
-					ctx.backward[color] |= (1ULL << pawn_square);
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::FORWARD_CONTROLLED_BACKWARD_START + bucket), color == 0 ? 1 : -1, trace);
+			int file_index = pawn_square % 8;
+			int forward_square = color == to_int(Color::WHITE) ? pawn_square + 8 : pawn_square - 8;
 
+			if (forward_square >= 0 && forward_square < 64) {
+				uint64_t forward_mask = bit64(forward_square);
+				uint64_t adjacent_backwards = PAWN_ATTACKS[ecolor][pawn_square];
+				bool has_adjacent_support = (ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN) & adjacent_backwards) != 0;
+				bool forward_blocked = (ctx.board.get_all_pieces() & forward_mask) != 0;
+				if (!has_adjacent_support) {
+					if (forward_blocked) {
+						ctx.backward[color] |= (1ULL << pawn_square);
+						blocked_backward_count += color == 0 ? 1 : -1;
+					}
+					else if ((PAWN_ATTACKS[color][forward_square] & ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN)) != 0)
+					{
+						ctx.backward[color] |= (1ULL << pawn_square);
+						forwad_controlled_backward_count += color == 0 ? 1 : -1;
+
+					}
+					else {
+						free_to_advance_backward_count += color == 0 ? 1 : -1;
+					}
 				}
-				else {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::FREE_TO_ADV_BACKWARD_START + bucket), color == 0 ? 1 : -1, trace);
-				}
+
 			}
 			pawns &= pawns - 1;
 		}
 
 	}
+	addTerm<isTracing>(score, EvalParam::FORWARD_BLOCKED_BACKWARD, blocked_backward_count, trace);
+	addTerm<isTracing>(score, EvalParam::FORWARD_CONTROLLED_BACKWARD, forwad_controlled_backward_count, trace);
+	addTerm<isTracing>(score, EvalParam::FREE_TO_ADV_BACKWARD, free_to_advance_backward_count, trace);
 }
 template <bool isTracing>
 void eval_double_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
