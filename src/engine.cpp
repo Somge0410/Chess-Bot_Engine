@@ -799,7 +799,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             if (best_score <= alpha || best_score >= beta) {
 
                 //WIden around the reported score and try again.
-                window = std::min(window * ASPIRATION_WINDOW_MULTIPLIER, MATE_SCORE);
+                window = std::min(static_cast<int>(window * ASPIRATION_WINDOW_MULTIPLIER), MATE_SCORE);
                 alpha = std::max(-MATE_SCORE, best_score - window);
                 beta = std::min(MATE_SCORE, best_score + window);
 
