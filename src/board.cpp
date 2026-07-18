@@ -224,37 +224,29 @@ EvaluationResult Board::initialize_material_score()const {
     EvaluationResult score = { 0,0 };
     for (int color=0;color<2;++color){
         for (int piece=0;piece<6;++piece){
-			score.mg_score += color == 0 ? popcount(pieces[color][piece]) * PIECE_VALUES_MG[piece] : -popcount(pieces[color][piece]) * PIECE_VALUES_MG[piece];
-			score.eg_score += color == 0 ? popcount(pieces[color][piece]) * PIECE_VALUES_EG[piece] : -popcount(pieces[color][piece]) * PIECE_VALUES_EG[piece];
+			score += color == 0 ? EvalWeights[static_cast<EvalParam>(piece)] * popcount(pieces[color][piece]) : EvalWeights[static_cast<EvalParam>(piece)] * -popcount(pieces[color][piece]);
         }
     }
     return score;
 }
 EvaluationResult Board::initialize_positional_score()const {
-        int16_t score_mg=0;
-        int16_t score_eg=0;
-        int16_t old_score_mg = 0;
-        int16_t old_score_eg = 0;
+    EvaluationResult score = { 0,0 };
         for (int color=0;color<2;++color){
             for (int piece=0;piece<6;++piece){
                 uint64_t bitboard=pieces[color][piece];
                 while (bitboard) {
                     int square = get_lsb(bitboard);
-                    if (color == 0) {
-                    score_mg += MG_PST[piece][square];
-                    score_eg += EG_PST[piece][square];
-                    }
-                    else {
-						score_mg -= MG_PST[piece][flip_square(square)];
-						score_eg -= EG_PST[piece][flip_square(square)];
-                    }
+                    
+					score.mg_score += get_mg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
+                    score.eg_score += get_eg_pos_score(static_cast<Color>(color), static_cast<PieceType>(piece), square);
+                    
 
                     bitboard &=bitboard-1;
                 }
 
             }
         }
-        return {score_mg,score_eg};
+        return score;
 }
 void Board::make_move(const Move& move){
     push_current_state_to_history();
