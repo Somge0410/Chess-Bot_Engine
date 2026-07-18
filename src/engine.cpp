@@ -87,16 +87,15 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	int static_eval = -MATE_SCORE;
     //REVERSE FUTILITY PRUNING
     // 
-	int rfp_max_depth = 5;
-	bool is_pv_node = (beta - alpha) > 1;
-    if(!king_is_in_check && depth <= rfp_max_depth&& std::abs(beta)<MATE_THRESHOLD && !is_pv_node) {
-        static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
-		int rfp_margin = 112 * depth; // This margin can be tuned
+
+    bool is_pv_node = (beta - alpha) > 1;
+    if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
+        static_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
-            rev_fut_count++;
             return { static_eval,Move() };
         }
-	}
+    }
    
     
     // NULL Move Pruning Here
@@ -131,10 +130,10 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     int current_eval=-MATE_SCORE;
     if (depth<=2)
 	{
-		if (static_eval != -MATE_SCORE) 
+        if (static_eval != -MATE_SCORE)
             current_eval = static_eval;
         else
-            current_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+            current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     
 	// Late Move Reduction prerequisites here
@@ -532,16 +531,19 @@ bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check
 }
 int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls, const Move& previous_move) {
     if (depth >= 64 || moves_searched >= 218) return 7;
-    if (depth<=1 || moves_searched <=1) return 0; // No reduction for the first move
+    if (depth <= 1 || moves_searched <= 1) return 0; // No reduction for the first move
     bool is_killer = (ply > 0 && (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]));
     if (is_killer) return 0;
     bool is_quiet = move.is_quiet();
     if (is_quiet) {
-        return Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+        //return Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+        return std::clamp(static_cast<int>(Q_LOG_BASE + std::log(depth) * std::log(moves_searched) / Q_LOG_DIV), 0, depth - 1);
     }
     else {
 
-        return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+        //return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
+
+        return std::clamp(static_cast<int>(LOG_BASE + std::log(depth) * std::log(moves_searched) / LOG_DIV), 0, depth - 1);
     }
 }
 bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls) {
@@ -642,20 +644,20 @@ int Engine::relevant_pawn_push(const Board& board, const Move& move) {
     bool passed = board.is_passed_after(move);
 
     if (passed) {
-        score += 40;
-        if (relative_rank >= 4) score += 30;
-        if (relative_rank >= 5) score += 50;
-        if (relative_rank >= 6) score += 160;
+        score += PAWN_PUSH_SCORE1;
+        if (relative_rank >= 4) score += PAWN_PUSH_SCORE2;
+        if (relative_rank >= 5) score += PAWN_PUSH_SCORE3;
+        if (relative_rank >= 6) score += PAWN_PUSH_SCORE4;
 
         if (board.count_attacker_on_square(to, flip_color(us), 1, false).count == 0) {
-            score += 25;
+            score += PAWN_PUSH_SCORE5;
         }
     }
-		int king_square = board.get_king_square(flip_color(us));
-        if (KING_ZONE[king_square] & bit64(to)) {
-            score += 60;
-		}
-        return score;
+    int king_square = board.get_king_square(flip_color(us));
+    if (KING_ZONE[king_square] & bit64(to)) {
+        score += PAWN_PUSH_SCORE6;
+    }
+    return score;
 
 }
 void Engine::set_threads(int n) {
@@ -797,7 +799,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             if (best_score <= alpha || best_score >= beta) {
 
                 //WIden around the reported score and try again.
-                window = std::min(window * ASPIRATION_WINDOW_MULTIPLIER, MATE_SCORE);
+                window = std::min(static_cast<int>(window * ASPIRATION_WINDOW_MULTIPLIER), MATE_SCORE);
                 alpha = std::max(-MATE_SCORE, best_score - window);
                 beta = std::min(MATE_SCORE, best_score + window);
 
