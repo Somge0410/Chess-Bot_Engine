@@ -644,20 +644,20 @@ int Engine::relevant_pawn_push(const Board& board, const Move& move) {
     bool passed = board.is_passed_after(move);
 
     if (passed) {
-        score += 40;
-        if (relative_rank >= 4) score += 30;
-        if (relative_rank >= 5) score += 50;
-        if (relative_rank >= 6) score += 160;
+        score += PAWN_PUSH_SCORE1;
+        if (relative_rank >= 4) score += PAWN_PUSH_SCORE2;
+        if (relative_rank >= 5) score += PAWN_PUSH_SCORE3;
+        if (relative_rank >= 6) score += PAWN_PUSH_SCORE4;
 
         if (board.count_attacker_on_square(to, flip_color(us), 1, false).count == 0) {
-            score += 25;
+            score += PAWN_PUSH_SCORE5;
         }
     }
-		int king_square = board.get_king_square(flip_color(us));
-        if (KING_ZONE[king_square] & bit64(to)) {
-            score += 60;
-		}
-        return score;
+    int king_square = board.get_king_square(flip_color(us));
+    if (KING_ZONE[king_square] & bit64(to)) {
+        score += PAWN_PUSH_SCORE6;
+    }
+    return score;
 
 }
 void Engine::set_threads(int n) {
