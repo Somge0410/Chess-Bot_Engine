@@ -129,10 +129,10 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     int current_eval=-MATE_SCORE;
     if (depth<=2)
 	{
-		if (static_eval != -MATE_SCORE) 
+        if (static_eval != -MATE_SCORE)
             current_eval = static_eval;
         else
-            current_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+            current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     
 	// Late Move Reduction prerequisites here
@@ -1127,7 +1127,7 @@ void Engine::resize_tt(size_t tt_size_mb) {
     int saved_threads = thread_count;
     stop_thread_pool();
 
-    // TT neu allokieren (löscht alle alten Einträge)
+    // TT neu allokieren (lÃ¶scht alle alten EintrÃ¤ge)
     tt.clear();
     init_tt(tt_size_mb);
 
@@ -1143,7 +1143,7 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
     Board b = board;
     b.make_move(best_move);
 
-    // Sammle bis zu depth-1 weitere Züge aus der TT
+    // Sammle bis zu depth-1 weitere ZÃ¼ge aus der TT
     for (int i = 1; i < depth; ++i) {
         if (b.is_fifty_move_rule_draw() || b.is_repetition_draw(2)) {
             break;
@@ -1159,10 +1159,10 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)
             break;
 
-        // TT speichert nur from/to/promotion — Rest muss rekonstruiert werden
+        // TT speichert nur from/to/promotion Â— Rest muss rekonstruiert werden
         recover_move_fully(tt_move, b);
 
-        // Prüfe ob der rekonstruierte Zug gültig ist (piece_moved darf nicht NONE sein)
+        // PrÃ¼fe ob der rekonstruierte Zug gÃ¼ltig ist (piece_moved darf nicht NONE sein)
         if (tt_move.piece_moved == PieceType::NONE)
             break;
 
