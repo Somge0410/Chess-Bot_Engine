@@ -17,12 +17,12 @@
 #include "adjustable_parameters.h"
 #include "uci_helpers.h"
 #include "SPSA_parameters.h"
-void ThreadLocalData::flush_counters(Engine* engine) {
-    if (nodes > 10000) {
+void ThreadLocalData::flush_counters(Engine* engine,bool force) {
+    if (force || nodes > 10000) {
         engine->nodes.fetch_add(nodes, std::memory_order_relaxed);
         nodes = 0;
     }
-    if (qnodes > 10000) {
+    if (force || qnodes > 10000) {
         engine->qnodes.fetch_add(qnodes, std::memory_order_relaxed);
         qnodes = 0;
     }
@@ -716,6 +716,7 @@ void Engine::worker_loop(int thread_id) {
 		int tmp_score = local_score;    
 		TimeControlDecision tc = decide_time_control(pos, limits);
         iterative_deepening_new(thread_id, false, tmp_best, tmp_score, pos, tc, &tls_data);
+        tls_data.flush_counters(this, true);
 		local_best = tmp_best;
 		local_score = tmp_score;
         {
@@ -893,7 +894,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
             uint64_t elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-            uint64_t total_nodes = nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
+            uint64_t total_nodes = get_total_nodes();
             uint64_t nps = (elapsed_ms > 0) ? (total_nodes * 1000 / elapsed_ms) : 0;
 
             std::string best_uci = move_to_uci(best_move);
@@ -1104,7 +1105,7 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 		std::unique_lock<std::mutex> lk(pool_mtx);
         cv_done.wait(lk, [&] {return active_workers == 0; });
 	}
-
+    tls_data.flush_counters(this, true);
     //std::cout << rev_fut_count;
 	return best_move_so_far;
 }
@@ -1188,4 +1189,11 @@ bool Engine::is_time_up() const {
     const int64_t deadline_ns = search_deadline_ns.load(std::memory_order_acquire);
     const int64_t now = now_ns();
     return now >= deadline_ns;
+}
+void Engine::flush_node_counters() {
+    tls_data.flush_counters(this, true);
+}
+uint64_t Engine::get_total_nodes() {
+    flush_node_counters();
+    return nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
 }

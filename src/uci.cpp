@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "board.h"
@@ -27,6 +28,12 @@ struct NamedPosition {
 };
 
 static constexpr NamedPosition DEFAULT_POSITIONS[] = {
+    {"Kf7","8/4k2r/3P3q/1pN2pp1/2R1p3/P3P1P1/1Q3PK1/8 b - - 0 42"},
+    {"Qe1", "q2r2r1/1k2b3/4P2p/1pp5/3p1B1P/1PQP2P1/2P2P2/R5K1 w - - 0 34"},
+    {"h6", "7b/8/3k4/4pK1P/8/6B1/8/8 w - - 3 50" },
+    {"g6", "r1b1kb1r/pp2pppp/1q3n2/3p4/PP6/2P2N2/3NPPPP/R2QKB1R b KQkq - 0 1"},
+	{"Rb8", "r5k1/pB1b1ppp/3qpb2/8/3n1N2/6P1/4PP1P/2BQ1RK1 b - - 0 1"},
+    {"Rd1", "r1bq1rk1/pp2ppb1/3p1np1/6N1/2Pn4/2N4P/PP2BPP1/R3QRK1 w - - 0 1"},
     {"Qe3", "r4rk1/1b3ppp/p2pp3/4n1Q1/B1p1P3/P1N4P/1qP2PP1/R4RK1 w - - 0 18"},
     {"a4", "8/8/6k1/ppppp1P1/5pK1/P1PP1P2/1P6/8 b - - 0 41"},
     {"g5", "rnb1k2r/pp4p1/8/2bQPp2/5q1p/1PN4K/PB1PBPP1/R4R2 b kq - 3 21"},
@@ -36,6 +43,15 @@ static constexpr NamedPosition DEFAULT_POSITIONS[] = {
     {"perft4", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"},
     {"perft5", "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"}
 };
+
+std::vector<std::pair<std::string, std::string>> get_default_positions() {
+    std::vector<std::pair<std::string, std::string>> positions;
+    positions.reserve(sizeof(DEFAULT_POSITIONS) / sizeof(DEFAULT_POSITIONS[0]));
+    for (const auto& preset : DEFAULT_POSITIONS) {
+        positions.emplace_back(preset.name, preset.fen);
+    }
+    return positions;
+}
 
 static bool try_get_default_position(const std::string& name, std::string& out_fen) {
     for (const auto& preset : DEFAULT_POSITIONS) {
