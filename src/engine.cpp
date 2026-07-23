@@ -35,8 +35,8 @@ Engine::Engine(size_t tt_size_mb){
     //int thread_count = std::thread::hardware_concurrency();
 	int thread_count = 1;
     start_thread_pool(thread_count);
-    std::cerr << "Engine initialized with threads=" << thread_count
-		<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
+    //std::cerr << "Engine initialized with threads=" << thread_count
+	//	<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
 	stop_search.store(false, std::memory_order_relaxed);
     checks_count=0;
     ep_count=0;
@@ -367,9 +367,10 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
 			tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_EG)+inc / INCREMENT_DIVISOR;
         }
 
-        if (tc.time_ms > time_left / 2){
-            tc.time_ms = time_left / 40;
-            tc.max_time_ms = time_left / 40;
+        if (tc.time_ms > time_left / NO_TIME_TRIGGER_DIV){
+            tc.time_ms = time_left / NO_TIME_ALLOC_DIV;
+            tc.max_time_ms = time_left / MAX_NO_TIME_ALLOC_DIV;
+            tc.max_time_ms = time_left / MAX_NO_TIME_ALLOC_DIV;
         }
 
         // Near 50-move rule: use half of remaining time to avoid draw
@@ -522,7 +523,7 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
 
 }
 bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move) {
-	if (depth > 2) return false;
+	if (depth > 3) return false;
     bool is_quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
     if (in_check || !is_quiet) return false;
     if (depth == 1 && eval + FUTILITY_MARGIN_D1 <= alpha) return true;
@@ -552,6 +553,7 @@ bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int dept
     if(is_mate_score_possible|| depth < NMP_MIN_DEPTH || king_is_in_check || !board.has_enough_material_for_nmp()) {
         return false;
 	}
+	if (depth - NMP_REDUCTION <= 0) return false;
 	int original_ep_square = board.make_null_move();
 	int null_move_score = negamax(board, depth - NMP_REDUCTION, -beta, -beta + 1, ply + 1,tls).score;
 	null_move_score = -null_move_score;
@@ -1127,12 +1129,12 @@ void Engine::resize_tt(size_t tt_size_mb) {
     int saved_threads = thread_count;
     stop_thread_pool();
 
-    // TT neu allokieren (löscht alle alten Einträge)
+    // TT neu allokieren (lÃ¶scht alle alten EintrÃ¤ge)
     tt.clear();
     init_tt(tt_size_mb);
 
-    std::cerr << "info string TT resized to " << tt_size_mb
-              << " MB, entries=" << 4 * tt.size() << "\n";
+    //std::cerr << "info string TT resized to " << tt_size_mb
+    //          << " MB, entries=" << 4 * tt.size() << "\n";
 
     // Thread-Pool mit gleicher Thread-Anzahl wieder hochfahren
     start_thread_pool(saved_threads);
@@ -1143,7 +1145,7 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
     Board b = board;
     b.make_move(best_move);
 
-    // Sammle bis zu depth-1 weitere Züge aus der TT
+    // Sammle bis zu depth-1 weitere ZÃ¼ge aus der TT
     for (int i = 1; i < depth; ++i) {
         if (b.is_fifty_move_rule_draw() || b.is_repetition_draw(2)) {
             break;
@@ -1159,10 +1161,10 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)
             break;
 
-        // TT speichert nur from/to/promotion — Rest muss rekonstruiert werden
+        // TT speichert nur from/to/promotion Â— Rest muss rekonstruiert werden
         recover_move_fully(tt_move, b);
 
-        // Prüfe ob der rekonstruierte Zug gültig ist (piece_moved darf nicht NONE sein)
+        // PrÃ¼fe ob der rekonstruierte Zug gÃ¼ltig ist (piece_moved darf nicht NONE sein)
         if (tt_move.piece_moved == PieceType::NONE)
             break;
 
