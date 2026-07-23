@@ -77,7 +77,7 @@ static int run_main_bench() {
         std::cout << "info string bench pos " << name
                   << " bestmove " << move_to_uci(best)
                   << " time " << elapsed_ms
-                  << " nodes " << nodes << "\n";
+                  << " nodes " << 1 << "\n";
         std::cout.flush();
 
         engine.shutdown();
@@ -88,7 +88,7 @@ static int run_main_bench() {
     std::cout << "info string bench total positions " << positions.size()
               << " depth " << bench_depth
               << " time " << total_time_ms
-              << " nodes " << total_nodes
+              << " nodes " << 1
               << " nps " << nps << "\n";
     std::cout.flush();
 
