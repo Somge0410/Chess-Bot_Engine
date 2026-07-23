@@ -118,7 +118,7 @@ struct ThreadLocalData {
     Move counter_moves[2][7][64] = {};
     std::atomic<uint64_t> nodes{ 0 };
     std::atomic<uint64_t> qnodes{ 0 };
-    void flush_counters(Engine* engine);
+    void flush_counters(Engine* engine,bool force=false);
 };
 class Engine {
     public:
@@ -127,6 +127,8 @@ class Engine {
 		void resize_tt(size_t tt_size_mb);
         ~Engine();
         void shutdown();
+        void flush_node_counters();
+        uint64_t get_total_nodes();
         int checks_count;
         int ep_count;
         int capture_count;

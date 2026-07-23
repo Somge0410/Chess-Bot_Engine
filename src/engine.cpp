@@ -17,12 +17,12 @@
 #include "adjustable_parameters.h"
 #include "uci_helpers.h"
 #include "SPSA_parameters.h"
-void ThreadLocalData::flush_counters(Engine* engine) {
-    if (nodes > 10000) {
+void ThreadLocalData::flush_counters(Engine* engine,bool force) {
+    if (force || nodes > 10000) {
         engine->nodes.fetch_add(nodes, std::memory_order_relaxed);
         nodes = 0;
     }
-    if (qnodes > 10000) {
+    if (force || qnodes > 10000) {
         engine->qnodes.fetch_add(qnodes, std::memory_order_relaxed);
         qnodes = 0;
     }
@@ -87,14 +87,15 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	int static_eval = -MATE_SCORE;
     //REVERSE FUTILITY PRUNING
     // 
-	bool is_pv_node = (beta - alpha) > 1;
-    if(!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH&& std::abs(beta)<MATE_THRESHOLD && !is_pv_node) {
-        static_eval = board.is_white_to_move() ? evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
-		int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
+
+    bool is_pv_node = (beta - alpha) > 1;
+    if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
+        static_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
             return { static_eval,Move() };
         }
-	}
+    }
    
     
     // NULL Move Pruning Here
@@ -531,7 +532,7 @@ bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check
 }
 int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls, const Move& previous_move) {
     if (depth >= 64 || moves_searched >= 218) return 7;
-    if (depth<=1 || moves_searched <=1) return 0; // No reduction for the first move
+    if (depth <= 1 || moves_searched <= 1) return 0; // No reduction for the first move
     bool is_killer = (ply > 0 && (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]));
     if (is_killer) return 0;
     bool is_quiet = move.is_quiet();
@@ -543,7 +544,7 @@ int Engine::late_move_reduction(int depth, int moves_searched, const Move& move,
 
         //return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
 
-        return std::clamp(static_cast<int>(LOG_BASE + std::log(depth) * std::log(moves_searched) / LOG_DIV),0,depth-1);
+        return std::clamp(static_cast<int>(LOG_BASE + std::log(depth) * std::log(moves_searched) / LOG_DIV), 0, depth - 1);
     }
 }
 bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls) {
@@ -654,11 +655,11 @@ int Engine::relevant_pawn_push(const Board& board, const Move& move) {
             score += PAWN_PUSH_SCORE5;
         }
     }
-		int king_square = board.get_king_square(flip_color(us));
-        if (KING_ZONE[king_square] & bit64(to)) {
-            score += PAWN_PUSH_SCORE6;
-		}
-        return score;
+    int king_square = board.get_king_square(flip_color(us));
+    if (KING_ZONE[king_square] & bit64(to)) {
+        score += PAWN_PUSH_SCORE6;
+    }
+    return score;
 
 }
 void Engine::set_threads(int n) {
@@ -717,6 +718,7 @@ void Engine::worker_loop(int thread_id) {
 		int tmp_score = local_score;    
 		TimeControlDecision tc = decide_time_control(pos, limits);
         iterative_deepening_new(thread_id, false, tmp_best, tmp_score, pos, tc, &tls_data);
+        tls_data.flush_counters(this, true);
 		local_best = tmp_best;
 		local_score = tmp_score;
         {
@@ -894,7 +896,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
             uint64_t elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 
-            uint64_t total_nodes = nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
+            uint64_t total_nodes = get_total_nodes();
             uint64_t nps = (elapsed_ms > 0) ? (total_nodes * 1000 / elapsed_ms) : 0;
 
             std::string best_uci = move_to_uci(best_move);
@@ -1105,7 +1107,7 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 		std::unique_lock<std::mutex> lk(pool_mtx);
         cv_done.wait(lk, [&] {return active_workers == 0; });
 	}
-
+    tls_data.flush_counters(this, true);
     //std::cout << rev_fut_count;
 	return best_move_so_far;
 }
@@ -1189,4 +1191,11 @@ bool Engine::is_time_up() const {
     const int64_t deadline_ns = search_deadline_ns.load(std::memory_order_acquire);
     const int64_t now = now_ns();
     return now >= deadline_ns;
+}
+void Engine::flush_node_counters() {
+    tls_data.flush_counters(this, true);
+}
+uint64_t Engine::get_total_nodes() {
+    flush_node_counters();
+    return nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
 }
