@@ -344,6 +344,16 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
 
     return best_score;
 }
+double interpolate_phase(double phase, double endgame_value, double midgame_value, double opening_value) {
+    phase = std::clamp(phase, 0.0, 24.0);
+    if (phase <= 12) {
+        const double t = phase / 12.0;
+		return endgame_value + t * (midgame_value - endgame_value);
+    }
+
+	const double t = (phase - 12.0) / 12.0;
+	return midgame_value + t * (opening_value - midgame_value);
+}
 TimeControlDecision Engine::decide_time_control(const Board& position, const SearchLimits& limits) {
     TimeControlDecision tc{};
     tc.max_depth = limits.depth > 0 ? limits.depth : INFINITE_DEPTH;
@@ -352,32 +362,38 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
 		tc.max_time_ms = limits.movetime;
     }
     else if (limits.wtime > 0 || limits.btime > 0) {
-        int time_left = (position.get_turn() == Color::WHITE) ? limits.wtime : limits.btime;
-        int inc = (position.get_turn() == Color::WHITE) ? limits.winc : limits.binc;
+		const bool white_to_move = position.get_turn() == Color::WHITE;
 
-        if (position.get_move_count() < 10) {
-        tc.time_ms = time_left / OPT_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
-        tc.max_time_ms = time_left / MAX_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
-        }else if(position.get_move_count() < 30){
-            tc.time_ms = time_left / (OPT_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
-            tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
-        }
-        else {
-            tc.time_ms = time_left / (OPT_TIME_ALLOCATION_DIVISOR_EG) + inc / INCREMENT_DIVISOR;
-			tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_EG)+inc / INCREMENT_DIVISOR;
-        }
+        const int time_left = (position.get_turn() == Color::WHITE) ? limits.wtime : limits.btime;
+        const int inc = (position.get_turn() == Color::WHITE) ? limits.winc : limits.binc;
 
-        if (tc.time_ms > time_left / NO_TIME_TRIGGER_DIV){
-            tc.time_ms = time_left / NO_TIME_ALLOC_DIV;
-            tc.max_time_ms = time_left / MAX_NO_TIME_ALLOC_DIV;
-            tc.max_time_ms = time_left / MAX_NO_TIME_ALLOC_DIV;
-        }
+        const int usable_time = std::max(1, time_left - MOVE_OVERHEAD_MS);
 
-        // Near 50-move rule: use half of remaining time to avoid draw
-        int half_moves = position.get_half_moves();
-        if ((half_moves == 50 || half_moves == 51) && time_left > 500) {
-            tc.time_ms =std::min(time_left / 2,30000);
-        }
+        const double phase = position.get_game_phase();
+
+		double moves_to_go = interpolate_phase(phase, MOVES_TO_GO_EG, MOVES_TO_GO_MG, MOVES_TO_GO);
+
+		const int moves_after_threshold = std::max(0, position.get_move_count() - MOVE_COUNT_THRESHOLD);
+
+        moves_to_go -= std::min(MAX_MOVE_COUNT_REDUCTION,MOVE_COUNT_WEIGHT * moves_after_threshold);
+        moves_to_go = std::clamp(moves_to_go, MIN_MOVES_TO_GO, MAX_MOVES_TO_GO);
+
+        const double increment_contribution = inc * INC_USAGE_FACTOR;
+        
+        const double base_time = usable_time / moves_to_go + increment_contribution;
+
+        //Estimate the clock resources avalable over the expected remainng number of moves
+
+        const double effective_time = usable_time + inc * moves_to_go;
+
+        const double time_scale = std::clamp(effective_time / REFERENCE_TIME, 0.0, 1.0);
+
+        double max_multiplier = MAX_MULTIPLIER_FAST + time_scale * (MAX_MULTIPLIER_SLOW - MAX_MULTIPLIER_FAST);
+        max_multiplier=std::max(1.0,max_multiplier);
+
+        tc.time_ms = std::clamp(static_cast<int>(base_time), 1, usable_time);
+		tc.max_time_ms = std::clamp(static_cast<int>(base_time * max_multiplier), tc.time_ms, usable_time);
+
     }
     else if (limits.depth > 0) {
         tc.time_ms = INFINITE_TIME_MS;
@@ -742,7 +758,9 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
     double predicted_next_iteration_ms = 0;
     Move recent_best_moves[MAX_RECENT_BEST_COUNT] = { };
     int recent_best_move_count = 0;
-    int dynamic_soft_time_ms = tc.time_ms;
+    const int initial_budget_ms = tc.time_ms;
+    const int maximum_budget = tc.max_time_ms;
+    int current_budget_ms = initial_budget_ms;
 
     int prev_root_score = 0;
     bool has_prev_root_score = false;
@@ -833,12 +851,12 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             recent_best_moves[recent_best_move_count % MAX_RECENT_BEST_COUNT] = best_move;
             recent_best_move_count++;
 
-            if (recent_best_move_count >= 6 && tc.max_time_ms > tc.time_ms) {
+            if (recent_best_move_count >= 6 && initial_budget_ms > maximum_budget) {
                 int changes = 0;
                 int consecutive_changes = 0;
                 bool has_two_consecutive_changes = false;
                 int start = recent_best_move_count - MAX_RECENT_BEST_COUNT;
-                for (int i = 0; i < 5; ++i) {
+                for (int i = 0; i < MAX_RECENT_BEST_COUNT; ++i) {
                     const Move& a = recent_best_moves[(start + i) % MAX_RECENT_BEST_COUNT];
                     const Move& b = recent_best_moves[(start + i + 1) % MAX_RECENT_BEST_COUNT];
                     if (a != b) {
@@ -854,7 +872,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                 }
 				const bool unstable = has_two_consecutive_changes || changes >= 3;
                     if (unstable) {
-                        int gap = tc.max_time_ms - tc.time_ms;
+                        int gap = std::max(0, maximum_budget-initial_budget_ms);
                         double extra_fraction = 0.0;
                         if (has_two_consecutive_changes) {
 							extra_fraction = (changes >= 3) ? TIME_CHANGES_COUNT_BIG : TIME_CHANGES_COUNT_MEDIUM;
@@ -863,11 +881,11 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                             extra_fraction = TIME_CHANGES_COUNT_SMALL;
                         }
                         int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
-                        tc.time_ms = std::clamp(tc.time_ms + extra_time_ms, tc.time_ms, tc.max_time_ms);
-                        set_time_budget_ms(tc.time_ms);
+                        current_budget_ms = std::clamp(current_budget_ms + extra_time_ms, initial_budget_ms, maximum_budget);
+                        set_time_budget_ms(current_budget_ms);
                     }
             }
-            if (tc.max_time_ms > tc.time_ms && has_prev_root_score) {
+            if (maximum_budget > current_budget_ms && has_prev_root_score) {
                 const bool curr_is_mate = std::abs(best_score) >= MATE_THRESHOLD;
                 const bool prev_is_mate = std::abs(prev_root_score) >= MATE_THRESHOLD;
 
@@ -877,7 +895,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
                     // Tuning: ab ~50cp Unterschied reagieren
                     if (delta_cp >= DELTA_BEST_SCORE || sign_flip) {
-                        const int gap = tc.max_time_ms - tc.time_ms;
+                        const int gap = std::max(0, maximum_budget - current_budget_ms);
 
                         // sanfte Skalierung
                         const double volatility = std::clamp(static_cast<double>(delta_cp - DELTA_BEST_SCORE) / VOLATILITY_DIV, 0.0, 1.0);
@@ -888,8 +906,8 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
                         int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
 
-                        tc.time_ms = std::clamp(tc.time_ms + extra_time_ms, tc.time_ms, tc.max_time_ms);
-                        set_time_budget_ms(tc.time_ms);
+                        current_budget_ms = std::clamp(current_budget_ms + extra_time_ms, initial_budget_ms, maximum_budget);
+                        set_time_budget_ms(current_budget_ms);
                     }
                 }
             }
