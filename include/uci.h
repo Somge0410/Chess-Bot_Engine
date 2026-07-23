@@ -1,8 +1,3 @@
 #pragma once
 
-#include <string>
-#include <utility>
-#include <vector>
-
 void uci_loop();
-std::vector<std::pair<std::string, std::string>> get_default_positions();
