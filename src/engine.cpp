@@ -269,7 +269,11 @@ void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& 
     scored.reserve(moves.size());
     for (const auto& m : moves) scored.emplace_back(score_move(m, ply, tt_move,tt_depth_0,board,tls,previous_move), m);
 
-    std::sort(scored.begin(), scored.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+    std::sort(scored.begin(), scored.end(), [](const auto& a, const auto& b) {
+        if(a.first != b.first)
+            return a.first > b.first;
+		return a.second.get_int() < b.second.get_int();
+        });
 
     for (size_t i = 0; i < moves.size(); ++i) moves[i]=scored[i].second;
 }
