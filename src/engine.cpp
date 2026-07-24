@@ -851,7 +851,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             recent_best_moves[recent_best_move_count % MAX_RECENT_BEST_COUNT] = best_move;
             recent_best_move_count++;
 
-            if (recent_best_move_count >= 6 && initial_budget_ms > maximum_budget) {
+            if (recent_best_move_count >= 6 && initial_budget_ms < maximum_budget) {
                 int changes = 0;
                 int consecutive_changes = 0;
                 bool has_two_consecutive_changes = false;
