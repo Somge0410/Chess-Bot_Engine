@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "board.h"
 #include "Move.h"
 #include <vector>
@@ -116,8 +116,8 @@ struct ThreadLocalData {
     MoveList searched_quiets[MAX_PLY];
     int history_scores[2][6][64] = {};
     Move counter_moves[2][7][64] = {};
-    std::atomic<uint64_t> nodes{ 0 };
-    std::atomic<uint64_t> qnodes{ 0 };
+    uint64_t nodes{ 0 };
+    uint64_t qnodes{ 0 };
     void flush_counters(Engine* engine,bool force=false);
 };
 class Engine {

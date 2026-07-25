@@ -48,16 +48,19 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     if (tls) {
         if (depth == 0) {
             tls->qnodes++;
-        } else {
+        }
+        else {
             tls->nodes++;
         }
         tls->flush_counters(this);
     }
-    if (is_time_up())
+    if (nodes % 1024 == 0) {
+        if (is_time_up())
         {
             stop_search.store(true, std::memory_order_relaxed);
             return { .score = 0,.best_move = Move(),.is_tempered = true };
         }
+    }
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
@@ -333,7 +336,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
         Move move = moves[i];
 
         if (!in_check) {
-            int see = see_move(board, move);
+            int victim = PIECE_VALUES_MG[to_int(move.piece_captured)] / 100;
+            int attacker = PIECE_VALUES_MG[to_int(move.piece_moved)] / 100;
+            int see = scores[i] - victim + attacker;
             if (see < 0) continue; // tune; or start with see < 0
         }
 
@@ -412,7 +417,7 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
     return tc;
 }
 bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move,bool depth_0,TTMode mode) {
-    TTCluster& cluster = tt[hash % tt.size()];
+    TTCluster& cluster = tt[hash & (tt.size() - 1)];
     bool hits = false;
     for (int i = 0; i < 4; i++) {
         TTEntry& slot = cluster.entries[i];
@@ -490,7 +495,7 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
     }
 
     TTEntry new_entry = TTEntry(best_score, depth, flag_to_store, generation, best_move, static_cast<uint16_t>(hash >> 48));
-	TTCluster& cluster = tt[hash % tt.size()];
+	TTCluster& cluster = tt[hash & (tt.size() - 1)];
 
     uint16_t key16 = static_cast<uint16_t>(hash >> 48);
     for(int i=0;i<4;i++){
