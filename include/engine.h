@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "board.h"
 #include "Move.h"
 #include <vector>
