@@ -12,6 +12,7 @@
 #include "see.h"
 #include "bitboard_masks.h"
 #include <atomic>
+#include <bit>
 #include <mutex>
 #include <algorithm>
 #include "uci_helpers.h"
@@ -617,6 +618,7 @@ void Engine::init_tt(size_t tt_size_mb) {
     size_t bytes = tt_size_mb * 1024ull * 1024ull;
     size_t clusters = bytes / sizeof(TTCluster);
     if (clusters == 0) clusters = 1;
+    clusters = std::bit_floor(clusters);
     tt.resize(clusters);
 }
 bool Engine::move_could_result_in_repetition(Board& board, Move& move, int count) {
