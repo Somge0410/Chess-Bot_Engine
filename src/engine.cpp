@@ -45,18 +45,10 @@ Engine::Engine(size_t tt_size_mb){
 	int overwrite_tt_counter = 0;
 }
 SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls, const Move& previous_move) {
-    if (tls) {
-        if (depth == 0) {
-            tls->qnodes++;
-        }
-        else {
-            tls->nodes++;
-        }
+    if (tls && depth > 0) {
+        tls->nodes++;
         tls->flush_counters(this);
-    }
-    if (nodes % 1024 == 0) {
-        if (is_time_up())
-        {
+        if (tls->should_check_time() && is_time_up()) {
             stop_search.store(true, std::memory_order_relaxed);
             return { .score = 0,.best_move = Move(),.is_tempered = true };
         }
@@ -284,12 +276,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
     if (tls) {
         tls->qnodes++;
         tls->flush_counters(this);
+        if (tls->should_check_time() && is_time_up()) {
+            stop_search.store(true, std::memory_order_relaxed);
+            return 0;
+        }
     }
-    if(is_time_up())
-    {
-        stop_search.store(true, std::memory_order_relaxed);
-        return 0;
-	}
     uint64_t hash = board.get_hash();
 
     int tt_score;
@@ -299,17 +290,19 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
         return tt_score;
     }
     bool in_check = board.in_check();
+    constexpr int max_qply_index = ThreadLocalData::QSEARCH_PLY_CAPACITY - 1;
+    const int qply = std::min(ply, max_qply_index);
+    MoveList& moves = tls->qmove_lists[qply];
+    moves.clear();
 
-    if (ply >= MAX_QUIET_PLY) {
+    if (ply >= MAX_QUIET_PLY || ply >= max_qply_index) {
         if (in_check) {
-            MoveList evasions;
-            MoveGenerator::generate_moves(board, evasions);
-            if (evasions.empty()) return -MATE_SCORE + ply;
+            MoveGenerator::generate_moves(board, moves);
+            if (moves.empty()) return -MATE_SCORE + ply;
         }
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     }
 
-    MoveList moves;
     if (in_check) {
         MoveGenerator::generate_moves(board, moves);
         if (moves.empty()) return -MATE_SCORE + ply;
@@ -327,11 +320,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
     score_quiet_moves(moves, scores, board, in_check);
 
     for (int i = 0; i < (int)moves.size(); ++i) {
-        if(stop_search.load(std::memory_order_relaxed)|| is_time_up())
-        {
-			stop_search.store(true, std::memory_order_relaxed);
+        if (stop_search.load(std::memory_order_relaxed)) {
             break;
-		}
+        }
         pick_best(moves, scores, i);
         Move move = moves[i];
 
@@ -339,7 +330,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
             int victim = PIECE_VALUES_MG[to_int(move.piece_captured)] / 100;
             int attacker = PIECE_VALUES_MG[to_int(move.piece_moved)] / 100;
             int see = scores[i] - victim + attacker;
-            if (see < 0) continue; // tune; or start with see < 0
+            if (see < 0) continue;
         }
 
         board.make_move(move);
@@ -650,13 +641,11 @@ void Engine::score_quiet_moves(const MoveList& moves, int* scores,const Board& b
         scores[i] = 0;
 		const Move& m = moves[i];
         if (!evade_check) {
-            int see = see_move(board, m);
-            scores[i] += see;
+            scores[i] += see_move(board, m);
         }
-        
         int victim = PIECE_VALUES_MG[to_int(m.piece_captured)]/100;
         int attacker = PIECE_VALUES_MG[to_int(m.piece_moved)]/100;
-        scores[i]+= victim - attacker;
+        scores[i] += victim - attacker;
     }
 }
 int Engine::relevant_pawn_push(const Board& board, const Move& move) {
@@ -739,6 +728,7 @@ void Engine::worker_loop(int thread_id) {
             limits = job_limits;
         }
 
+        tls_data.clear_counters();
         Move tmp_best = local_best;
 		int tmp_score = local_score;    
 		TimeControlDecision tc = decide_time_control(pos, limits);

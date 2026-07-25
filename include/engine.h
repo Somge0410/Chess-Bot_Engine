@@ -100,17 +100,29 @@ struct SearchResult {
 };
 class Engine;
 struct ThreadLocalData {
+    static constexpr uint32_t TIME_CHECK_INTERVAL = 1024;
+    static constexpr int QSEARCH_PLY_CAPACITY = 65;
+
     void clear_counters() {
         nodes = 0;
         qnodes = 0;
+        nodes_until_time_check = TIME_CHECK_INTERVAL;
     }
     void clear_heuristics() {
         std::memset(killer_moves, 0, sizeof(killer_moves));
         std::memset(history_scores, 0, sizeof(history_scores));
         std::memset(counter_moves, 0, sizeof(counter_moves));
     }
+    bool should_check_time() {
+        if (--nodes_until_time_check != 0) {
+            return false;
+        }
+        nodes_until_time_check = TIME_CHECK_INTERVAL;
+        return true;
+    }
 
     MoveList move_lists[MAX_PLY];
+    MoveList qmove_lists[QSEARCH_PLY_CAPACITY];
     int move_scores[MAX_PLY][256] = {};
     Move killer_moves[128][2] = {};
     MoveList searched_quiets[MAX_PLY];
@@ -118,6 +130,7 @@ struct ThreadLocalData {
     Move counter_moves[2][7][64] = {};
     uint64_t nodes{ 0 };
     uint64_t qnodes{ 0 };
+    uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
     void flush_counters(Engine* engine,bool force=false);
 };
 class Engine {
