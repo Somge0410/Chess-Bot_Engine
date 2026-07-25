@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -9,7 +9,6 @@
 #include "notation_utils.h"
 #include "bishop_tables.h"
 #include "rook_tables.h"
-#include "adjustable_parameters.h"
 #include "attack_rays.h"
 #include "bitboard_masks.h"
 #include "eval_params.h"

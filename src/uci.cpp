@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <sstream>
@@ -14,7 +14,6 @@
 #include "constants.h"
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
-#include "adjustable_parameters.h"
 #include "SPSA_parameters.h"
 
 #ifndef GIT_COMMIT
