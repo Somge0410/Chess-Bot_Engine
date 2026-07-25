@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+﻿cmake_minimum_required(VERSION 3.10)
 project(Chess-Bot_Engine LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -25,7 +25,7 @@ add_executable(Chess-Bot_Engine
     src/notation_utils.cpp
     src/zobrist.cpp
     src/uci.cpp
- "include/pst.h" "include/adjustable_parameters.h" "include/Squares.h" "include/evaluation.h" "src/evaluation.cpp" "src/weights.cpp")
+ "include/pst.h"  "include/Squares.h" "include/evaluation.h" "src/evaluation.cpp" "src/weights.cpp")
 
 target_include_directories(Chess-Bot_Engine PUBLIC include)
 
