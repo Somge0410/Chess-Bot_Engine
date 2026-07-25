@@ -1,4 +1,4 @@
-#include "evaluation.h"
+ï»¿#include "evaluation.h"
 #include <memory>
 static thread_local std::unique_ptr<std::array<PawnEvalEntry, PAWN_HASH_SIZE>> pawn_evaluation_table;
 PawnEvalEntry& get_pawn_entry(size_t idx) {
@@ -385,8 +385,8 @@ void eval_rook_activity(EvaluationResult& score, const EvalContext& ctx, Trace* 
 
 	int white_rook_square = get_lsb(ctx.get_pieces(0, PieceType::ROOK));
 	int black_rook_square = get_lsb(ctx.get_pieces(1, PieceType::ROOK));
-	int white_connected = get_rook_attacks(white_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(0, PieceType::ROOK);
-	int black_connected = get_rook_attacks(black_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(1, PieceType::ROOK);
+	uint64_t white_connected = get_rook_attacks(white_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(0, PieceType::ROOK);
+	uint64_t black_connected = get_rook_attacks(black_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(1, PieceType::ROOK);
 	connected_rooks += popcount(white_connected) - popcount(black_connected);
 	addTerm<isTracing>(score, EvalParam::CONNECTED_ROOKS, connected_rooks, trace);
 	addTerm<isTracing>(score, EvalParam::ROOK_ON_SEMI_OPEN_FILE, semi_open_count, trace);
@@ -421,7 +421,7 @@ void eval_bad_bishop(EvaluationResult& score, const EvalContext& ctx, Trace* tra
 			uint64_t bishop_color_mask = (bit64(sq) & LIGHT_SQUARES) != 0 ? LIGHT_SQUARES : DARK_SQUARES;
 
 
-			// Zähle blockierte eigene Bauern auf der gleichen Farbe
+			// ZÃ¤hle blockierte eigene Bauern auf der gleichen Farbe
 			int blocked_pawns = 0;
 			uint64_t pawns_to_check = ctx.get_pieces(color, PieceType::PAWN) & bishop_color_mask;
 
@@ -429,7 +429,7 @@ void eval_bad_bishop(EvaluationResult& score, const EvalContext& ctx, Trace* tra
 				int pawn_sq = get_lsb(pawns_to_check);
 				int forward_sq = (color == 0) ? pawn_sq + 8 : pawn_sq - 8;
 
-				// Prüfe ob Bauer blockiert ist
+				// PrÃ¼fe ob Bauer blockiert ist
 				if (forward_sq >= 0 && forward_sq < 64 && (ctx.get_all_pieces() & (1ULL << forward_sq))) {
 					blocked_penalty_count += color == 0 ? 1 : -1;
 				}
@@ -453,30 +453,30 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 	int trapped_knight_count = 0;
 
 	// Typische Fallen:
-	// - Läufer auf a7/h7 (Weiß) oder a2/h2 (Schwarz) eingekesselt von Bauern
+	// - LÃ¤ufer auf a7/h7 (WeiÃŸ) oder a2/h2 (Schwarz) eingekesselt von Bauern
 	// - Springer in der Ecke ohne Fluchtfelder
 
 	for (int color = 0; color < 2; color++) {
 		int ecolor = 1 - color;
 
-		// Läufer-Fallen
+		// LÃ¤ufer-Fallen
 		uint64_t bishops = ctx.get_pieces(color, PieceType::BISHOP);
 		while (bishops) {
 			int sq = get_lsb(bishops);
 
-			// Läufer gefangen am Brettrand
+			// LÃ¤ufer gefangen am Brettrand
 			bool is_trapped = false;
 
 			if (color == 0) {
-				// a7-Falle: Läufer auf a7, Bauer auf b6
+				// a7-Falle: LÃ¤ufer auf a7, Bauer auf b6
 				if (sq == 48 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 41))) is_trapped = true;
-				// h7-Falle: Läufer auf h7, Bauer auf g6
+				// h7-Falle: LÃ¤ufer auf h7, Bauer auf g6
 				if (sq == 55 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 46))) is_trapped = true;
 			}
 			else {
-				// a2-Falle: Läufer auf a2, Bauer auf b3
+				// a2-Falle: LÃ¤ufer auf a2, Bauer auf b3
 				if (sq == 8 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 17))) is_trapped = true;
-				// h2-Falle: Läufer auf h2, Bauer auf g3
+				// h2-Falle: LÃ¤ufer auf h2, Bauer auf g3
 				if (sq == 15 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 22))) is_trapped = true;
 			}
 
@@ -532,7 +532,7 @@ void eval_fianchetto_bishop(EvaluationResult& score, const EvalContext& ctx, Tra
 	int intact_count = 0;
 	int broken_count = 0;
 
-	// Fianchetto-Positionen: b2, g2 (Weiß), b7, g7 (Schwarz)
+	// Fianchetto-Positionen: b2, g2 (WeiÃŸ), b7, g7 (Schwarz)
 	const uint64_t WHITE_FIANCHETTO = (1ULL << 9) | (1ULL << 14);  // b2, g2
 	const uint64_t BLACK_FIANCHETTO = (1ULL << 49) | (1ULL << 54); // b7, g7
 
@@ -543,7 +543,7 @@ void eval_fianchetto_bishop(EvaluationResult& score, const EvalContext& ctx, Tra
 		while (bishops_fianchetto) {
 			int sq = get_lsb(bishops_fianchetto);
 
-			// Prüfe ob Bauernstruktur intakt ist (Bauer auf b3/g3 oder b6/g6)
+			// PrÃ¼fe ob Bauernstruktur intakt ist (Bauer auf b3/g3 oder b6/g6)
 			int pawn_sq = (color == 0) ? sq + 8 : sq - 8;
 			bool pawn_structure_intact = (ctx.get_pieces(color, PieceType::PAWN) & (1ULL << pawn_sq)) != 0;
 
@@ -551,7 +551,7 @@ void eval_fianchetto_bishop(EvaluationResult& score, const EvalContext& ctx, Tra
 				intact_count += (color == 0) ? 1 : -1;
 			}
 			else {
-				// Strafe wenn Fianchetto-Bauer fehlt (schwacher König)
+				// Strafe wenn Fianchetto-Bauer fehlt (schwacher KÃ¶nig)
 				broken_count += (color == 0) ? 1 : -1;
 			}
 

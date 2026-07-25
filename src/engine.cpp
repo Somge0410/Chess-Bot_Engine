@@ -1,4 +1,4 @@
-#include "engine.h"
+﻿#include "engine.h"
 #include "evaluation.h"
 #include <chrono>
 #include <thread>
@@ -14,7 +14,6 @@
 #include <atomic>
 #include <mutex>
 #include <algorithm>
-#include "adjustable_parameters.h"
 #include "uci_helpers.h"
 #include "SPSA_parameters.h"
 void ThreadLocalData::flush_counters(Engine* engine,bool force) {
@@ -28,10 +27,11 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
     }
 }
 static thread_local ThreadLocalData tls_data;
-constexpr int PIECE_VALUES_QU[7] = {100,320,320,500,900,10000,0};
+constexpr int PIECE_VALUES_MG[7] = {100,320,320,500,900,10000,0};
 
 Engine::Engine(size_t tt_size_mb){
     init_tt(tt_size_mb);
+    tls_data.clear_heuristics();
     //int thread_count = std::thread::hardware_concurrency();
 	int thread_count = 1;
     start_thread_pool(thread_count);
@@ -649,8 +649,8 @@ void Engine::score_quiet_moves(const MoveList& moves, int* scores,const Board& b
             scores[i] += see;
         }
         
-        int victim = PIECE_VALUES_QU[to_int(m.piece_captured)]/100;
-        int attacker = PIECE_VALUES_QU[to_int(m.piece_moved)]/100;
+        int victim = PIECE_VALUES_MG[to_int(m.piece_captured)]/100;
+        int attacker = PIECE_VALUES_MG[to_int(m.piece_moved)]/100;
         scores[i]+= victim - attacker;
     }
 }
