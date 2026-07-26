@@ -7,12 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. Hardware Optimization Toggle
 option(USE_NATIVE_ARCH "Optimize for current CPU" ON)
 
-# 2. Platform-dependent default TT size (in MB)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64|arm64")
-    set(DEFAULT_TT_MB 128)
-else()
-    set(DEFAULT_TT_MB 512)
-endif()
+# 2. Conservative default TT size (in MB).
+# GUIs can still select a larger Hash value for long searches.
+set(DEFAULT_TT_MB 128)
 set(TT_SIZE_MB ${DEFAULT_TT_MB} CACHE STRING "Transposition table size in MB")
 
 # 3. Define the Executable

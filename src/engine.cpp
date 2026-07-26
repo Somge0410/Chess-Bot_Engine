@@ -282,14 +282,6 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
             return 0;
         }
     }
-    uint64_t hash = board.get_hash();
-
-    int tt_score;
-    Move tt_move;
-    bool depth_0 = 0;
-    if (probe_tt(hash, 0, alpha, beta, tt_score, tt_move, depth_0, TTMode::Quiescence)) {
-        return tt_score;
-    }
     bool in_check = board.in_check();
     constexpr int max_qply_index = ThreadLocalData::QSEARCH_PLY_CAPACITY - 1;
     const int qply = std::min(ply, max_qply_index);
@@ -410,14 +402,15 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
 }
 bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move,bool depth_0,TTMode mode) {
     TTCluster& cluster = tt[hash & (tt.size() - 1)];
+    const uint16_t key16 = static_cast<uint16_t>(hash >> 48);
     bool hits = false;
     for (int i = 0; i < 4; i++) {
         TTEntry& slot = cluster.entries[i];
         uint64_t w = tt_load(slot);
         TTEntry entry;
         entry.entry = w;
-		if (entry.empty()) continue;
-		if (entry.key() != (static_cast<uint16_t>(hash >> 48))) continue;
+		if (entry.empty()) return false;
+		if (entry.key() != key16) continue;
 
         out_move = entry.move();
         out_score = entry.score();

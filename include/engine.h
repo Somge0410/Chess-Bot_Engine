@@ -63,9 +63,11 @@ struct TTEntry {
 
 };
 
-struct TTCluster {
+struct alignas(32) TTCluster {
 	TTEntry entries[4];
 };
+static_assert(sizeof(TTCluster) == 32);
+static_assert(alignof(TTCluster) == 32);
 inline uint64_t tt_load(TTEntry& entry) {
     return std::atomic_ref<uint64_t>(entry.entry).load(std::memory_order_relaxed);
 }
