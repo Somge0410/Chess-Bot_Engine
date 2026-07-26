@@ -73,12 +73,6 @@ void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	PawnEvalEntry& entry = get_pawn_entry(idx);
 	if (!isTracing && entry.valid && entry.key == pawn_key) {
 		score += entry.score;
-		ctx.backward[0] = entry.backward[0];
-		ctx.backward[1] = entry.backward[1];
-		ctx.isolated[0] = entry.isolated[0];
-		ctx.isolated[1] = entry.isolated[1];
-		ctx.passed[0] = entry.passed[0];
-		ctx.passed[1] = entry.passed[1];
 		ctx.files_with_no_color_pawns[0] = entry.file_info[0];
 		ctx.files_with_no_color_pawns[1] = entry.file_info[1];
 		return;
@@ -93,12 +87,6 @@ void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	if (!isTracing) {
 		entry.key = pawn_key;
 		entry.score = entry_score;
-		entry.isolated[0] = ctx.isolated[0];
-		entry.isolated[1] = ctx.isolated[1];
-		entry.passed[0] = ctx.passed[0];
-		entry.passed[1] = ctx.passed[1];
-		entry.backward[0] = ctx.backward[0];
-		entry.backward[1] = ctx.backward[1];
 		entry.file_info[0] = ctx.files_with_no_color_pawns[0];
 		entry.file_info[1] = ctx.files_with_no_color_pawns[1];
 		entry.valid = true;
@@ -181,7 +169,7 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::BLOCKED_ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
 				else
 					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
-				uint64_t defends = ctx.board.get_attacks_for_color(static_cast<Color>(color)) & bit64(pawn_square);
+				uint64_t defends = ctx.get_attacks(static_cast<Color>(color)) & bit64(pawn_square);
 				if (defends != 0) {
 					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? 1 : -1, trace);
 				}
@@ -354,7 +342,7 @@ void eval_mobility(EvaluationResult& score, const EvalContext& ctx, Trace* trace
 		int mob_count = 0;
 		for (int color = 0; color < 2; color++) {
 			int ecolor = color == 0 ? 1 : 0;
-			uint64_t enemy_attacks = ctx.board.get_attacks_for_color(static_cast<Color>(ecolor));
+			uint64_t enemy_attacks = ctx.get_attacks(static_cast<Color>(ecolor));
 			uint64_t pieces = ctx.get_pieces(color, pt);
 			while (pieces) {
 				int sq = get_lsb(pieces);
@@ -508,7 +496,7 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 					while (unoccupied_escapes) {
 						int escape_sq = get_lsb(unoccupied_escapes);
 						PieceType pt = ctx.get_piece_on_square(escape_sq);
-						if (see_capture(ctx.board, sq, escape_sq, static_cast<Color>(color), PieceType::KNIGHT, pt) >= 0) {
+						if (see_capture_ge(ctx.board, sq, escape_sq, static_cast<Color>(color), PieceType::KNIGHT, pt, 0)) {
 							is_trapped = false;
 							break;
 						}
