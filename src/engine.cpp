@@ -63,7 +63,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     Move tt_move;
 
     bool is_from_depth_0 = false;
-    if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move,is_from_depth_0)) {
+    if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move, ply, is_from_depth_0)) {
         bool is_draw = move_could_result_in_repetition(board, tt_move);
         //is_draw = false;
         if (!is_draw) {
@@ -74,7 +74,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     
     if (depth==0)
     {
-        int q_score=quiescence_search(board,alpha,beta,0,tls);
+        int q_score=quiescence_search(board, alpha, beta, ply, 0, tls);
         
         return {q_score,Move()};
     }
@@ -224,7 +224,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         
     }
 
-    bool is_result_tempered=store_tt(hash, depth, original_alpha, beta, best_score, best_move,is_best_move_tempered,is_any_tempered);
+    bool is_result_tempered = store_tt(hash, depth, original_alpha, beta, best_score,
+        best_move, ply, is_best_move_tempered, is_any_tempered);
     return {best_score,best_move,is_result_tempered};
 }
 int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Board& board, ThreadLocalData* tls, const Move& previous_move) {
@@ -273,7 +274,7 @@ void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& 
 
     for (size_t i = 0; i < moves.size(); ++i) moves[i]=scored[i].second;
 }
-int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, ThreadLocalData* tls) {
+int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply, ThreadLocalData* tls) {
     if (tls) {
         tls->qnodes++;
         tls->flush_counters(this);
@@ -282,23 +283,26 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
             return 0;
         }
     }
+    if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
+        return 0;
+    }
     bool in_check = board.in_check();
     constexpr int max_qply_index = ThreadLocalData::QSEARCH_PLY_CAPACITY - 1;
-    const int qply = std::min(ply, max_qply_index);
-    MoveList& moves = tls->qmove_lists[qply];
+    const int qmove_list_index = std::min(qply, max_qply_index);
+    MoveList& moves = tls->qmove_lists[qmove_list_index];
     moves.clear();
 
-    if (ply >= MAX_QUIET_PLY || ply >= max_qply_index) {
+    if (qply >= MAX_QUIET_PLY || qply >= max_qply_index) {
         if (in_check) {
             MoveGenerator::generate_moves(board, moves);
-            if (moves.empty()) return -MATE_SCORE + ply;
+            if (moves.empty()) return -MATE_SCORE + search_ply;
         }
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     }
 
     if (in_check) {
         MoveGenerator::generate_moves(board, moves);
-        if (moves.empty()) return -MATE_SCORE + ply;
+        if (moves.empty()) return -MATE_SCORE + search_ply;
     }
     else {
         int stand_pat = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
@@ -327,7 +331,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
         }
 
         board.make_move(move);
-        int score = -quiescence_search(board, -beta, -alpha, ply + 1, tls);
+        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls);
         board.undo_move(move);
 
         if (score > best_score) best_score = score;
@@ -400,7 +404,8 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
     }
     return tc;
 }
-bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move,bool depth_0,TTMode mode) {
+bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score,
+    Move& out_move, int ply, bool depth_0, TTMode mode) {
     TTCluster& cluster = tt[hash & (tt.size() - 1)];
     const uint16_t key16 = static_cast<uint16_t>(hash >> 48);
     bool hits = false;
@@ -413,7 +418,8 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 		if (entry.key() != key16) continue;
 
         out_move = entry.move();
-        out_score = entry.score();
+        const int score = score_from_tt(entry.score(), ply);
+        out_score = score;
         if (entry.depth() < depth) {
             return false;
         }
@@ -421,7 +427,6 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         if (entry.flag() == TEMPERED) {
             return false;
         }
-        int score = entry.score();
         int a = alpha, b = beta;
         if (entry.flag() == EXACT) {
             if (out_move.from_square == NO_SQUARE) return false;
@@ -443,7 +448,8 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
     return false;
 
 }
-bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score, Move& best_move,bool is_best_tempered, bool is_any_tempered, TTMode mode) {
+bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score,
+    Move& best_move, int ply, bool is_best_tempered, bool is_any_tempered, TTMode mode) {
     bool score_tempered=false;
     TTFlag flag_to_store;
     // Do some position from repeat logic here
@@ -479,7 +485,8 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         }
     }
 
-    TTEntry new_entry = TTEntry(best_score, depth, flag_to_store, generation, best_move, static_cast<uint16_t>(hash >> 48));
+    TTEntry new_entry = TTEntry(score_to_tt(best_score, ply), depth, flag_to_store,
+        generation, best_move, static_cast<uint16_t>(hash >> 48));
 	TTCluster& cluster = tt[hash & (tt.size() - 1)];
 
     uint16_t key16 = static_cast<uint16_t>(hash >> 48);
@@ -1051,6 +1058,7 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
 Move Engine::search(const Board& position, const SearchLimits& limits) {
     //decide time control
 	auto tc = decide_time_control(position, limits);
+    generation = static_cast<uint8_t>((generation + 1) & 0x3F);
     int use_threads = thread_count;
     if (tc.time_ms < 20) use_threads = 1;
 
@@ -1168,7 +1176,7 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         bool depth_0 = false;
 
         // depth=0 akzeptiert jeden TT-Eintrag mit depth>=0
-        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, depth_0))
+        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, i, depth_0))
             break;
         if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)
             break;
