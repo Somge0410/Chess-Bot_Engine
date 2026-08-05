@@ -773,14 +773,21 @@ void Engine::set_threads(int n) {
     start_thread_pool(n);
 }
 void Engine::start_thread_pool(int n) {
-	thread_count = n;
-    terminate_pool = false;
+	uint64_t initial_job_id;
+    {
+        std::lock_guard<std::mutex> lk(pool_mtx);
+        thread_count = n;
+        terminate_pool = false;
+        active_workers = 0;
+        job_thread_count = 1;
+        initial_job_id = job_id;
+    }
 	tls_data.clear_counters();
     workers.clear();
 	workers.reserve((size_t)thread_count - 1);
 
     for (int t = 1; t < thread_count; ++t) {
-		workers.emplace_back([this, t]() {worker_loop(t); });
+		workers.emplace_back([this, t, initial_job_id]() {worker_loop(t, initial_job_id); });
     }
 
 }
@@ -796,24 +803,34 @@ void Engine::stop_thread_pool() {
 			th.join();
     }
     workers.clear();
-    terminate_pool = false;
-    thread_count = 1;
+    {
+        std::lock_guard<std::mutex> lk(pool_mtx);
+        terminate_pool = false;
+        thread_count = 1;
+        active_workers = 0;
+        job_thread_count = 1;
+    }
     tls_data.clear_counters();
 }
 
-void Engine::worker_loop(int thread_id) {
-    uint64_t seen_job = 0;
+void Engine::worker_loop(int thread_id, uint64_t initial_job_id) {
+    uint64_t seen_job = initial_job_id;
     Move local_best;
     int local_score = 0;
 
     while (true) {
         Board pos;
         SearchLimits limits;
+        uint64_t assigned_job = 0;
+        bool participates = false;
         {
 			std::unique_lock<std::mutex> lk(pool_mtx);
 			cv_start.wait(lk, [&] {return terminate_pool || job_id != seen_job; });
 			if (terminate_pool) return;
 			seen_job = job_id;
+            assigned_job = job_id;
+            participates = thread_id < job_thread_count;
+            if (!participates) continue;
             pos = job_position;
             limits = job_limits;
         }
@@ -828,8 +845,11 @@ void Engine::worker_loop(int thread_id) {
 		local_score = tmp_score;
         {
             std::lock_guard<std::mutex> lk(pool_mtx);
-            active_workers--;
-            if (active_workers == 0) cv_done.notify_one();
+            // Only workers assigned to the current job may complete its counter.
+            if (assigned_job == job_id && active_workers > 0) {
+                active_workers--;
+                if (active_workers == 0) cv_done.notify_one();
+            }
         }
     }
 }
@@ -1200,12 +1220,13 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 
 		job_position = position;
         job_limits = limits;
+		job_thread_count = use_threads;
 		active_workers = std::max(0, use_threads - 1);
         job_id++;
     }
-    if (use_threads > 1) {
-        cv_start.notify_all();
-    }
+    // Wake every worker so non-participants also consume this job id and remain
+    // synchronized for the next search.
+    cv_start.notify_all();
 
     //master search in this thread (thread_id=0)
 	iterative_deepening_new(0, true, best_move_so_far, best_score_so_far, position, tc, &tls_data);

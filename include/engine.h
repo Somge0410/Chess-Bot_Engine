@@ -194,7 +194,7 @@ class Engine {
         void start_thread_pool(int n);
 		void stop_thread_pool();
 
-        void worker_loop(int thread_id);
+        void worker_loop(int thread_id, uint64_t initial_job_id);
         std::vector<std::thread> workers;
 		int thread_count = 1;
         std::mutex pool_mtx;
@@ -205,6 +205,7 @@ class Engine {
 
         uint64_t job_id = 0;
         int active_workers = 0;
+        int job_thread_count = 1;
 
         Board job_position;
 		SearchLimits job_limits;
