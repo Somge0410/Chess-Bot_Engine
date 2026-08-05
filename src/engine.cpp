@@ -440,6 +440,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         entry.entry = w;
 		if (entry.empty()) return false;
 		if (entry.key() != key16) continue;
+		tt_refresh_generation(slot, w, generation);
 
         out_move = entry.move();
         const int score = score_from_tt(entry.score(), ply);
@@ -522,6 +523,10 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
             if (old.depth() <= depth) {
                 tt_store(cluster.entries[i],new_entry.entry);
             }
+            else {
+                // Preserve the deeper result but mark it as used by this search.
+                tt_refresh_generation(cluster.entries[i], oldw, generation);
+            }
 
             
             return score_tempered;
@@ -545,7 +550,7 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
     int pos_depth = depth;
     for (size_t i = 0; i < 4; ++i) {
 		TTEntry e; e.entry = tt_load(cluster.entries[i]);
-		int8_t curr_gen_diff = dist_mod64_fast(e.generation(),generation);
+		uint8_t curr_gen_diff = generation_age(e.generation(),generation);
         if (curr_gen_diff>max_generation_diff) {
             pos_index = i;
             max_generation_diff = curr_gen_diff;

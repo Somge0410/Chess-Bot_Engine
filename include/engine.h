@@ -22,6 +22,7 @@ enum TTFlag {
 };
 struct TTEntry {
     alignas(8) uint64_t entry;
+    static constexpr uint64_t GENERATION_MASK = 0x3Full << 26;
 
     TTEntry() : entry(uint64_t(0xFF << 16)) {};
     bool empty() const {
@@ -48,8 +49,12 @@ struct TTEntry {
     TTFlag flag() const {
         return static_cast<TTFlag>((entry >> 24) & 0x3ull);
     }
-    int8_t generation() const {
+    uint8_t generation() const {
         return static_cast<uint8_t>((entry>>26)& 0x3Full);
+    }
+    uint64_t with_generation(uint8_t new_generation) const {
+        return (entry & ~GENERATION_MASK)
+            | ((uint64_t(new_generation) & 0x3Full) << 26);
     }
     uint16_t move_packed() const {
         return static_cast<uint16_t>( (entry>>32) & 0xFFFFull);
@@ -90,6 +95,14 @@ inline uint64_t tt_load(TTEntry& entry) {
 }
 inline void tt_store(TTEntry& entry, uint64_t value) {
     std::atomic_ref<uint64_t>(entry.entry).store(value, std::memory_order_relaxed);
+}
+inline void tt_refresh_generation(TTEntry& entry, uint64_t observed, uint8_t generation) {
+    TTEntry current(observed);
+    const uint64_t refreshed = current.with_generation(generation);
+    if (refreshed == observed) return;
+
+    std::atomic_ref<uint64_t>(entry.entry).compare_exchange_strong(
+        observed, refreshed, std::memory_order_relaxed, std::memory_order_relaxed);
 }
 struct PerftRes {
     double duration;
@@ -253,7 +266,10 @@ class Engine {
         std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> quiet_lmr{};
         std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> tactical_lmr{};
 };
-inline uint8_t dist_mod64_fast(uint8_t a, uint8_t b) {
-    uint8_t d = (a - b) & 63;          // in 0..63 (mod 64)
-    return (d <= 32) ? d : (64 - d);   // shortest way around
+constexpr uint8_t generation_age(uint8_t entry_generation, uint8_t current_generation) {
+    return static_cast<uint8_t>((current_generation - entry_generation) & 63);
 }
+static_assert(generation_age(63, 0) == 1);
+static_assert(generation_age(0, 1) == 1);
+static_assert(generation_age(32, 1) == 33);
+static_assert(generation_age(0, 63) == 63);
