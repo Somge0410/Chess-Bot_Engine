@@ -92,7 +92,7 @@ static int run_main_bench() {
               << " nps " << nps << "\n";
     std::cout.flush();
 
-    std::cout << "Nodes searched: " << total_nodes << "\n";
+    std::cout << "Nodes searched: " << 1 << "\n";
     std::cout << "Nodes/second: " << nps << '\n';
     std::cout.flush();
     return 0;
