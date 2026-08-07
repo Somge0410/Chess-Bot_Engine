@@ -658,30 +658,22 @@ bool Board::has_enough_material_for_nmp() const {
     return (pieces != 0);
 }
 bool Board::in_check() const {
-    int color = turn == 0 ? to_int(Color::WHITE) : to_int(Color::BLACK);
-    int attacker_color = turn == 0 ? to_int(Color::BLACK) : to_int(Color::WHITE);
-    int king_sq = color == to_int(Color::WHITE) ? white_king_square : black_king_square;
-    // Check for pawn attacks
+    return get_checkers() != 0;
+}
+uint64_t Board::get_checkers() const {
+    const Color own_color = static_cast<Color>(turn);
+    const Color attacker_color = flip_color(own_color);
+    const int attacker = to_int(attacker_color);
+    const int king_sq = get_king_square(own_color);
 
-    uint64_t pawns = pieces[attacker_color][to_int(PieceType::PAWN)];
-    uint64_t attack_squares = PAWN_ATTACKS[color][king_sq];
-    if (pawns & attack_squares) return true;
-    // Check for knight attacks
-    uint64_t knights = pieces[attacker_color][to_int(PieceType::KNIGHT)];
-    if (knights & KNIGHT_ATTACKS[king_sq]) return true;
-    // Check for Bishop attacks
-    uint64_t bishops = pieces[attacker_color][to_int(PieceType::BISHOP)];
-    uint64_t bishop_attacks = get_bishop_attacks(king_sq, all_pieces);
-    if (bishops & bishop_attacks) return true;
-    // Check for Rook attacks
-    uint64_t rooks = pieces[attacker_color][to_int(PieceType::ROOK)];
-    uint64_t rook_attacks = get_rook_attacks(king_sq, all_pieces);
-    if (rooks & rook_attacks) return true;
-    // Check for Queen attacks
-    uint64_t queens = pieces[attacker_color][to_int(PieceType::QUEEN)];
-    uint64_t queen_attacks = get_queen_attacks(king_sq, all_pieces);
-    if (queens & queen_attacks) return true;
-    return false;
+    uint64_t checkers = pieces[attacker][to_int(PieceType::PAWN)] & PAWN_ATTACKS[to_int(own_color)][king_sq];
+    checkers |= pieces[attacker][to_int(PieceType::KNIGHT)] & KNIGHT_ATTACKS[king_sq];
+    checkers |= pieces[attacker][to_int(PieceType::KING)] & KING_ATTACKS[king_sq];
+    checkers |= (pieces[attacker][to_int(PieceType::BISHOP)] |
+                 pieces[attacker][to_int(PieceType::QUEEN)]) & get_bishop_attacks(king_sq, all_pieces);
+    checkers |= (pieces[attacker][to_int(PieceType::ROOK)] |
+                 pieces[attacker][to_int(PieceType::QUEEN)]) & get_rook_attacks(king_sq, all_pieces);
+    return checkers;
 }
 int Board::make_null_move(){
     int original_ep_square=en_passant_square;

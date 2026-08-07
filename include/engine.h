@@ -22,6 +22,7 @@ enum TTFlag {
 };
 struct TTEntry {
     alignas(8) uint64_t entry;
+    static constexpr uint64_t GENERATION_MASK = 0x3Full << 26;
 
     TTEntry() : entry(uint64_t(0xFF << 16)) {};
     bool empty() const {
@@ -48,8 +49,12 @@ struct TTEntry {
     TTFlag flag() const {
         return static_cast<TTFlag>((entry >> 24) & 0x3ull);
     }
-    int8_t generation() const {
+    uint8_t generation() const {
         return static_cast<uint8_t>((entry>>26)& 0x3Full);
+    }
+    uint64_t with_generation(uint8_t new_generation) const {
+        return (entry & ~GENERATION_MASK)
+            | ((uint64_t(new_generation) & 0x3Full) << 26);
     }
     uint16_t move_packed() const {
         return static_cast<uint16_t>( (entry>>32) & 0xFFFFull);
@@ -90,6 +95,14 @@ inline uint64_t tt_load(TTEntry& entry) {
 }
 inline void tt_store(TTEntry& entry, uint64_t value) {
     std::atomic_ref<uint64_t>(entry.entry).store(value, std::memory_order_relaxed);
+}
+inline void tt_refresh_generation(TTEntry& entry, uint64_t observed, uint8_t generation) {
+    TTEntry current(observed);
+    const uint64_t refreshed = current.with_generation(generation);
+    if (refreshed == observed) return;
+
+    std::atomic_ref<uint64_t>(entry.entry).compare_exchange_strong(
+        observed, refreshed, std::memory_order_relaxed, std::memory_order_relaxed);
 }
 struct PerftRes {
     double duration;
@@ -181,7 +194,7 @@ class Engine {
         void start_thread_pool(int n);
 		void stop_thread_pool();
 
-        void worker_loop(int thread_id);
+        void worker_loop(int thread_id, uint64_t initial_job_id);
         std::vector<std::thread> workers;
 		int thread_count = 1;
         std::mutex pool_mtx;
@@ -192,12 +205,19 @@ class Engine {
 
         uint64_t job_id = 0;
         int active_workers = 0;
+        int job_thread_count = 1;
 
         Board job_position;
 		SearchLimits job_limits;
 
-        SearchResult negamax(Board & board, int depth, int alpha, int beta, int ply,ThreadLocalData* tls, const Move& previous_move=Move());
-        int quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply, ThreadLocalData* tls);
+        static constexpr uint64_t CHECKERS_UNKNOWN = std::numeric_limits<uint64_t>::max();
+        static constexpr int LMR_DEPTH_COUNT = 64;
+        static constexpr int LMR_MOVE_COUNT = 218;
+
+        SearchResult negamax(Board & board, int depth, int alpha, int beta, int ply,ThreadLocalData* tls,
+            const Move& previous_move=Move(), uint64_t checkers=CHECKERS_UNKNOWN, bool null_move_allowed=true);
+        int quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply,
+            ThreadLocalData* tls, uint64_t checkers=CHECKERS_UNKNOWN);
         Move best_move_this_iteration;
         std::vector<TTCluster> tt;/*
         Move killer_moves[128][2];
@@ -209,6 +229,7 @@ class Engine {
         static int64_t now_ns();
         void set_time_budget_ms(int total_time_ms);
         bool is_time_up() const;
+        void initialize_lmr_tables();
         void sort_moves(MoveList& moves, const Board& board, int ply,const Move& tt_move, bool tt_depth_0 = false,ThreadLocalData* tls={}, const Move& previous_move=Move());
         int score_move(const Move& move, int ply,const Move& tt_move, bool depth_0,const Board& board,ThreadLocalData* tls, const Move& previous_move);
         TimeControlDecision decide_time_control(const Board& position, const SearchLimits& limits);
@@ -216,15 +237,18 @@ class Engine {
         bool store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score, Move& best_move, int ply, bool is_best_tempered, bool is_any_tempered = false, TTMode mode = TTMode::Negamax);
 		bool should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move);
 		int late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls,const Move& previous_move);
-		bool try_null_move_pruning(Board& board,bool is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls);
+		bool try_null_move_pruning(Board& board,bool is_in_check, int depth, int alpha, int beta, int ply,
+            int static_eval, int& out_score,ThreadLocalData* tls);
 		SearchResult terminal_eval(const Board& board, bool king_is_in_check,int ply);
 		void update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls, const Move& previous_move=Move(),const MoveList& searched_quiets=MoveList());
         void init_tt(size_t tt_size_mb = MAX_MEMORY_TT_MB);
         bool move_could_result_in_repetition(Board& board, Move& move, int count=3);
         void recover_move_fully(Move& move,const Board& board);
         void score_moves(const MoveList& moves, int* scores, 
-		int ply, const Move& tt_move, bool depth_0,const Board& board, ThreadLocalData* tls,const Move& previous_move);
-        void score_quiet_moves(const MoveList& moves, int* scores,const Board& board,bool evade_check);
+		int ply, const Move& tt_move, bool depth_0,const Board& board, ThreadLocalData* tls,
+            const Move& previous_move, bool lazy_see=false);
+        void pick_next_staged(MoveList& moves, int* scores, int start, const Board& board);
+        void score_qsearch_moves(const MoveList& moves, int* scores);
 		int relevant_pawn_push(const Board& board, const Move& move);
 		void iterative_deepening_new(int thread_id, bool is_master,Move& out_best_move ,int& io_best_score,const Board& board, TimeControlDecision& tc,ThreadLocalData* tls);
 		void perturb_root_order(MoveList& moves, int thread_id, int current_depth, uint64_t hash);
@@ -240,8 +264,13 @@ class Engine {
 			ThreadLocalData* tls);
 		std::string create_pv_string(const Board& board,const Move& best_move, int depth);
 		void add_history(ThreadLocalData* tls, const Move& move, int bonus);
+        std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> quiet_lmr{};
+        std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> tactical_lmr{};
 };
-inline uint8_t dist_mod64_fast(uint8_t a, uint8_t b) {
-    uint8_t d = (a - b) & 63;          // in 0..63 (mod 64)
-    return (d <= 32) ? d : (64 - d);   // shortest way around
+constexpr uint8_t generation_age(uint8_t entry_generation, uint8_t current_generation) {
+    return static_cast<uint8_t>((current_generation - entry_generation) & 63);
 }
+static_assert(generation_age(63, 0) == 1);
+static_assert(generation_age(0, 1) == 1);
+static_assert(generation_age(32, 1) == 33);
+static_assert(generation_age(0, 63) == 63);

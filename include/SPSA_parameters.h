@@ -13,7 +13,10 @@ inline int LMR_REDUCTION_AMOUNT = 2;
 
 // --- NEU: Null Move Pruning (NMP) ---
 inline int NMP_MIN_DEPTH = 5;
-inline int NMP_REDUCTION = 1;
+inline int NMP_REDUCTION = 2;
+inline int NMP_DEPTH_DIVISOR = 6;
+inline int NMP_EVAL_DIVISOR = 200;
+inline int NMP_MAX_EVAL_REDUCTION = 2;
 
 // --- NEU: Move Ordering ---
 inline int TT_STAGE = 7;
