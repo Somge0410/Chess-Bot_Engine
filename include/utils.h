@@ -192,6 +192,22 @@ inline uint64_t get_pawn_attacks(uint64_t pawns, Color color) {
 
     }
 }
+inline uint64_t get_pawn_left_attacks(uint64_t pawns, Color color) {
+    if (Color::WHITE == color) {
+        return (pawns & NOT_FILE_A) << 7;
+    }
+    else {
+        return (pawns & NOT_FILE_H) >> 7;
+    }
+}
+inline uint64_t get_pawn_right_attacks(uint64_t pawns, Color color) {
+    if (Color::WHITE == color) {
+        return (pawns & NOT_FILE_H) << 9;
+    }
+    else {
+        return (pawns & NOT_FILE_A) >> 9;
+    }
+}
 inline uint64_t get_pawn_attackers(int to_square, Color attacker_color, uint64_t attacker_pawns) {
     uint64_t bb = get_pawn_attacks(bit64(to_square), flip_color(attacker_color));
     return bb & attacker_pawns;

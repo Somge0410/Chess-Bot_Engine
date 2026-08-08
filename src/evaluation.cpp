@@ -13,7 +13,12 @@ void build_attack_info(EvalContext& ctx) {
 		const uint64_t pawns = ctx.get_pieces(side, PieceType::PAWN);
 		SideAttackInfo& side_info = info.side[color];
 
-		side_info.by_type[to_int(PieceType::PAWN)] = get_pawn_attacks(pawns, side);
+		uint64_t pawn_left_attacks = get_pawn_left_attacks(pawns, side);
+		uint64_t pawn_right_attacks = get_pawn_right_attacks(pawns, side);
+		side_info.by_type[to_int(PieceType::PAWN)] = pawn_left_attacks | pawn_right_attacks;
+		side_info.all |= side_info.by_type[to_int(PieceType::PAWN)];
+
+		side_info.attacked_twice |= pawn_left_attacks & pawn_right_attacks;
 
 
 		const uint64_t pawn_attacks = side_info.by_type[to_int(PieceType::PAWN)];
@@ -26,7 +31,7 @@ void build_attack_info(EvalContext& ctx) {
 		side_info.small_king_zone_hits[to_int(PieceType::PAWN)] += popcount(pawn_attacks & small_king_zone);
 		side_info.big_king_zone_hits[to_int(PieceType::PAWN)] += popcount(pawn_attacks & big_king_zone);
 		const uint64_t small_attacking_pawns = pawns & get_pawn_attacks(small_king_zone, flip_color(side));
-		const uint64_t big_attacking_pawns = pawns & get_pawn_attackers(big_king_zone, flip_color(side));
+		const uint64_t big_attacking_pawns = pawns & get_pawn_attacks(big_king_zone, flip_color(side));
 
 		side_info.small_king_zone_attackers[to_int(PieceType::PAWN)] += popcount(small_attacking_pawns);
 		side_info.big_king_zone_attackers[to_int(PieceType::PAWN)] += popcount(big_attacking_pawns);
@@ -46,9 +51,6 @@ void build_attack_info(EvalContext& ctx) {
 		const uint64_t small_king_zone = SMALL_KING_ZONE[enemy_king];
 		const uint64_t big_king_zone = KING_ZONE[enemy_king] &~small_king_zone;
 
-
-		side_info.all |= side_info.by_type[to_int(PieceType::PAWN)];
-
 		for (PieceType pt : {
 			PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN }) {
 			uint64_t pieces = ctx.get_pieces(to_color(color), pt);
@@ -58,9 +60,16 @@ void build_attack_info(EvalContext& ctx) {
 				const uint64_t attacks = get_piece_attacks(pt, square, occupied);
 
 				side_info.by_type[to_int(pt)] |= attacks;
+				side_info.attacked_twice |= side_info.all & attacks;
 				side_info.all |= attacks;
 				const int mobility = popcount(attacks & mobility_area);
 				side_info.mobility[to_int(pt) - 1] += mobility;
+				if (pt == PieceType::KNIGHT && mobility <= 2) {
+					side_info.restricted_knights[color]++;
+				}
+				if(pt== PieceType::BISHOP && mobility <= 3) {
+					side_info.restricted_bishops[color]++;
+				}
 
 				const uint64_t zone_attacks = attacks & big_king_zone;
 				if (zone_attacks) {
@@ -516,16 +525,23 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 					2 * ctx.attack_info.side[ecolor].small_king_zone_hits[p]);
 				big_attackers += ctx.attack_info.side[ecolor].big_king_zone_attackers[p];
 				small_attackers += ctx.attack_info.side[ecolor].small_king_zone_attackers[p];
-				if (big_attackers >= 2) {
-					danger += (big_attackers - 1);
-				}
-				if (small_attackers >= 2) {
-					danger += 2 * (small_attackers - 1);
-				}
+				
 			}
+			if (big_attackers >= 2) {
+				danger += (big_attackers - 1);
+			}
+			if (small_attackers >= 2) {
+				danger += 2 * (small_attackers - 1);
+			}
+			const uint64_t small_king_zone = SMALL_KING_ZONE[king_squares[color]];
+			const uint64_t big_king_zone = KING_ZONE[king_squares[color]] & ~small_king_zone;
 
+			const uint64_t weak_small_squares = small_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
+			const uint64_t weak_big_squares = big_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
+			danger += 2 * popcount(weak_small_squares) + popcount(weak_big_squares);
+			danger += 2*popcount(small_king_zone & ctx.attack_info.side[ecolor].attacked_twice);
 			danger = std::min(danger, KING_DANGER_END- KING_DANGER_START);
-			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger),color==0? 1:-1 , trace);
+			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger),color==0? -1:1 , trace);
 
 
 
@@ -571,9 +587,10 @@ void eval_rook_activity(EvaluationResult& score, const EvalContext& ctx, Trace* 
 
 	int white_rook_square = get_lsb(ctx.get_pieces(0, PieceType::ROOK));
 	int black_rook_square = get_lsb(ctx.get_pieces(1, PieceType::ROOK));
-	uint64_t white_connected =ctx.get_color_pt_attack(Color::WHITE, PieceType::ROOK) & ctx.get_pieces(0, PieceType::ROOK)/2;
-	uint64_t black_connected = ctx.get_color_pt_attack(Color::BLACK, PieceType::ROOK) & ctx.get_pieces(1, PieceType::ROOK)/2;
+	uint64_t white_connected =ctx.get_color_pt_attack(Color::WHITE, PieceType::ROOK) & ctx.get_pieces(0, PieceType::ROOK);
+	uint64_t black_connected = ctx.get_color_pt_attack(Color::BLACK, PieceType::ROOK) & ctx.get_pieces(1, PieceType::ROOK);
 	connected_rooks += popcount(white_connected) - popcount(black_connected);
+	connected_rooks = connected_rooks / 2;
 	addTerm<isTracing>(score, EvalParam::CONNECTED_ROOKS, connected_rooks, trace);
 	addTerm<isTracing>(score, EvalParam::ROOK_ON_SEMI_OPEN_FILE, semi_open_count, trace);
 	addTerm<isTracing>(score, EvalParam::ROOK_ON_OPEN_FILE, open_count, trace);
@@ -711,6 +728,10 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 	}
 	addTerm<isTracing>(score, EvalParam::TRAPPED_BISHOP, trapped_bishop_count, trace);
 	addTerm<isTracing>(score, EvalParam::TRAPPED_KNIGHT, trapped_knight_count, trace);
+	int restricted_bishop_count = ctx.attack_info.side[to_int(Color::WHITE)].restricted_bishops - ctx.attack_info.side[to_int(Color::BLACK)].restricted_bishops;
+	int restricted_knight_count = ctx.attack_info.side[to_int(Color::WHITE)].restricted_knights - ctx.attack_info.side[to_int(Color::BLACK)].restricted_knights;
+	addTerm<isTracing>(score, EvalParam::RESTRICTED_BISHOP, restricted_bishop_count, trace);
+	addTerm<isTracing>(score, EvalParam::RESTRICTED_KNIGHT, restricted_knight_count, trace);
 }
 
 template<bool isTracing>
@@ -790,4 +811,54 @@ void eval_outpost(EvaluationResult& score, const EvalContext& ctx, Trace* trace)
 	addTerm<isTracing>(score, EvalParam::BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP, bishop_outpost_count_with_op_bishop, trace);
 	addTerm<isTracing>(score, EvalParam::KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP, knight_outpost_count_no_op_bishop, trace);
 	addTerm<isTracing>(score, EvalParam::KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP, knight_outpost_count_with_op_bishop, trace);
+}
+
+template<bool isTracing>
+void eval_threats(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
+	int pawn_threat_minor_count = 0;
+	int pawn_threat_rook_count = 0;
+	int pawn_threat_queen_count = 0;
+	int minor_threat_rook_count = 0;
+	int minor_threat_queen_count = 0;
+	int rook_threat_queen_count = 0;
+	for (int color = 0; color < 2; color++) {
+		int enemy = flip_color(color);
+		const uint64_t pawn_attacks = ctx.get_color_pt_attack(static_cast<Color>(color), PieceType::PAWN);
+		const uint64_t minor_attacks = ctx.get_color_pt_attack(static_cast<Color>(color), PieceType::KNIGHT) | ctx.get_color_pt_attack(static_cast<Color>(color), PieceType::BISHOP);
+		const uint64_t rook_attacks = ctx.get_color_pt_attack(static_cast<Color>(color), PieceType::ROOK);
+
+		const uint64_t enemy_minors = ctx.get_pieces(static_cast<Color>(enemy), PieceType::KNIGHT) | ctx.get_pieces(static_cast<Color>(enemy), PieceType::BISHOP);
+		const uint64_t enemy_rooks = ctx.get_pieces(static_cast<Color>(enemy), PieceType::ROOK);
+		const uint64_t enemy_queens = ctx.get_pieces(static_cast<Color>(enemy), PieceType::QUEEN);
+
+		 pawn_threat_minor_count += color==0? popcount(pawn_attacks & enemy_minors):-popcount(pawn_attacks & enemy_minors);
+		 pawn_threat_rook_count += color==0? popcount(pawn_attacks & enemy_rooks):-popcount(pawn_attacks & enemy_rooks);
+		 pawn_threat_queen_count += color==0? popcount(pawn_attacks & enemy_queens):-popcount(pawn_attacks & enemy_queens);
+		 minor_threat_rook_count += color==0? popcount(minor_attacks & enemy_rooks):-popcount(minor_attacks & enemy_rooks);
+		 minor_threat_queen_count += color==0? popcount(minor_attacks & enemy_queens):-popcount(minor_attacks & enemy_queens);
+		 rook_threat_queen_count += color==0? popcount(rook_attacks & enemy_queens):-popcount(rook_attacks & enemy_queens);
+
+	}
+
+	addTerm<isTracing>(score, EvalParam::PAWN_THREAT_MINOR, pawn_threat_minor_count, trace);
+	addTerm<isTracing>(score, EvalParam::PAWN_THREAT_ROOK, pawn_threat_rook_count, trace);
+	addTerm<isTracing>(score, EvalParam::PAWN_THREAT_QUEEN, pawn_threat_queen_count, trace);
+	addTerm<isTracing>(score, EvalParam::MINOR_THREAT_ROOK, minor_threat_rook_count, trace);
+	addTerm<isTracing>(score, EvalParam::MINOR_THREAT_QUEEN, minor_threat_queen_count, trace);
+	addTerm<isTracing>(score, EvalParam::ROOK_THREAT_QUEEN, rook_threat_queen_count, trace);
+
+
+}
+
+
+template<bool isTracing>
+void eval_hanging_pieces(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
+	uint64_t black_hanging= ctx.get_color_pieces(Color::BLACK) &
+		ctx.attack_info.side[to_int(Color::WHITE)].all & ~attack_info.side[to_int(Color::BLACK)].all;
+	uint64_t white_hanging = ctx.get_color_pieces(Color::WHITE) &
+		ctx.attack_info.side[to_int(Color::BLACK)].all & ~attack_info.side[to_int(Color::WHITE)].all;
+	for(PieceType pt: {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
+		int hanging_count = popcount(black_hanging & ctx.get_pieces(Color::BLACK, pt))- popcount(white_hanging & ctx.get_pieces(Color::WHITE, pt));
+		addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::HANGING_PIECE_START + to_int(pt)), hanging_count, trace);
+	}
 }

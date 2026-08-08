@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "board.h"
 #include "see.h"
+#include <cassert>
 #include "eval_params.h"
 struct SideAttackInfo {
 	uint64_t by_type[6] = { 0 };
@@ -12,6 +13,9 @@ struct SideAttackInfo {
 	int big_king_zone_attackers[6] = { 0 };
 	int small_king_zone_hits[6] = { 0 };
 	int small_king_zone_attackers[6] = { 0 };
+	uint64_t attacked_twice = 0;
+	int restricted_knights = { 0 };
+	int restricted_bishops = { 0 };
 };
 struct AttackInfo {
 	SideAttackInfo side[2];
@@ -65,11 +69,11 @@ struct EvalContext {
 		return board.get_all_pieces();
 	}
 	uint64_t get_attacks(Color color) const {
-		if(!attack_info.initiliazed) build_attack_info(const_cast<EvalContext&>(*this));
+		assert(attack_info.initiliazed);
 		return attack_info.side[to_int(color)].all;
 	}
 	uint64_t get_color_pt_attack(Color color, PieceType piece_type) const {
-		if (!attack_info.initiliazed) build_attack_info(const_cast<EvalContext&>(*this));
+		assert(attack_info.initiliazed);
 		return attack_info.side[to_int(color)].by_type[to_int(piece_type)];
 	}
 	bool is_file_open(int file) const {
@@ -193,3 +197,9 @@ void eval_fianchetto_bishop(EvaluationResult& score, const EvalContext& ctx, Tra
 
 template <bool isTracing>
 void eval_outpost(EvaluationResult& score, const EvalContext& ctx, Trace* trace);
+
+template <bool isTracing>
+void eval_threats(EvaluationResult& score, const EvalContext& ctx, Trace* trace);
+
+template <bool isTracing>
+void eval_hanging_pieces(EvaluationResult& score, const EvalContext& ctx, Trace* trace);
