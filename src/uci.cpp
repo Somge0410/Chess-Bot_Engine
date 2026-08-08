@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "benchmark.h"
 #include "board.h"
 #include "engine.h"
 #include "Move.h"
@@ -396,6 +397,7 @@ void uci_loop() {
             wait_for_search(engine, search_thread);
 
             SearchLimits limits;
+            bool bench_mode = false;
             bool legalmoves_only = false;
             bool perft_mode = false;
             int perft_depth = -1;
@@ -405,7 +407,10 @@ void uci_loop() {
             iss >> token; // "go"
 
             while (iss >> token) {
-                if (token == "depth") {
+                if (token == "bench") {
+                    bench_mode = true;
+                }
+                else if (token == "depth") {
                     iss >> limits.depth;
                 }
                 else if (token == "movetime") {
@@ -444,6 +449,11 @@ void uci_loop() {
                         }
                     }
                 }
+            }
+
+            if (bench_mode) {
+                run_benchmark(get_default_positions());
+                continue;
             }
 
             if (legalmoves_only) {
