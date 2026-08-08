@@ -65,9 +65,55 @@ void eval_positional(EvaluationResult& score, const Board& board, Trace* trace) 
 		}
 	}
 }
+
+namespace {
+uint64_t expand_file_mask(uint8_t file_mask) {
+	return static_cast<uint64_t>(file_mask) * 0x0101010101010101ULL;
+}
+
+void classify_pawns(EvalContext& ctx) {
+	const uint64_t white_pawns = ctx.get_pieces(Color::WHITE, PieceType::PAWN);
+	const uint64_t black_pawns = ctx.get_pieces(Color::BLACK, PieceType::PAWN);
+
+	uint64_t black_front_span = black_pawns >> 8;
+	black_front_span |= black_front_span >> 8;
+	black_front_span |= black_front_span >> 16;
+	black_front_span |= black_front_span >> 32;
+	const uint64_t white_passer_blockers = black_front_span
+		| ((black_front_span & NOT_FILE_H) << 1)
+		| ((black_front_span & NOT_FILE_A) >> 1);
+	ctx.passed[to_int(Color::WHITE)] = white_pawns & ~white_passer_blockers;
+
+	uint64_t white_front_span = white_pawns << 8;
+	white_front_span |= white_front_span << 8;
+	white_front_span |= white_front_span << 16;
+	white_front_span |= white_front_span << 32;
+	const uint64_t black_passer_blockers = white_front_span
+		| ((white_front_span & NOT_FILE_H) << 1)
+		| ((white_front_span & NOT_FILE_A) >> 1);
+	ctx.passed[to_int(Color::BLACK)] = black_pawns & ~black_passer_blockers;
+
+	for (int color = 0; color < 2; ++color) {
+		const uint64_t own_pawns = color == to_int(Color::WHITE)
+			? white_pawns : black_pawns;
+		uint64_t folded_files = own_pawns;
+		folded_files |= folded_files >> 32;
+		folded_files |= folded_files >> 16;
+		folded_files |= folded_files >> 8;
+		const uint8_t occupied_files = static_cast<uint8_t>(folded_files);
+		const uint8_t adjacent_occupied_files = static_cast<uint8_t>(
+			(occupied_files << 1) | (occupied_files >> 1));
+		const uint8_t isolated_files = static_cast<uint8_t>(
+			occupied_files & ~adjacent_occupied_files);
+		ctx.isolated[color] = own_pawns
+			& expand_file_mask(isolated_files)
+			& ~ctx.passed[color];
+	}
+}
+}
+
 template <bool isTracing>
 void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
-
 	uint64_t pawn_key = ctx.board.get_pawn_key();
 	int idx = pawn_key & (PAWN_HASH_SIZE - 1);
 	PawnEvalEntry& entry = get_pawn_entry(idx);
@@ -75,107 +121,147 @@ void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 		score += entry.score;
 		ctx.files_with_no_color_pawns[0] = entry.file_info[0];
 		ctx.files_with_no_color_pawns[1] = entry.file_info[1];
-		return;
+		classify_pawns(ctx);
 	}
-	EvaluationResult entry_score = { 0,0 };
-	ctx.init_file_info();
-	eval_iso_passed<isTracing>(entry_score, ctx, trace);
-	eval_backward<isTracing>(entry_score, ctx, trace);
-	eval_double_pawns<isTracing>(entry_score, ctx, trace);
+	else {
+		EvaluationResult entry_score = { 0,0 };
+		ctx.init_file_info();
+		eval_iso_passed<isTracing>(entry_score, ctx, trace);
+		eval_double_pawns<isTracing>(entry_score, ctx, trace);
 
-	score += entry_score;
-	if (!isTracing) {
-		entry.key = pawn_key;
-		entry.score = entry_score;
-		entry.file_info[0] = ctx.files_with_no_color_pawns[0];
-		entry.file_info[1] = ctx.files_with_no_color_pawns[1];
-		entry.valid = true;
+		score += entry_score;
+		if (!isTracing) {
+			entry.key = pawn_key;
+			entry.score = entry_score;
+			entry.file_info[0] = ctx.files_with_no_color_pawns[0];
+			entry.file_info[1] = ctx.files_with_no_color_pawns[1];
+			entry.valid = true;
+		}
 	}
+
+	eval_dynamic_pawns<isTracing>(score, ctx, trace);
+	eval_backward<isTracing>(score, ctx, trace);
 }
+
 template <bool isTracing>
 void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
-	for (size_t color = 0; color < 2; color++) {
-		int ecolor = color == 0 ? 1 : 0;
-		uint64_t pawns = ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN);
-		while (pawns)
-		{
-			int pawn_square = get_lsb(pawns);
-			int file_index = pawn_square % 8;
-			int rank_index = color == rank(pawn_square);
-			int bucket = PASSED_PAWN_BUCKET[color == 0 ? pawn_square : flip_square(pawn_square)];
-			if ((ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN) & PASSED_PAWN_MASK[color][pawn_square]) == 0)
-			{
-				ctx.passed[color] |= (1ULL << pawn_square);
-				if (color == 0) {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + bucket), 1, trace);
-				}
-				else {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + bucket), -1, trace);
+	classify_pawns(ctx);
+	for (int color = 0; color < 2; ++color) {
+		const int enemy_color = 1 - color;
+		const int sign = color == to_int(Color::WHITE) ? 1 : -1;
+		uint64_t passed = ctx.passed[color];
+		while (passed) {
+			const int pawn_square = poplsb(passed);
+			const int bucket = PASSED_PAWN_BUCKET[
+				color == to_int(Color::WHITE) ? pawn_square : flip_square(pawn_square)];
+			addTerm<isTracing>(score,
+				static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + bucket),
+				sign, trace);
 
-				}
-				//check if passed pawn is defended
-				uint64_t defenders = get_pawn_attacks(bit64(pawn_square), static_cast<Color>(ecolor));
-				int def_count = popcount(defenders & ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN));
-				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? def_count : -def_count, trace);
-				//check if blockated
-				int block_count = is_occupied(get_forward_square(pawn_square, static_cast<Color>(color)), ctx.board.get_all_pieces()) ? 1 : 0;
-				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::BLOCKED_FREE_PAWN_START + bucket), color == 0 ? block_count : -block_count, trace);
-				// check if enemy king can stop it
-				if (block_count == 0) {
-					int promo_square = get_promotion_square(pawn_square, static_cast<Color>(color));
-					int enemy_king_distance_to_promo_sq = king_distance(ctx.board.get_king_square(static_cast<Color>(ecolor)), promo_square);
-					int pawn_distance_to_promo_sq =7 - rank_index;
-					if (ctx.board.get_turn() == static_cast<Color>(ecolor)) enemy_king_distance_to_promo_sq--;
-					if (enemy_king_distance_to_promo_sq > pawn_distance_to_promo_sq) {
-						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::CANT_REACHED_BY_ENEMY_KING_START + bucket), color == 0 ? 1 : -1, trace);
-					}
-				}
-				// Check if own king is close
-				int own_king_distance_to_pawn = king_distance(ctx.board.get_king_square(static_cast<Color>(color)), pawn_square);
-				if (own_king_distance_to_pawn <= 2) {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::OWN_KING_IS_CLOSE_START + bucket), color == 0 ? 1 : -1, trace);
-				}
-				if (own_king_distance_to_pawn >= 5) {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::OWN_KING_IS_FAR_START + bucket), color == 0 ? 1 : -1, trace);
-				}
-				//Check if Rook is behing pawn
-				uint64_t rooks = ctx.board.get_pieces(static_cast<Color>(color), PieceType::ROOK) & FORWARD_WAY_MASK[ecolor][pawn_square];
-				while (rooks) {
-					int rook_square = get_lsb(rooks);
-					if (bit64(pawn_square) & get_rook_attacks(rook_square, ctx.board.get_all_pieces())) {
-						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ROOK_BEHIND_FREE_PAWN_START + bucket), color == 0 ? 1 : -1, trace);
-						break;
-					}
-					rooks &= rooks - 1;
-				}
-				//Check if Opponent Rook is behind pawn
-				uint64_t op_rooks = ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::ROOK) & FORWARD_WAY_MASK[ecolor][pawn_square];
-				while (op_rooks) {
-					int rook_square = get_lsb(op_rooks);
-					if (bit64(pawn_square) & get_rook_attacks(rook_square, ctx.board.get_all_pieces())) {
-						addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::OP_ROOK_BEHIND_FREE_PAWN_START + bucket), color == 0 ? 1 : -1, trace);
-						break;
-					}
-					op_rooks &= op_rooks - 1;
-				}
-				pawns &= pawns - 1;
-				continue;
-			}
-			if ((ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN) & ADJACENT_FILE_MASK[file_index]) == 0)
-			{
-				ctx.isolated[color] |= (1ULL << pawn_square);
-				int bucket = ISOLATED_PAWN_BUCKET[color == 0 ? pawn_square : flip_square(pawn_square)];
-				if (is_occupied(get_forward_square(pawn_square, static_cast<Color>(color)), ctx.board.get_all_pieces()))
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::BLOCKED_ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
-				else
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::ISOLANI_START + bucket), color == 0 ? 1 : -1, trace);
-				uint64_t defends = ctx.get_attacks(static_cast<Color>(color)) & bit64(pawn_square);
-				if (defends != 0) {
-					addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket), color == 0 ? 1 : -1, trace);
-				}
+			const uint64_t defenders = get_pawn_attacks(
+				bit64(pawn_square), static_cast<Color>(enemy_color));
+			const int defender_count = popcount(
+				defenders & ctx.get_pieces(color, PieceType::PAWN));
+			addTerm<isTracing>(score,
+				static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket),
+				sign * defender_count, trace);
+		}
+	}
+}
 
+template <bool isTracing>
+void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
+	for (int color = 0; color < 2; ++color) {
+		const int enemy_color = 1 - color;
+		const int sign = color == to_int(Color::WHITE) ? 1 : -1;
+		const Color pawn_color = static_cast<Color>(color);
+		uint64_t passed = ctx.passed[color];
+		while (passed) {
+			const int pawn_square = poplsb(passed);
+			const int rank_index = rank(pawn_square);
+			const int bucket = PASSED_PAWN_BUCKET[
+				color == to_int(Color::WHITE) ? pawn_square : flip_square(pawn_square)];
+			const int block_count = is_occupied(
+				get_forward_square(pawn_square, pawn_color), ctx.get_all_pieces()) ? 1 : 0;
+			addTerm<isTracing>(score,
+				static_cast<EvalParam>(EvalParam::BLOCKED_FREE_PAWN_START + bucket),
+				sign * block_count, trace);
+
+			if (block_count == 0) {
+				const int promo_square = get_promotion_square(pawn_square, pawn_color);
+				int enemy_king_distance = king_distance(
+					ctx.board.get_king_square(static_cast<Color>(enemy_color)), promo_square);
+				const int pawn_distance = color == to_int(Color::WHITE)
+					? 7 - rank_index : rank_index;
+				if (ctx.board.get_turn() == static_cast<Color>(enemy_color)) {
+					enemy_king_distance--;
+				}
+				if (enemy_king_distance > pawn_distance) {
+					addTerm<isTracing>(score,
+						static_cast<EvalParam>(EvalParam::CANT_REACHED_BY_ENEMY_KING_START + bucket),
+						sign, trace);
+				}
 			}
-			pawns &= pawns - 1;
+
+			const int own_king_distance = king_distance(
+				ctx.board.get_king_square(pawn_color), pawn_square);
+			if (own_king_distance <= 2) {
+				addTerm<isTracing>(score,
+					static_cast<EvalParam>(EvalParam::OWN_KING_IS_CLOSE_START + bucket),
+					sign, trace);
+			}
+			if (own_king_distance >= 5) {
+				addTerm<isTracing>(score,
+					static_cast<EvalParam>(EvalParam::OWN_KING_IS_FAR_START + bucket),
+					sign, trace);
+			}
+
+			uint64_t rooks = ctx.get_pieces(color, PieceType::ROOK)
+				& FORWARD_WAY_MASK[enemy_color][pawn_square];
+			while (rooks) {
+				const int rook_square = poplsb(rooks);
+				if (bit64(pawn_square) & get_rook_attacks(rook_square, ctx.get_all_pieces())) {
+					addTerm<isTracing>(score,
+						static_cast<EvalParam>(EvalParam::ROOK_BEHIND_FREE_PAWN_START + bucket),
+						sign, trace);
+					break;
+				}
+			}
+
+			uint64_t enemy_rooks = ctx.get_pieces(enemy_color, PieceType::ROOK)
+				& FORWARD_WAY_MASK[enemy_color][pawn_square];
+			while (enemy_rooks) {
+				const int rook_square = poplsb(enemy_rooks);
+				if (bit64(pawn_square) & get_rook_attacks(rook_square, ctx.get_all_pieces())) {
+					addTerm<isTracing>(score,
+						static_cast<EvalParam>(EvalParam::OP_ROOK_BEHIND_FREE_PAWN_START + bucket),
+						sign, trace);
+					break;
+				}
+			}
+		}
+
+		uint64_t isolated = ctx.isolated[color];
+		while (isolated) {
+			const int pawn_square = poplsb(isolated);
+			const int bucket = ISOLATED_PAWN_BUCKET[
+				color == to_int(Color::WHITE) ? pawn_square : flip_square(pawn_square)];
+			if (is_occupied(get_forward_square(pawn_square, pawn_color), ctx.get_all_pieces())) {
+				addTerm<isTracing>(score,
+					static_cast<EvalParam>(EvalParam::BLOCKED_ISOLANI_START + bucket),
+					sign, trace);
+			}
+			else {
+				addTerm<isTracing>(score,
+					static_cast<EvalParam>(EvalParam::ISOLANI_START + bucket),
+					sign, trace);
+			}
+
+			if (ctx.get_attacks(pawn_color) & bit64(pawn_square)) {
+				addTerm<isTracing>(score,
+					static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket),
+					sign, trace);
+			}
 		}
 	}
 }
@@ -261,6 +347,12 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 		int next_to_open_diagonal_count[7] = { 0,0,0,0,0,0,0 };
 		for (size_t color = 0; color < 2; color++) {
 			int ecolor = color == 0 ? 1 : 0;
+			const Color own_color = static_cast<Color>(color);
+			const Color enemy_color = static_cast<Color>(ecolor);
+			auto is_semi_open_for_king = [&](int file) {
+				return !ctx.does_color_have_pawns_on_file(file, own_color)
+					&& ctx.does_color_have_pawns_on_file(file, enemy_color);
+			};
 			uint64_t king_square_colors = ((bit64(king_squares[color]) & LIGHT_SQUARES) != 0) ? LIGHT_SQUARES : DARK_SQUARES;
 			uint64_t shield_mask = KING_SHIELD[color][king_squares[color]];
 			int king_file_index = king_squares[color] % 8;
@@ -291,7 +383,7 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 				}
 			}
 			// 3. Semi Open File Penalty
-			bool on_semi_open = ctx.does_color_have_pawns_on_file(king_file_index, static_cast<Color>(ecolor));
+			bool on_semi_open = is_semi_open_for_king(king_file_index);
 			if (on_semi_open) {
 				if (!is_any_next_open) {
 					directly_on_semi_open_count_not_next_to_open += color == 0 ? 1 : -1;
@@ -301,10 +393,10 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 				}
 			}
 			//3.5 Semi Open File Penalty for files next to the king
-			if (ctx.does_color_have_pawns_on_file(king_file_index + 1, static_cast<Color>(ecolor))) {
+			if (is_semi_open_for_king(king_file_index + 1)) {
 				next_to_semi_open_count += color == 0 ? 1 : -1;
 			}
-			if (ctx.does_color_have_pawns_on_file(king_file_index - 1, static_cast<Color>(ecolor))) {
+			if (is_semi_open_for_king(king_file_index - 1)) {
 				next_to_semi_open_count += color == 0 ? 1 : -1;
 			}
 
