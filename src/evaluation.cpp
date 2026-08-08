@@ -11,8 +11,25 @@ void build_attack_info(EvalContext& ctx) {
 	for (int color = 0; color < 2; ++color) {
 		const Color side=static_cast<Color>(color);
 		const uint64_t pawns = ctx.get_pieces(side, PieceType::PAWN);
+		SideAttackInfo& side_info = info.side[color];
 
-		info.side[color].by_type[to_int(PieceType::PAWN)] = get_pawn_attacks(pawns, side);
+		side_info.by_type[to_int(PieceType::PAWN)] = get_pawn_attacks(pawns, side);
+
+
+		const uint64_t pawn_attacks = side_info.by_type[to_int(PieceType::PAWN)];
+
+
+		const int enemy_king = ctx.board.get_king_square(flip_color(side));
+		const uint64_t small_king_zone = SMALL_KING_ZONE[enemy_king];
+		const uint64_t big_king_zone = KING_ZONE[enemy_king] & ~small_king_zone;
+
+		side_info.small_king_zone_hits[to_int(PieceType::PAWN)] += popcount(pawn_attacks & small_king_zone);
+		side_info.big_king_zone_hits[to_int(PieceType::PAWN)] += popcount(pawn_attacks & big_king_zone);
+		const uint64_t small_attacking_pawns = pawns & get_pawn_attacks(small_king_zone, flip_color(side));
+		const uint64_t big_attacking_pawns = pawns & get_pawn_attackers(big_king_zone, flip_color(side));
+
+		side_info.small_king_zone_attackers[to_int(PieceType::PAWN)] += popcount(small_attacking_pawns);
+		side_info.big_king_zone_attackers[to_int(PieceType::PAWN)] += popcount(big_attacking_pawns);
 
 	}
 
@@ -26,7 +43,9 @@ void build_attack_info(EvalContext& ctx) {
 		const uint64_t mobility_area = ~own_pieces & ~enemy_pawn_attacks;
 
 		const int enemy_king = ctx.board.get_king_square(to_color(enemy));
-		const uint64_t king_zone = KING_ZONE[enemy_king];
+		const uint64_t small_king_zone = SMALL_KING_ZONE[enemy_king];
+		const uint64_t big_king_zone = KING_ZONE[enemy_king] &~small_king_zone;
+
 
 		side_info.all |= side_info.by_type[to_int(PieceType::PAWN)];
 
@@ -39,21 +58,35 @@ void build_attack_info(EvalContext& ctx) {
 				const uint64_t attacks = get_piece_attacks(pt, square, occupied);
 
 				side_info.by_type[to_int(pt)] |= attacks;
-
+				side_info.all |= attacks;
 				const int mobility = popcount(attacks & mobility_area);
 				side_info.mobility[to_int(pt) - 1] += mobility;
 
-				const uint64_t zone_attacks = attacks & king_zone;
+				const uint64_t zone_attacks = attacks & big_king_zone;
 				if (zone_attacks) {
-					side_info.king_attackers[to_int(pt)]++;
-					side_info.king_zone_hits[to_int(pt)] += popcount(zone_attacks);
+					side_info.big_king_zone_attackers[to_int(pt)]++;
+					side_info.big_king_zone_hits[to_int(pt)] += popcount(zone_attacks);
+				}
+				const uint64_t small_zone_attacks = attacks & small_king_zone;
+				if(small_zone_attacks) {
+					side_info.small_king_zone_attackers[to_int(pt)]++;
+					side_info.small_king_zone_hits[to_int(pt)] += popcount(small_zone_attacks);
 				}
 			}
 		}
 		const int king = ctx.board.get_king_square(to_color(color));
 		const uint64_t king_attacks = KING_ATTACKS[king];
+		if(big_king_zone & king_attacks) {
+			side_info.big_king_zone_attackers[to_int(PieceType::KING)]++;
+			side_info.big_king_zone_hits[to_int(PieceType::KING)] += popcount(big_king_zone & king_attacks);
+		}
+		if(small_king_zone & king_attacks) {
+			side_info.small_king_zone_attackers[to_int(PieceType::KING)]++;
+			side_info.small_king_zone_hits[to_int(PieceType::KING)] += popcount(small_king_zone & king_attacks);
+		}
 		side_info.by_type[to_int(PieceType::KING)] |= king_attacks;
 		side_info.all |= king_attacks;
+
 	}
 	info.initiliazed = true;
 }
@@ -83,7 +116,7 @@ int evaluate(const Board& board, Trace* trace, uint8_t terms_mask) {
 	eval_pawns<isTracing>(score, ctx, trace);
 	if (terms_mask != EvalAll) return tapered(score, board.get_game_phase());
 
-	built_attack_info(ctx);
+	build_attack_info(ctx);
 
 	eval_king_safety<isTracing>(score, ctx, trace);
 	eval_mobility<isTracing>(score, ctx, trace);
@@ -315,12 +348,6 @@ void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace)
 					static_cast<EvalParam>(EvalParam::ISOLANI_START + bucket),
 					sign, trace);
 			}
-
-			if (ctx.get_attacks(pawn_color) & bit64(pawn_square)) {
-				addTerm<isTracing>(score,
-					static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket),
-					sign, trace);
-			}
 		}
 	}
 }
@@ -471,6 +498,37 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 
 				op_bishop_queen_on_mask &= op_bishop_queen_on_mask - 1;
 			}
+			//6. King Zone 
+			constexpr int Piece_ATTACK_UNIT[6] = {
+				1, 2,2,3,5,0 };
+			int danger = 0;
+			int big_attackers = 0;
+			int small_attackers = 0;
+			for (PieceType pt : {
+				PieceType::PAWN,
+					PieceType::KNIGHT,
+					PieceType::BISHOP,
+					PieceType::ROOK,
+					PieceType::QUEEN,
+					PieceType::KING }) {
+				const int p = to_int(pt);
+				danger += Piece_ATTACK_UNIT[p] * (ctx.attack_info.side[ecolor].big_king_zone_hits[p] +
+					2 * ctx.attack_info.side[ecolor].small_king_zone_hits[p]);
+				big_attackers += ctx.attack_info.side[ecolor].big_king_zone_attackers[p];
+				small_attackers += ctx.attack_info.side[ecolor].small_king_zone_attackers[p];
+				if (big_attackers >= 2) {
+					danger += (big_attackers - 1);
+				}
+				if (small_attackers >= 2) {
+					danger += 2 * (small_attackers - 1);
+				}
+			}
+
+			danger = std::min(danger, KING_DANGER_END- KING_DANGER_START);
+			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger),color==0? 1:-1 , trace);
+
+
+
 		}
 		//TODO: Scale safety score with enemy material.
 		addTerm<isTracing>(score, EvalParam::PAWN_SHIELD_BONUS, pawn_shield_count, trace);
@@ -513,8 +571,8 @@ void eval_rook_activity(EvaluationResult& score, const EvalContext& ctx, Trace* 
 
 	int white_rook_square = get_lsb(ctx.get_pieces(0, PieceType::ROOK));
 	int black_rook_square = get_lsb(ctx.get_pieces(1, PieceType::ROOK));
-	uint64_t white_connected = ctx.attack_info.side[to_int(Color::WHITE)].by_type[to_int(PieceType::ROOK)] & ctx.get_pieces(0, PieceType::ROOK);
-	uint64_t black_connected = ctx.attack_info.side[to_int(Color::BLACK)].by_type[to_int(PieceType::ROOK)] & ctx.get_pieces(1, PieceType::ROOK);
+	uint64_t white_connected =ctx.get_color_pt_attack(Color::WHITE, PieceType::ROOK) & ctx.get_pieces(0, PieceType::ROOK)/2;
+	uint64_t black_connected = ctx.get_color_pt_attack(Color::BLACK, PieceType::ROOK) & ctx.get_pieces(1, PieceType::ROOK)/2;
 	connected_rooks += popcount(white_connected) - popcount(black_connected);
 	addTerm<isTracing>(score, EvalParam::CONNECTED_ROOKS, connected_rooks, trace);
 	addTerm<isTracing>(score, EvalParam::ROOK_ON_SEMI_OPEN_FILE, semi_open_count, trace);

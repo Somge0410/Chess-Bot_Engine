@@ -8,8 +8,10 @@ struct SideAttackInfo {
 	int mobility[4] = { 0 }; // knight, bishop, rook, queen
 
 	// Attacks against the opponent's king
-	int king_zone_hits[6] = { 0 };
-	int king_attackers[6] = { 0 };
+	int big_king_zone_hits[6] = { 0 };
+	int big_king_zone_attackers[6] = { 0 };
+	int small_king_zone_hits[6] = { 0 };
+	int small_king_zone_attackers[6] = { 0 };
 };
 struct AttackInfo {
 	SideAttackInfo side[2];
@@ -63,13 +65,12 @@ struct EvalContext {
 		return board.get_all_pieces();
 	}
 	uint64_t get_attacks(Color color) const {
-		const int color_index = to_int(color);
-		const uint8_t initialized_bit = bit8(color_index);
-		if ((attacks_initialized & initialized_bit) == 0) {
-			attacks[color_index] = board.get_attacks_for_color(color);
-			attacks_initialized |= initialized_bit;
-		}
-		return attacks[color_index];
+		if(!attack_info.initiliazed) build_attack_info(const_cast<EvalContext&>(*this));
+		return attack_info.side[to_int(color)].all;
+	}
+	uint64_t get_color_pt_attack(Color color, PieceType piece_type) const {
+		if (!attack_info.initiliazed) build_attack_info(const_cast<EvalContext&>(*this));
+		return attack_info.side[to_int(color)].by_type[to_int(piece_type)];
 	}
 	bool is_file_open(int file) const {
 		if (file < 0 || file>7) return false;
@@ -113,7 +114,8 @@ enum EvalTerms : uint8_t {
 };
 
 inline int tapered(EvaluationResult score, int game_phase) {
-	return std::clamp((score.mg_score * game_phase + score.eg_score * (24 - game_phase)) / 24,0,24);
+	const int phase = std::clamp(game_phase, 0, 24);
+	return (score.mg_score * phase + score.eg_score * (24 - phase)) / 24;
 }
 
 void build_attack_info(EvalContext& ctx);
