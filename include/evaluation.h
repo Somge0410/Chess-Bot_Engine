@@ -14,8 +14,8 @@ struct SideAttackInfo {
 	int small_king_zone_hits[6] = { 0 };
 	int small_king_zone_attackers[6] = { 0 };
 	uint64_t attacked_twice = 0;
-	int restricted_knights = { 0 };
-	int restricted_bishops = { 0 };
+	int restricted_knights =  0 ;
+	int restricted_bishops =  0 ;
 };
 struct AttackInfo {
 	SideAttackInfo side[2];
@@ -71,6 +71,9 @@ struct EvalContext {
 	uint64_t get_attacks(Color color) const {
 		assert(attack_info.initiliazed);
 		return attack_info.side[to_int(color)].all;
+	}
+	uint64_t get_attacks(int color) const {
+		return get_attacks(static_cast<Color>(color));
 	}
 	uint64_t get_color_pt_attack(Color color, PieceType piece_type) const {
 		assert(attack_info.initiliazed);

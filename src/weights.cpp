@@ -140,6 +140,39 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         { 23, -40 },      // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+4
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+5
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+6
+        { 0, 0 }, // KING_DANGER_START+0
+        { 0, 0 }, // KING_DANGER_START+1
+        { 0, 0 }, // KING_DANGER_START+2
+        { 0, 0 }, // KING_DANGER_START+3
+        { 0, 0 }, // KING_DANGER_START+4
+        { 0, 0 }, // KING_DANGER_START+5
+        { 0, 0 }, // KING_DANGER_START+6
+        { 0, 0 }, // KING_DANGER_START+7
+        { 0, 0 }, // KING_DANGER_START+8
+        { 0, 0 }, // KING_DANGER_START+9
+        { 0, 0 }, // KING_DANGER_START+10
+        { 0, 0 }, // KING_DANGER_START+11
+        { 0, 0 }, // KING_DANGER_START+12
+        { 0, 0 }, // KING_DANGER_START+13
+        { 0, 0 }, // KING_DANGER_START+14
+        { 0, 0 }, // KING_DANGER_START+15
+        { 0, 0 }, // KING_DANGER_START+16
+        { 0, 0 }, // KING_DANGER_START+17
+        { 0, 0 }, // KING_DANGER_START+18
+        { 0, 0 }, // KING_DANGER_START+19
+        { 0, 0 }, // KING_DANGER_START+20
+        { 0, 0 }, // KING_DANGER_START+21
+        { 0, 0 }, // KING_DANGER_START+22
+        { 0, 0 }, // KING_DANGER_START+23
+        { 0, 0 }, // KING_DANGER_START+24
+        { 0, 0 }, // KING_DANGER_START+25
+        { 0, 0 }, // KING_DANGER_START+26
+        { 0, 0 }, // KING_DANGER_START+27
+        { 0, 0 }, // KING_DANGER_START+28
+        { 0, 0 }, // KING_DANGER_START+29
+        { 0, 0 }, // KING_DANGER_START+30
+        { 0, 0 }, // KING_DANGER_START+31
+        { 0, 0 }, // KING_DANGER_START+32
         { 4, 1 }, // MOBILITY_START+0
         { 4, 2 }, // MOBILITY_START+1
         { 2, 1 }, // MOBILITY_START+2
@@ -150,6 +183,8 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         { 31, 37 },       // BISHOP_PAIR
         { -8, -9 },       // BAD_BISHOP_BLOCKED
         { -3, -2 },       // BAD_BISHOP_UNBLOCKED
+        { 0, 0 },         // RESTRICTED_BISHOP
+        { 0, 0 },         // RESTRICTED_KNIGHT
         { -143, -7 },     // TRAPPED_BISHOP
         { -75, -62 },     // TRAPPED_KNIGHT
         { 15, 3 },        // FIANCHETTO_BISHOP
@@ -158,4 +193,15 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         { 43, 0 },        // BISHOP_OUTPOST_WITH_OPPOSITE_BISHOP
         { 32, 11 },       // KNIGHT_OUTPOST_NO_OPPOSITE_BISHOP
         { 24, 15 },       // KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP
+        { 0, 0 },         // PAWN_THREAT_MINOR
+        { 0, 0 },         // PAWN_THREAT_ROOK
+        { 0, 0 },         // PAWN_THREAT_QUEEN
+        { 0, 0 },         // MINOR_THREAT_ROOK
+        { 0, 0 },         // MINOR_THREAT_QUEEN
+        { 0, 0 },         // ROOK_THREAT_QUEEN
+        { 0, 0 },         // HANGING_PIECE_START+0
+        { 0, 0 },         // HANGING_PIECE_START+1
+        { 0, 0 },         // HANGING_PIECE_START+2
+        { 0, 0 },         // HANGING_PIECE_START+3
+        { 0, 0 },         // HANGING_PIECE_START+4
 };

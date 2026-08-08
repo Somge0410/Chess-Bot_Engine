@@ -65,10 +65,10 @@ void build_attack_info(EvalContext& ctx) {
 				const int mobility = popcount(attacks & mobility_area);
 				side_info.mobility[to_int(pt) - 1] += mobility;
 				if (pt == PieceType::KNIGHT && mobility <= 2) {
-					side_info.restricted_knights[color]++;
+					side_info.restricted_knights++;
 				}
 				if(pt== PieceType::BISHOP && mobility <= 3) {
-					side_info.restricted_bishops[color]++;
+					side_info.restricted_bishops++;
 				}
 
 				const uint64_t zone_attacks = attacks & big_king_zone;
@@ -131,6 +131,8 @@ int evaluate(const Board& board, Trace* trace, uint8_t terms_mask) {
 	eval_mobility<isTracing>(score, ctx, trace);
 	eval_rook_activity<isTracing>(score, ctx, trace);
 	eval_minor_pieces<isTracing>(score, ctx, trace);
+	eval_threats<isTracing>(score, ctx, trace);
+	eval_hanging_pieces<isTracing>(score, ctx, trace);
 	return tapered(score, board.get_game_phase());
 
 }
@@ -854,9 +856,9 @@ void eval_threats(EvaluationResult& score, const EvalContext& ctx, Trace* trace)
 template<bool isTracing>
 void eval_hanging_pieces(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
 	uint64_t black_hanging= ctx.get_color_pieces(Color::BLACK) &
-		ctx.attack_info.side[to_int(Color::WHITE)].all & ~attack_info.side[to_int(Color::BLACK)].all;
+		ctx.attack_info.side[to_int(Color::WHITE)].all & ~ctx.attack_info.side[to_int(Color::BLACK)].all;
 	uint64_t white_hanging = ctx.get_color_pieces(Color::WHITE) &
-		ctx.attack_info.side[to_int(Color::BLACK)].all & ~attack_info.side[to_int(Color::WHITE)].all;
+		ctx.attack_info.side[to_int(Color::BLACK)].all & ~ctx.attack_info.side[to_int(Color::WHITE)].all;
 	for(PieceType pt: {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
 		int hanging_count = popcount(black_hanging & ctx.get_pieces(Color::BLACK, pt))- popcount(white_hanging & ctx.get_pieces(Color::WHITE, pt));
 		addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::HANGING_PIECE_START + to_int(pt)), hanging_count, trace);
