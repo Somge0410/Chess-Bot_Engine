@@ -147,6 +147,9 @@ template <bool isTracing>
 void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace);
 
 template <bool isTracing>
+void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace);
+
+template <bool isTracing>
 void eval_backward(EvaluationResult& score, EvalContext& ctx, Trace* trace);
 template <bool isTracing>
 void eval_double_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace);
