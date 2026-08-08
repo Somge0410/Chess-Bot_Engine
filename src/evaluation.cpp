@@ -1,6 +1,63 @@
 ﻿#include "evaluation.h"
 #include <memory>
 static thread_local std::unique_ptr<std::array<PawnEvalEntry, PAWN_HASH_SIZE>> pawn_evaluation_table;
+
+void build_attack_info(EvalContext& ctx) {
+	AttackInfo& info = ctx.attack_info;
+	if (info.initiliazed) return;
+
+	const uint64_t occupied = ctx.board.get_all_pieces();
+
+	for (int color = 0; color < 2; ++color) {
+		const Color side=static_cast<Color>(color);
+		const uint64_t pawns = ctx.get_pieces(side, PieceType::PAWN);
+
+		info.side[color].by_type[to_int(PieceType::PAWN)] = get_pawn_attacks(pawns, side);
+
+	}
+
+	for (int color = 0; color < 2; ++color) {
+		const int enemy = flip_color(color);
+		SideAttackInfo& side_info = info.side[color];
+
+		const uint64_t own_pieces = ctx.get_color_pieces(color);
+		const uint64_t enemy_pawn_attacks = info.side[enemy].by_type[to_int(PieceType::PAWN)];
+
+		const uint64_t mobility_area = ~own_pieces & ~enemy_pawn_attacks;
+
+		const int enemy_king = ctx.board.get_king_square(to_color(enemy));
+		const uint64_t king_zone = KING_ZONE[enemy_king];
+
+		side_info.all |= side_info.by_type[to_int(PieceType::PAWN)];
+
+		for (PieceType pt : {
+			PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN }) {
+			uint64_t pieces = ctx.get_pieces(to_color(color), pt);
+
+			while (pieces) {
+				const int square = poplsb(pieces);
+				const uint64_t attacks = get_piece_attacks(pt, square, occupied);
+
+				side_info.by_type[to_int(pt)] |= attacks;
+
+				const int mobility = popcount(attacks & mobility_area);
+				side_info.mobility[to_int(pt) - 1] += mobility;
+
+				const uint64_t zone_attacks = attacks & king_zone;
+				if (zone_attacks) {
+					side_info.king_attackers[to_int(pt)]++;
+					side_info.king_zone_hits[to_int(pt)] += popcount(zone_attacks);
+				}
+			}
+		}
+		const int king = ctx.board.get_king_square(to_color(color));
+		const uint64_t king_attacks = KING_ATTACKS[king];
+		side_info.by_type[to_int(PieceType::KING)] |= king_attacks;
+		side_info.all |= king_attacks;
+	}
+	info.initiliazed = true;
+}
+
 PawnEvalEntry& get_pawn_entry(size_t idx) {
 	if (!pawn_evaluation_table) {
 		pawn_evaluation_table = std::make_unique<std::array<PawnEvalEntry, PAWN_HASH_SIZE>>();
@@ -25,8 +82,10 @@ int evaluate(const Board& board, Trace* trace, uint8_t terms_mask) {
 	eval_positional<isTracing>(score, board, trace);
 	eval_pawns<isTracing>(score, ctx, trace);
 	if (terms_mask != EvalAll) return tapered(score, board.get_game_phase());
-	eval_king_safety<isTracing>(score, ctx, trace);
 
+	built_attack_info(ctx);
+
+	eval_king_safety<isTracing>(score, ctx, trace);
 	eval_mobility<isTracing>(score, ctx, trace);
 	eval_rook_activity<isTracing>(score, ctx, trace);
 	eval_minor_pieces<isTracing>(score, ctx, trace);
@@ -432,19 +491,8 @@ template<bool isTracing>
 void eval_mobility(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
 	for (PieceType pt : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
 		int mob_count = 0;
-		for (int color = 0; color < 2; color++) {
-			int ecolor = color == 0 ? 1 : 0;
-			uint64_t enemy_attacks = ctx.get_attacks(static_cast<Color>(ecolor));
-			uint64_t pieces = ctx.get_pieces(color, pt);
-			while (pieces) {
-				int sq = get_lsb(pieces);
-				if (color == 0)
-					mob_count += popcount(get_piece_attacks(pt, sq, ctx.get_all_pieces()) & ~ctx.get_color_pieces(color) & ~enemy_attacks);
-				else
-					mob_count -= popcount(get_piece_attacks(pt, sq, ctx.get_all_pieces()) & ~ctx.get_color_pieces(color) & ~enemy_attacks);
-				pieces &= pieces - 1;
-			}
-		}
+		mob_count += ctx.attack_info.side[to_int(Color::WHITE)].mobility[to_int(pt) - 1];
+		mob_count -= ctx.attack_info.side[to_int(Color::BLACK)].mobility[to_int(pt) - 1];
 		addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::MOBILITY_START + to_int(pt) - 1), mob_count, trace);
 	}
 }
@@ -465,8 +513,8 @@ void eval_rook_activity(EvaluationResult& score, const EvalContext& ctx, Trace* 
 
 	int white_rook_square = get_lsb(ctx.get_pieces(0, PieceType::ROOK));
 	int black_rook_square = get_lsb(ctx.get_pieces(1, PieceType::ROOK));
-	uint64_t white_connected = get_rook_attacks(white_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(0, PieceType::ROOK);
-	uint64_t black_connected = get_rook_attacks(black_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(1, PieceType::ROOK);
+	uint64_t white_connected = ctx.attack_info.side[to_int(Color::WHITE)].by_type[to_int(PieceType::ROOK)] & ctx.get_pieces(0, PieceType::ROOK);
+	uint64_t black_connected = ctx.attack_info.side[to_int(Color::BLACK)].by_type[to_int(PieceType::ROOK)] & ctx.get_pieces(1, PieceType::ROOK);
 	connected_rooks += popcount(white_connected) - popcount(black_connected);
 	addTerm<isTracing>(score, EvalParam::CONNECTED_ROOKS, connected_rooks, trace);
 	addTerm<isTracing>(score, EvalParam::ROOK_ON_SEMI_OPEN_FILE, semi_open_count, trace);

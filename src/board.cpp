@@ -1,4 +1,4 @@
-#include <string>
+﻿#include <string>
 #include <vector>
 #include <sstream>
 #include <iostream>
@@ -216,8 +216,6 @@ uint64_t Board::initialize_pawn_key() const {
             pawn_bitboard &= pawn_bitboard - 1;
         }
     }
-	pawn_key ^= Zobrist::piece_keys[to_int(Color::WHITE)][to_int(PieceType::KING)][white_king_square];
-	pawn_key ^= Zobrist::piece_keys[to_int(Color::BLACK)][to_int(PieceType::KING)][black_king_square];
     return pawn_key;
 }
 EvaluationResult Board::initialize_material_score()const {
@@ -379,10 +377,10 @@ void Board::update_pieces_hash(const Move& move){
     int move_color=to_int(move.move_color);
     zobrist_hash^=Zobrist::piece_keys[move_color][to_int(move.piece_moved)][move.from_square];
     zobrist_hash^=Zobrist::piece_keys[move_color][to_int(piece_reached)][move.to_square];
-    if(move.piece_moved==PieceType::PAWN || move.piece_moved==PieceType::KING){
+    if(move.piece_moved==PieceType::PAWN){
         pawn_key^=Zobrist::piece_keys[move_color][to_int(move.piece_moved)][move.from_square];
 	}
-    if (piece_reached == PieceType::PAWN|| piece_reached==PieceType::KING) {
+    if (piece_reached == PieceType::PAWN) {
         pawn_key ^= Zobrist::piece_keys[move_color][to_int(piece_reached)][move.to_square];
     }
 

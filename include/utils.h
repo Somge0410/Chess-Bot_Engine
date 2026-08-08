@@ -73,7 +73,12 @@ static inline uint8_t bit8(int sq) { return static_cast<uint8_t>(1u << sq); }
 static inline Color flip_color(Color color) {
     return (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
 }
-
+static inline int flip_color(int color) {
+    return 1 - color;
+}
+static inline Color to_color(int color) {
+	return static_cast<Color>(color);
+}
 inline int popcount(uint64_t bitboard) {
 #ifdef _MSC_VER
     return __popcnt64(bitboard);

@@ -1,24 +1,34 @@
-#pragma once
+﻿#pragma once
 #include "board.h"
 #include "see.h"
 #include "eval_params.h"
+struct SideAttackInfo {
+	uint64_t by_type[6] = { 0 };
+	uint64_t all = 0;
+	int mobility[4] = { 0 }; // knight, bishop, rook, queen
+
+	// Attacks against the opponent's king
+	int king_zone_hits[6] = { 0 };
+	int king_attackers[6] = { 0 };
+};
+struct AttackInfo {
+	SideAttackInfo side[2];
+	bool initiliazed = false;
+};
 struct EvalContext {
 	const Board& board;
 	uint64_t backward[2];
 	uint64_t isolated[2];
 	uint64_t passed[2];
 	uint8_t files_with_no_color_pawns[2];
-	mutable uint64_t attacks[2];
-	mutable uint8_t attacks_initialized;
-
+	mutable AttackInfo attack_info;
 	EvalContext(const Board& b)
 		: board(b),
 		backward{ 0,0 },
 		isolated{ 0,0 },
 		passed{ 0,0 },
-		files_with_no_color_pawns{ 0,0 },
-		attacks{ 0,0 },
-		attacks_initialized(0) {
+		files_with_no_color_pawns{ 0,0 }
+	{
 	}
 	void init_file_info() {
 		for (size_t file = 0; file < 8; ++file) {
@@ -77,6 +87,7 @@ struct EvalContext {
 		return board.get_piece_on_square(square);
 	}
 };
+
 struct PawnEvalEntry {
 	uint64_t key = 0;
 	EvaluationResult score = { 0,0 };
@@ -102,10 +113,10 @@ enum EvalTerms : uint8_t {
 };
 
 inline int tapered(EvaluationResult score, int game_phase) {
-	return (score.mg_score * game_phase + score.eg_score * (24 - game_phase)) / 24;
+	return std::clamp((score.mg_score * game_phase + score.eg_score * (24 - game_phase)) / 24,0,24);
 }
 
-
+void build_attack_info(EvalContext& ctx);
 
 struct Trace {
 	int counts[PARAM_COUNT] = { 0 };
