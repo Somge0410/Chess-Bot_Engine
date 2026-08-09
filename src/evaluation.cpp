@@ -21,20 +21,10 @@ void build_attack_info(EvalContext& ctx) {
 		side_info.attacked_twice |= pawn_left_attacks & pawn_right_attacks;
 
 
-		const uint64_t pawn_attacks = side_info.by_type[to_int(PieceType::PAWN)];
-
-
 		const int enemy_king = ctx.board.get_king_square(flip_color(side));
-		const uint64_t small_king_zone = SMALL_KING_ZONE[enemy_king];
-		const uint64_t big_king_zone = KING_ZONE[enemy_king] & ~small_king_zone;
-
-		side_info.small_king_zone_hits[to_int(PieceType::PAWN)] += popcount(pawn_attacks & small_king_zone);
-		side_info.big_king_zone_hits[to_int(PieceType::PAWN)] += popcount(pawn_attacks & big_king_zone);
-		const uint64_t small_attacking_pawns = pawns & get_pawn_attacks(small_king_zone, flip_color(side));
-		const uint64_t big_attacking_pawns = pawns & get_pawn_attacks(big_king_zone, flip_color(side));
-
-		side_info.small_king_zone_attackers[to_int(PieceType::PAWN)] += popcount(small_attacking_pawns);
-		side_info.big_king_zone_attackers[to_int(PieceType::PAWN)] += popcount(big_attacking_pawns);
+		const uint64_t king_zone = KING_ZONE[enemy_king];
+		const uint64_t attacking_pawns = pawns & get_pawn_attacks(king_zone, flip_color(side));
+		side_info.king_zone_attackers[to_int(PieceType::PAWN)] = popcount(attacking_pawns);
 
 	}
 
@@ -48,8 +38,7 @@ void build_attack_info(EvalContext& ctx) {
 		const uint64_t mobility_area = ~own_pieces & ~enemy_pawn_attacks;
 
 		const int enemy_king = ctx.board.get_king_square(to_color(enemy));
-		const uint64_t small_king_zone = SMALL_KING_ZONE[enemy_king];
-		const uint64_t big_king_zone = KING_ZONE[enemy_king] &~small_king_zone;
+		const uint64_t king_zone = KING_ZONE[enemy_king];
 
 		for (PieceType pt : {
 			PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN }) {
@@ -71,28 +60,13 @@ void build_attack_info(EvalContext& ctx) {
 					side_info.restricted_bishops++;
 				}
 
-				const uint64_t zone_attacks = attacks & big_king_zone;
-				if (zone_attacks) {
-					side_info.big_king_zone_attackers[to_int(pt)]++;
-					side_info.big_king_zone_hits[to_int(pt)] += popcount(zone_attacks);
-				}
-				const uint64_t small_zone_attacks = attacks & small_king_zone;
-				if(small_zone_attacks) {
-					side_info.small_king_zone_attackers[to_int(pt)]++;
-					side_info.small_king_zone_hits[to_int(pt)] += popcount(small_zone_attacks);
+				if (attacks & king_zone) {
+					side_info.king_zone_attackers[to_int(pt)]++;
 				}
 			}
 		}
 		const int king = ctx.board.get_king_square(to_color(color));
 		const uint64_t king_attacks = KING_ATTACKS[king];
-		if(big_king_zone & king_attacks) {
-			side_info.big_king_zone_attackers[to_int(PieceType::KING)]++;
-			side_info.big_king_zone_hits[to_int(PieceType::KING)] += popcount(big_king_zone & king_attacks);
-		}
-		if(small_king_zone & king_attacks) {
-			side_info.small_king_zone_attackers[to_int(PieceType::KING)]++;
-			side_info.small_king_zone_hits[to_int(PieceType::KING)] += popcount(small_king_zone & king_attacks);
-		}
 		side_info.by_type[to_int(PieceType::KING)] |= king_attacks;
 		side_info.all |= king_attacks;
 
@@ -509,45 +483,57 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 
 				op_bishop_queen_on_mask &= op_bishop_queen_on_mask - 1;
 			}
-			////6. King Zone 
-			constexpr int Piece_ATTACK_UNIT[6] = {
-				1, 2,2,3,5,0 };
-			int danger = 0;
-			int big_attackers = 0;
-			int small_attackers = 0;
+			// 6. King-zone danger. Piece involvement and square pressure are
+			// deliberately separate: a queen that attacks three ring squares is
+			// still only one attacker.
+			constexpr int PIECE_ATTACK_UNIT[6] = { 0, 2, 2, 3, 5, 0 };
+			const SideAttackInfo& enemy_attacks = ctx.attack_info.side[ecolor];
+			int attacker_count = 0;
+			int attacker_units = 0;
 			for (PieceType pt : {
-				PieceType::PAWN,
-					PieceType::KNIGHT,
-					PieceType::BISHOP,
-					PieceType::ROOK,
-					PieceType::QUEEN,
-					PieceType::KING }) {
+				PieceType::KNIGHT,
+				PieceType::BISHOP,
+				PieceType::ROOK,
+				PieceType::QUEEN }) {
 				const int p = to_int(pt);
-				danger += Piece_ATTACK_UNIT[p] * (ctx.attack_info.side[ecolor].big_king_zone_hits[p] +
-					2 * ctx.attack_info.side[ecolor].small_king_zone_hits[p]);
-				big_attackers += ctx.attack_info.side[ecolor].big_king_zone_attackers[p];
-				small_attackers += ctx.attack_info.side[ecolor].small_king_zone_attackers[p];
+				const int count = enemy_attacks.king_zone_attackers[p];
+				attacker_count += count;
+				attacker_units += PIECE_ATTACK_UNIT[p] * count;
 			}
-			if (big_attackers >= 2) {
-				danger += (big_attackers - 1);
-			}
-			if (small_attackers >= 2) {
-				danger += 2 * (small_attackers - 1);
-			}
+
 			const uint64_t small_king_zone = SMALL_KING_ZONE[king_squares[color]];
 			const uint64_t big_king_zone = KING_ZONE[king_squares[color]] & ~small_king_zone;
+			uint64_t enemy_non_king_attacks = 0;
+			for (PieceType pt : {
+				PieceType::PAWN,
+				PieceType::KNIGHT,
+				PieceType::BISHOP,
+				PieceType::ROOK,
+				PieceType::QUEEN }) {
+				enemy_non_king_attacks |= enemy_attacks.by_type[to_int(pt)];
+			}
 
-			const uint64_t weak_small_squares = small_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
-			const uint64_t weak_big_squares = big_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
-			danger += 2 * popcount(weak_small_squares) + popcount(weak_big_squares);
-			danger += 2*popcount(small_king_zone & ctx.attack_info.side[ecolor].attacked_twice);
-			danger = std::min(danger, KING_DANGER_END- KING_DANGER_START);
-			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger),color==0? -1:1 , trace);
+			const uint64_t weak_small_squares = small_king_zone & enemy_non_king_attacks & ~ctx.get_attacks(color);
+			const uint64_t weak_big_squares = big_king_zone & enemy_non_king_attacks & ~ctx.get_attacks(color);
+			const int weak_small_count = popcount(weak_small_squares);
+			int danger = weak_small_count;
+			if (attacker_count >= 2) {
+				danger = attacker_units
+					+ 2 * weak_small_count
+					+ popcount(weak_big_squares)
+					+ 2 * popcount(small_king_zone & enemy_attacks.attacked_twice);
+			}
+
+			if (ctx.get_pieces(enemy_color, PieceType::QUEEN) == 0) {
+				danger = (danger + 1) / 2;
+			}
+			danger = std::min(danger, KING_DANGER_END - KING_DANGER_START);
+			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger), color == 0 ? -1 : 1, trace);
 
 
 
 		}
-		//TODO: Scale safety score with enemy material.
+		// TODO: Replace the binary queenless reduction with smoother enemy-material scaling.
 		addTerm<isTracing>(score, EvalParam::PAWN_SHIELD_BONUS, pawn_shield_count, trace);
 		addTerm<isTracing>(score, EvalParam::DIRECTLY_ON_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY, directly_on_open_not_next_to_open_count, trace);
 		addTerm<isTracing>(score, EvalParam::DIRECTLY_ON_OPEN_FILE_NEXT_TO_OPEN_PENALTY, directly_on_open_next_to_open_count, trace);

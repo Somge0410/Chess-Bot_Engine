@@ -9,10 +9,9 @@ struct SideAttackInfo {
 	int mobility[4] = { 0 }; // knight, bishop, rook, queen
 
 	// Attacks against the opponent's king
-	int big_king_zone_hits[6] = { 0 };
-	int big_king_zone_attackers[6] = { 0 };
-	int small_king_zone_hits[6] = { 0 };
-	int small_king_zone_attackers[6] = { 0 };
+	// Each physical piece is counted at most once, even if it attacks several
+	// squares or both parts of the king zone.
+	int king_zone_attackers[6] = { 0 };
 	uint64_t attacked_twice = 0;
 	int restricted_knights =  0 ;
 	int restricted_bishops =  0 ;
