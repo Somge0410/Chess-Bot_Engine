@@ -509,41 +509,41 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 
 				op_bishop_queen_on_mask &= op_bishop_queen_on_mask - 1;
 			}
-			//6. King Zone 
-			constexpr int Piece_ATTACK_UNIT[6] = {
-				1, 2,2,3,5,0 };
-			int danger = 0;
-			int big_attackers = 0;
-			int small_attackers = 0;
-			for (PieceType pt : {
-				PieceType::PAWN,
-					PieceType::KNIGHT,
-					PieceType::BISHOP,
-					PieceType::ROOK,
-					PieceType::QUEEN,
-					PieceType::KING }) {
-				const int p = to_int(pt);
-				danger += Piece_ATTACK_UNIT[p] * (ctx.attack_info.side[ecolor].big_king_zone_hits[p] +
-					2 * ctx.attack_info.side[ecolor].small_king_zone_hits[p]);
-				big_attackers += ctx.attack_info.side[ecolor].big_king_zone_attackers[p];
-				small_attackers += ctx.attack_info.side[ecolor].small_king_zone_attackers[p];
-				
-			}
-			if (big_attackers >= 2) {
-				danger += (big_attackers - 1);
-			}
-			if (small_attackers >= 2) {
-				danger += 2 * (small_attackers - 1);
-			}
-			const uint64_t small_king_zone = SMALL_KING_ZONE[king_squares[color]];
-			const uint64_t big_king_zone = KING_ZONE[king_squares[color]] & ~small_king_zone;
+			////6. King Zone 
+			//constexpr int Piece_ATTACK_UNIT[6] = {
+			//	1, 2,2,3,5,0 };
+			//int danger = 0;
+			//int big_attackers = 0;
+			//int small_attackers = 0;
+			//for (PieceType pt : {
+			//	PieceType::PAWN,
+			//		PieceType::KNIGHT,
+			//		PieceType::BISHOP,
+			//		PieceType::ROOK,
+			//		PieceType::QUEEN,
+			//		PieceType::KING }) {
+			//	const int p = to_int(pt);
+			//	danger += Piece_ATTACK_UNIT[p] * (ctx.attack_info.side[ecolor].big_king_zone_hits[p] +
+			//		2 * ctx.attack_info.side[ecolor].small_king_zone_hits[p]);
+			//	big_attackers += ctx.attack_info.side[ecolor].big_king_zone_attackers[p];
+			//	small_attackers += ctx.attack_info.side[ecolor].small_king_zone_attackers[p];
+			//	
+			//}
+			//if (big_attackers >= 2) {
+			//	danger += (big_attackers - 1);
+			//}
+			//if (small_attackers >= 2) {
+			//	danger += 2 * (small_attackers - 1);
+			//}
+			//const uint64_t small_king_zone = SMALL_KING_ZONE[king_squares[color]];
+			//const uint64_t big_king_zone = KING_ZONE[king_squares[color]] & ~small_king_zone;
 
-			const uint64_t weak_small_squares = small_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
-			const uint64_t weak_big_squares = big_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
-			danger += 2 * popcount(weak_small_squares) + popcount(weak_big_squares);
-			danger += 2*popcount(small_king_zone & ctx.attack_info.side[ecolor].attacked_twice);
-			danger = std::min(danger, KING_DANGER_END- KING_DANGER_START);
-			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger),color==0? -1:1 , trace);
+			//const uint64_t weak_small_squares = small_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
+			//const uint64_t weak_big_squares = big_king_zone & ctx.get_attacks(ecolor) & ~ctx.get_attacks(color);
+			//danger += 2 * popcount(weak_small_squares) + popcount(weak_big_squares);
+			//danger += 2*popcount(small_king_zone & ctx.attack_info.side[ecolor].attacked_twice);
+			//danger = std::min(danger, KING_DANGER_END- KING_DANGER_START);
+			//addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger),color==0? -1:1 , trace);
 
 
 
