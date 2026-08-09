@@ -503,18 +503,22 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 
 			const uint64_t small_king_zone = SMALL_KING_ZONE[king_squares[color]];
 			const uint64_t big_king_zone = KING_ZONE[king_squares[color]] & ~small_king_zone;
+			const SideAttackInfo& own_attacks = ctx.attack_info.side[color];
 			uint64_t enemy_non_king_attacks = 0;
+			uint64_t own_non_king_attacks = 0;
 			for (PieceType pt : {
 				PieceType::PAWN,
 				PieceType::KNIGHT,
 				PieceType::BISHOP,
 				PieceType::ROOK,
 				PieceType::QUEEN }) {
-				enemy_non_king_attacks |= enemy_attacks.by_type[to_int(pt)];
+				const int p = to_int(pt);
+				enemy_non_king_attacks |= enemy_attacks.by_type[p];
+				own_non_king_attacks |= own_attacks.by_type[p];
 			}
 
-			const uint64_t weak_small_squares = small_king_zone & enemy_non_king_attacks & ~ctx.get_attacks(color);
-			const uint64_t weak_big_squares = big_king_zone & enemy_non_king_attacks & ~ctx.get_attacks(color);
+			const uint64_t weak_small_squares = small_king_zone & enemy_non_king_attacks & ~own_non_king_attacks;
+			const uint64_t weak_big_squares = big_king_zone & enemy_non_king_attacks & ~own_non_king_attacks;
 			const int weak_small_count = popcount(weak_small_squares);
 			int danger = weak_small_count;
 			if (attacker_count >= 2) {
