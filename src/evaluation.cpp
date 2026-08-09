@@ -531,8 +531,24 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 			if (ctx.get_pieces(enemy_color, PieceType::QUEEN) == 0) {
 				danger = (danger + 1) / 2;
 			}
-			danger = std::min(danger, KING_DANGER_END - KING_DANGER_START);
-			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger), color == 0 ? -1 : 1, trace);
+
+			int danger_bucket = danger;
+			if (danger > 21) {
+				danger_bucket = 15;
+			}
+			else if (danger > 17) {
+				danger_bucket = 14;
+			}
+			else if (danger > 14) {
+				danger_bucket = 13;
+			}
+			else if (danger > 12) {
+				danger_bucket = 12;
+			}
+			else if (danger > 10) {
+				danger_bucket = 11;
+			}
+			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger_bucket), color == 0 ? -1 : 1, trace);
 
 
 

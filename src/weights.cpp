@@ -140,39 +140,22 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         { 25, -43 },      // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+4
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+5
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+6
-        { -30, 6 },       // KING_DANGER_START+0
+        { 0, 0 }, // KING_DANGER_START+0
         { 0, 0 }, // KING_DANGER_START+1
-        { -21, -11 },     // KING_DANGER_START+2
-        { -21, -3 },      // KING_DANGER_START+3
-        { -29, 4 },       // KING_DANGER_START+4
-        { -15, -5 },      // KING_DANGER_START+5
-        { -14, -3 },      // KING_DANGER_START+6
-        { -28, 1 },       // KING_DANGER_START+7
-        { -12, -2 },      // KING_DANGER_START+8
-        { -14, 16 },      // KING_DANGER_START+9
-        { 5, 1 }, // KING_DANGER_START+10
-        { 14, 6 },        // KING_DANGER_START+11
-        { 31, 3 },        // KING_DANGER_START+12
-        { 33, 6 },        // KING_DANGER_START+13
-        { 34, -8 },       // KING_DANGER_START+14
-        { 24, 0 },        // KING_DANGER_START+15
-        { 25, 3 },        // KING_DANGER_START+16
-        { 13, -3 },       // KING_DANGER_START+17
-        { 12, -1 },       // KING_DANGER_START+18
-        { 8, 1 }, // KING_DANGER_START+19
-        { 4, 0 }, // KING_DANGER_START+20
-        { 0, -1 },        // KING_DANGER_START+21
-        { -1, -2 },       // KING_DANGER_START+22
-        { -3, -2 },       // KING_DANGER_START+23
-        { 2, 1 }, // KING_DANGER_START+24
-        { -1, -1 },       // KING_DANGER_START+25
-        { 0, 0 }, // KING_DANGER_START+26
-        { -1, 0 },        // KING_DANGER_START+27
-        { 0, 0 }, // KING_DANGER_START+28
-        { 0, 0 }, // KING_DANGER_START+29
-        { 0, 0 }, // KING_DANGER_START+30
-        { 0, 0 }, // KING_DANGER_START+31
-        { 0, 0 }, // KING_DANGER_START+32
+        { 0, 0 }, // KING_DANGER_START+2
+        { 0, 0 }, // KING_DANGER_START+3
+        { 0, 0 }, // KING_DANGER_START+4
+        { 0, 0 }, // KING_DANGER_START+5
+        { 0, 0 }, // KING_DANGER_START+6
+        { 0, 0 }, // KING_DANGER_START+7
+        { 0, 0 }, // KING_DANGER_START+8
+        { 0, 0 }, // KING_DANGER_START+9
+        { 0, 0 }, // KING_DANGER_START+10
+        { 0, 0 }, // KING_DANGER_START+11 (danger 11-12)
+        { 0, 0 }, // KING_DANGER_START+12 (danger 13-14)
+        { 0, 0 }, // KING_DANGER_START+13 (danger 15-17)
+        { 0, 0 }, // KING_DANGER_START+14 (danger 18-21)
+        { 0, 0 }, // KING_DANGER_START+15 (danger 22+)
         { 7, -2 },        // MOBILITY_START+0
         { 6, 0 }, // MOBILITY_START+1
         { 4, 2 }, // MOBILITY_START+2
