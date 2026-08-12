@@ -8,13 +8,17 @@ struct EvalContext {
 	uint64_t isolated[2];
 	uint64_t passed[2];
 	uint8_t files_with_no_color_pawns[2];
+	mutable uint64_t attacks[2];
+	mutable uint8_t attacks_initialized;
 
 	EvalContext(const Board& b)
 		: board(b),
 		backward{ 0,0 },
 		isolated{ 0,0 },
 		passed{ 0,0 },
-		files_with_no_color_pawns{ 0,0 } {
+		files_with_no_color_pawns{ 0,0 },
+		attacks{ 0,0 },
+		attacks_initialized(0) {
 	}
 	void init_file_info() {
 		for (size_t file = 0; file < 8; ++file) {
@@ -48,6 +52,15 @@ struct EvalContext {
 	uint64_t get_all_pieces() const {
 		return board.get_all_pieces();
 	}
+	uint64_t get_attacks(Color color) const {
+		const int color_index = to_int(color);
+		const uint8_t initialized_bit = bit8(color_index);
+		if ((attacks_initialized & initialized_bit) == 0) {
+			attacks[color_index] = board.get_attacks_for_color(color);
+			attacks_initialized |= initialized_bit;
+		}
+		return attacks[color_index];
+	}
 	bool is_file_open(int file) const {
 		if (file < 0 || file>7) return false;
 		return (get_open_files() & bit8(file)) != 0;
@@ -65,14 +78,12 @@ struct EvalContext {
 	}
 };
 struct PawnEvalEntry {
-	uint64_t key;
-	EvaluationResult score;
-	uint64_t isolated[2] = { 0,0 };
-	uint64_t passed[2] = { 0,0 };
-	uint64_t backward[2] = { 0,0 };
+	uint64_t key = 0;
+	EvaluationResult score = { 0,0 };
 	uint8_t file_info[2] = { 0,0 };
-	bool valid;
+	bool valid = false;
 };
+static_assert(sizeof(PawnEvalEntry) == 16);
 
 constexpr int PAWN_HASH_SIZE = 1 << 18;
 
@@ -134,6 +145,9 @@ void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace);
 
 template <bool isTracing>
 void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace);
+
+template <bool isTracing>
+void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace);
 
 template <bool isTracing>
 void eval_backward(EvaluationResult& score, EvalContext& ctx, Trace* trace);

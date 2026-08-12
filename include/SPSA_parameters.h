@@ -13,7 +13,10 @@ inline int LMR_REDUCTION_AMOUNT = 2;
 
 // --- NEU: Null Move Pruning (NMP) ---
 inline int NMP_MIN_DEPTH = 5;
-inline int NMP_REDUCTION = 1;
+inline int NMP_REDUCTION = 2;
+inline int NMP_DEPTH_DIVISOR = 6;
+inline int NMP_EVAL_DIVISOR = 200;
+inline int NMP_MAX_EVAL_REDUCTION = 2;
 
 // --- NEU: Move Ordering ---
 inline int TT_STAGE = 7;
@@ -34,25 +37,32 @@ inline int ASPIRATION_WINDOW_INITIAL = 45;
 inline double ASPIRATION_WINDOW_MULTIPLIER = 2.662;
 
 // --- NEU: Time Management ---
-inline double OPT_TIME_ALLOCATION_DIVISOR = 33.69;     // time_left / divisor
-inline double OPT_TIME_ALLOCATION_DIVISOR_MG = 12.9;  // time_left / divisor
-inline double OPT_TIME_ALLOCATION_DIVISOR_EG = 29.6;  // time_left / divisor
-inline double MAX_TIME_ALLOCATION_DIVISOR = 28.7;
-inline double MAX_TIME_ALLOCATION_DIVISOR_MG = 32.27;
-inline double MAX_TIME_ALLOCATION_DIVISOR_EG = 28.5;
+inline int MOVE_OVERHEAD_MS = 50;
+inline double MOVES_TO_GO = 40;
+inline double MOVES_TO_GO_MG = 30;
+inline double MOVES_TO_GO_EG = 33;
+inline int MOVE_COUNT_THRESHOLD = 20;
+inline double MIN_MOVES_TO_GO = 10;
+inline double MAX_MOVES_TO_GO = 70;
+inline double INC_USAGE_FACTOR = 0.9;
+inline double MOVE_COUNT_WEIGHT = 0.1;
+inline double REFERENCE_TIME = 300000.0; // 5 minutes
+inline double MAX_MULTIPLIER_FAST = 1.5;
+inline double MAX_MULTIPLIER_SLOW = 2.5;
 constexpr int MAX_RECENT_BEST_COUNT = 5;
 inline double TIME_CHANGES_COUNT_BIG = 0.1;
-inline double TIME_CHANGES_COUNT_MEDIUM = 0.0404;
+inline double TIME_CHANGES_COUNT_MEDIUM = 0.0404 ;
 inline double TIME_CHANGES_COUNT_SMALL = 0.0017;
-inline double INCREMENT_DIVISOR = 1.1238;
-inline int DELTA_BEST_SCORE = 270;
+inline int    DELTA_BEST_SCORE = 270;
 inline double VOLATILITY_DIV = 202.38;
 inline double EXTRA_BEST_BASE = 0.0731;
 inline double EXTRA_BEST_FLIP = 0.0015;
 inline double EXTRA_BEST_WEIGHT = 1.0081;
-inline double NO_TIME_TRIGGER_DIV = 2.01;
-inline double NO_TIME_ALLOC_DIV = 42.9;
-inline double MAX_NO_TIME_ALLOC_DIV = 40.34;
+inline double MAX_MOVE_COUNT_REDUCTION = 8.0;
+
+
+
+
 inline double TIME_MARGIN = 0.3916;
 inline double LOG_BASE = 0.209;
 inline double LOG_DIV = 3.36;

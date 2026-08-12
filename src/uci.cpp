@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <sstream>
@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "benchmark.h"
 #include "board.h"
 #include "engine.h"
 #include "Move.h"
@@ -14,6 +15,7 @@
 #include "constants.h"
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
+#include "SPSA_parameters.h"
 
 #ifndef GIT_COMMIT
 #define GIT_COMMIT "unknown"
@@ -159,6 +161,107 @@ static void run_perft(const Board& root_board, int depth) {
         << " nps " << nps << "\n";
     std::cout.flush();
 }
+#define SPSA_INT_PARAMS(X) \
+    X(FUTILITY_MARGIN_D1, 0, 10000) \
+    X(FUTILITY_MARGIN_D2, 0, 10000) \
+    X(DELTA_MARGIN, 0, 10000) \
+    X(MAX_QUIET_PLY, 1, 64) \
+    X(LMR_MIN_DEPTH, 0, 64) \
+    X(LMR_MIN_MOVES_SEARCHED, 1, 256) \
+    X(LMR_REDUCTION_AMOUNT, 0, 64) \
+    X(NMP_MIN_DEPTH, 0, 64) \
+    X(NMP_REDUCTION, 1, 64) \
+    X(NMP_DEPTH_DIVISOR, 1, 64) \
+    X(NMP_EVAL_DIVISOR, 1, 10000) \
+    X(NMP_MAX_EVAL_REDUCTION, 0, 16) \
+    X(TT_STAGE, 0, 16) \
+    X(PROMO_STAGE, 0, 16) \
+    X(MVV_LVA_STAGE, 0, 16) \
+    X(KILLER_STAGE, 0, 16) \
+    X(COUNTERMOVE_STAGE, 0, 16) \
+    X(QUIET_STAGE, 0, 16) \
+    X(LOSING_CAPTURE_STAGE, 0, 16) \
+    X(CAPTURE_SCORE_TIEBREAK_DIVISOR, 1, 1024) \
+    X(HISTORY_BONUS_MULTIPLIER, 0, 1000) \
+    X(ASPIRATION_WINDOW_INITIAL, 0, 10000) \
+    X(MOVE_OVERHEAD_MS, 0, 10000) \
+    X(MOVE_COUNT_THRESHOLD, 0, 200) \
+    X(DELTA_BEST_SCORE, 0, 10000) \
+    X(ROOT_PERTURBATION_MIN_HELPERS, 0, 256) \
+    X(ROOT_PERTURBATION_MIN_BAND_SIZE, 0, 256) \
+    X(ROOT_PERTURBATION_MAX_BAND_SIZE, 0, 256) \
+    X(REVERSE_FUTILITY_MAX_DEPTH, 0, 64) \
+    X(REVERSE_FUTILITY_MARGIN, 0, 100000) \
+    X(PAWN_PUSH_SCORE1, -10000, 10000) \
+    X(PAWN_PUSH_SCORE2, -10000, 10000) \
+    X(PAWN_PUSH_SCORE3, -10000, 10000) \
+    X(PAWN_PUSH_SCORE4, -10000, 10000) \
+    X(PAWN_PUSH_SCORE5, -10000, 10000) \
+    X(PAWN_PUSH_SCORE6, -10000, 10000)
+
+#define SPSA_DOUBLE_PARAMS(X) \
+    X(ASPIRATION_WINDOW_MULTIPLIER, 1.0, 100.0) \
+    X(MOVES_TO_GO, 1.0, 200.0) \
+    X(MOVES_TO_GO_MG, 1.0, 200.0) \
+    X(MOVES_TO_GO_EG, 1.0, 200.0) \
+    X(MIN_MOVES_TO_GO, 1.0, 200.0) \
+    X(MAX_MOVES_TO_GO, 1.0, 400.0) \
+    X(INC_USAGE_FACTOR, 0.0, 10.0) \
+    X(MOVE_COUNT_WEIGHT, 0.0, 10.0) \
+    X(REFERENCE_TIME, 1.0, 10000000.0) \
+    X(MAX_MULTIPLIER_FAST, 0.0, 20.0) \
+    X(MAX_MULTIPLIER_SLOW, 0.0, 20.0) \
+    X(TIME_CHANGES_COUNT_BIG, 0.0, 1.0) \
+    X(TIME_CHANGES_COUNT_MEDIUM, 0.0, 1.0) \
+    X(TIME_CHANGES_COUNT_SMALL, 0.0, 1.0) \
+    X(VOLATILITY_DIV, 1.0, 100000.0) \
+    X(EXTRA_BEST_BASE, 0.0, 100000.0) \
+    X(EXTRA_BEST_FLIP, 0.0, 100000.0) \
+    X(EXTRA_BEST_WEIGHT, 0.0, 100000.0) \
+    X(MAX_MOVE_COUNT_REDUCTION, 0.0, 1000.0) \
+    X(TIME_MARGIN, -100000.0, 100000.0) \
+    X(LOG_BASE, 0.0, 10.0) \
+    X(LOG_DIV, 1.0, 1000.0) \
+    X(Q_LOG_BASE, 0.0, 10.0) \
+    X(Q_LOG_DIV, 1.0, 1000.0)
+
+static void print_spsa_options() {
+#define PRINT_INT_OPT(name, minv, maxv) \
+    std::cout << "option name " #name " type spin default " << name \
+              << " min " << minv << " max " << maxv << std::endl;
+#define PRINT_DOUBLE_OPT(name, minv, maxv) \
+    std::cout << "option name " #name " type spin default " << static_cast<int>(name) \
+              << " min " << static_cast<int>(minv) << " max " << static_cast<int>(maxv) << std::endl;
+
+    SPSA_INT_PARAMS(PRINT_INT_OPT)
+        SPSA_DOUBLE_PARAMS(PRINT_DOUBLE_OPT)
+
+#undef PRINT_INT_OPT
+#undef PRINT_DOUBLE_OPT
+}
+
+static bool try_set_spsa_option(const std::string& opt_name, const std::string& opt_value) {
+#define SET_INT_OPT(name, minv, maxv) \
+    if (opt_name == #name) { \
+        int val = std::stoi(opt_value); \
+        name = std::clamp(val, minv, maxv); \
+        return true; \
+    }
+
+#define SET_DOUBLE_OPT(name, minv, maxv) \
+    if (opt_name == #name) { \
+        double val = std::stod(opt_value); \
+        name = std::clamp(val, minv, maxv); \
+        return true; \
+    }
+
+    SPSA_INT_PARAMS(SET_INT_OPT)
+    SPSA_DOUBLE_PARAMS(SET_DOUBLE_OPT)
+
+#undef SET_INT_OPT
+#undef SET_DOUBLE_OPT
+        return false;
+}
 
 void uci_loop() {
     Board board;     // starts in startpos, thanks to default ctor
@@ -172,7 +275,9 @@ void uci_loop() {
             std::cout << "id author Aaron\n";
             std::cout << "option name Threads type spin default 1 min 1 max 256\n";
             std::cout << "option name Hash type spin default "
-                << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
+                      << MAX_MEMORY_TT_MB << " min 1 max 65536\n";
+            print_spsa_options();
+
             std::cout << "uciok\n";
             std::cout.flush();
         }
@@ -226,14 +331,20 @@ void uci_loop() {
                 int threads = std::stoi(opt_value);
                 threads = std::max(1, std::min(threads, static_cast<int>(std::thread::hardware_concurrency())));
                 engine.set_threads(threads);
-                std::cerr << "info string Threads set to " << threads << "\n";
+                //std::cerr << "info string Threads set to " << threads << "\n";
             }
             else if (opt_name == "Hash") {
                 size_t hash_mb = std::stoull(opt_value);
                 hash_mb = std::max<size_t>(1, std::min<size_t>(hash_mb, 65536));
                 engine.resize_tt(hash_mb);
-                std::cerr << "info string Hash set to " << hash_mb << " MB\n";
+                //std::cerr << "info string Hash set to " << hash_mb << " MB\n";
             }
+            else if (try_set_spsa_option(opt_name, opt_value)) {
+                continue;
+			}
+        
+
+
         }
         else if (line.rfind("position", 0) == 0) {
             std::istringstream iss(line);
@@ -286,6 +397,7 @@ void uci_loop() {
             wait_for_search(engine, search_thread);
 
             SearchLimits limits;
+            bool bench_mode = false;
             bool legalmoves_only = false;
             bool perft_mode = false;
             int perft_depth = -1;
@@ -295,7 +407,10 @@ void uci_loop() {
             iss >> token; // "go"
 
             while (iss >> token) {
-                if (token == "depth") {
+                if (token == "bench") {
+                    bench_mode = true;
+                }
+                else if (token == "depth") {
                     iss >> limits.depth;
                 }
                 else if (token == "movetime") {
@@ -334,6 +449,11 @@ void uci_loop() {
                         }
                     }
                 }
+            }
+
+            if (bench_mode) {
+                run_benchmark(get_default_positions());
+                continue;
             }
 
             if (legalmoves_only) {
@@ -378,3 +498,4 @@ void uci_loop() {
     wait_for_search(engine, search_thread);
     engine.shutdown();
 }
+

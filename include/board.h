@@ -189,6 +189,7 @@ class Board{
         EvaluationResult get_positional_score() const;
         int get_game_phase() const;
 		int get_king_square(Color color) const;
+        uint64_t get_checkers() const;
         bool in_check() const;
         BoardState get_board_state() const;
 		void push_current_state_to_history();

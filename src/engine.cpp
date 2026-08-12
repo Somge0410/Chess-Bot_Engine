@@ -1,4 +1,4 @@
-#include "engine.h"
+ï»¿#include "engine.h"
 #include "evaluation.h"
 #include <chrono>
 #include <thread>
@@ -12,9 +12,10 @@
 #include "see.h"
 #include "bitboard_masks.h"
 #include <atomic>
+#include <bit>
 #include <mutex>
 #include <algorithm>
-#include "adjustable_parameters.h"
+#include <cmath>
 #include "uci_helpers.h"
 #include "SPSA_parameters.h"
 void ThreadLocalData::flush_counters(Engine* engine,bool force) {
@@ -28,15 +29,16 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
     }
 }
 static thread_local ThreadLocalData tls_data;
-constexpr int PIECE_VALUES_QU[7] = {100,320,320,500,900,10000,0};
+constexpr int PIECE_VALUES_MG[7] = {100,320,320,500,900,10000,0};
 
 Engine::Engine(size_t tt_size_mb){
     init_tt(tt_size_mb);
+    tls_data.clear_heuristics();
     //int thread_count = std::thread::hardware_concurrency();
 	int thread_count = 1;
     start_thread_pool(thread_count);
-    std::cerr << "Engine initialized with threads=" << thread_count
-		<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
+    //std::cerr << "Engine initialized with threads=" << thread_count
+	//	<< " TT size=" << tt_size_mb << " MB, entries=" <<  4*tt.size() << std::endl << "\n";
 	stop_search.store(false, std::memory_order_relaxed);
     checks_count=0;
     ep_count=0;
@@ -44,20 +46,19 @@ Engine::Engine(size_t tt_size_mb){
     checkmate_count=0;
 	int overwrite_tt_counter = 0;
 }
-SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls, const Move& previous_move) {
-    if (tls) {
-        if (depth == 0) {
-            tls->qnodes++;
-        } else {
-            tls->nodes++;
-        }
-        tls->flush_counters(this);
+SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls,
+    const Move& previous_move, uint64_t checkers, bool null_move_allowed) {
+    if (stop_search.load(std::memory_order_relaxed)) {
+        return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
-    if (is_time_up())
-        {
+    if (tls && depth > 0) {
+        tls->nodes++;
+        tls->flush_counters(this);
+        if (tls->should_check_time() && is_time_up()) {
             stop_search.store(true, std::memory_order_relaxed);
             return { .score = 0,.best_move = Move(),.is_tempered = true };
         }
+    }
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
@@ -67,7 +68,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     Move tt_move;
 
     bool is_from_depth_0 = false;
-    if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move,is_from_depth_0)) {
+    if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move, ply, is_from_depth_0)) {
         bool is_draw = move_could_result_in_repetition(board, tt_move);
         //is_draw = false;
         if (!is_draw) {
@@ -78,19 +79,26 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     
     if (depth==0)
     {
-        int q_score=quiescence_search(board,alpha,beta,0,tls);
+        int q_score=quiescence_search(board, alpha, beta, ply, 0, tls, checkers);
         
         return {q_score,Move()};
     }
 
-    bool king_is_in_check = board.in_check();
+    if (checkers == CHECKERS_UNKNOWN) {
+        checkers = board.get_checkers();
+    }
+    bool king_is_in_check = checkers != 0;
 	int static_eval = -MATE_SCORE;
     //REVERSE FUTILITY PRUNING
     // 
 
     bool is_pv_node = (beta - alpha) > 1;
-    if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
+    const bool nmp_candidate = null_move_allowed && !is_pv_node && depth >= NMP_MIN_DEPTH && !king_is_in_check &&
+        std::abs(beta) < MATE_THRESHOLD && board.has_enough_material_for_nmp();
+    if (!king_is_in_check && ((depth <= REVERSE_FUTILITY_MAX_DEPTH && !is_pv_node) || nmp_candidate)) {
         static_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+    }
+    if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
         int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
             return { static_eval,Move() };
@@ -100,7 +108,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     
     // NULL Move Pruning Here
     int nmp_score;
-    if(try_null_move_pruning(board,king_is_in_check,depth,alpha,beta,ply,nmp_score,tls))
+    if(nmp_candidate && static_eval >= beta &&
+        try_null_move_pruning(board,king_is_in_check,depth,alpha,beta,ply,static_eval,nmp_score,tls))
     {
         return {nmp_score,Move()};
 	}
@@ -110,7 +119,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	MoveList& searched_quiets = tls->searched_quiets[ply];
     moves.clear();
 	searched_quiets.clear();
-    MoveGenerator::generate_moves(board,moves);
+    MoveGenerator::generate_moves(board,moves,checkers);
 	//If only one move available, no need to search further
     if ((ply == 0) && (moves.size() == 1)) {
         return { 0,moves[0] };
@@ -144,10 +153,10 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_best_move_tempered = false;
     bool current_move_tempered = false;
     int* scores = tls->move_scores[ply];
-	score_moves(moves, scores, ply, tt_move, is_from_depth_0,board,tls,previous_move);
+	score_moves(moves, scores, ply, tt_move, is_from_depth_0,board,tls,previous_move,true);
     for (int i=0;i<(int)moves.size();++i)
     {   
-		pick_best(moves, scores, i);
+		pick_next_staged(moves, scores, i, board);
 		const Move move = moves[i];
         // Now do futility pruning. If positions evaluation is already way worse than alpha, cut it off since it is
         //unlikely to get that much better in just 1 or two moves
@@ -166,13 +175,14 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
 		//If in check, we should increase depth by 1
         int extension = 0;
-        if (board.in_check() && ply<64 && depth<=3)
+        const uint64_t child_checkers = board.get_checkers();
+        if (child_checkers != 0 && ply<64 && depth<=3)
         {
             extension=1;
 		}
         int evaluation;
         if (first) { 
-			SearchResult first_result = negamax(board, depth - 1 + extension, -beta, -alpha, ply + 1,tls,move);
+			SearchResult first_result = negamax(board, depth - 1 + extension, -beta, -alpha, ply + 1,tls,move,child_checkers);
             evaluation = -first_result.score;
             current_move_tempered = first_result.is_tempered;
 			first = false;
@@ -181,18 +191,18 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             int new_depth = depth - 1 + extension;
 			int reduced_depth = new_depth - reduction;
 
-            SearchResult other_result = negamax(board, reduced_depth, -alpha - 1, -alpha, ply + 1,tls,move);
+            SearchResult other_result = negamax(board, reduced_depth, -alpha - 1, -alpha, ply + 1,tls,move,child_checkers);
             evaluation = -other_result.score;
             current_move_tempered = other_result.is_tempered;
 
             if (reduction > 0 && evaluation > alpha) {
-                other_result = negamax(board, new_depth, -alpha - 1, -alpha, ply + 1,tls,move);
+                other_result = negamax(board, new_depth, -alpha - 1, -alpha, ply + 1,tls,move,child_checkers);
                 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
             }
 
             if(evaluation > alpha && evaluation < beta) {
-                 other_result = negamax(board, new_depth, -beta, -alpha, ply + 1,tls,move);
+                 other_result = negamax(board, new_depth, -beta, -alpha, ply + 1,tls,move,child_checkers);
 				 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
             }
@@ -228,7 +238,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         
     }
 
-    bool is_result_tempered=store_tt(hash, depth, original_alpha, beta, best_score, best_move,is_best_move_tempered,is_any_tempered);
+    bool is_result_tempered = store_tt(hash, depth, original_alpha, beta, best_score,
+        best_move, ply, is_best_move_tempered, is_any_tempered);
     return {best_score,best_move,is_result_tempered};
 }
 int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Board& board, ThreadLocalData* tls, const Move& previous_move) {
@@ -269,73 +280,83 @@ void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& 
     scored.reserve(moves.size());
     for (const auto& m : moves) scored.emplace_back(score_move(m, ply, tt_move,tt_depth_0,board,tls,previous_move), m);
 
-    std::sort(scored.begin(), scored.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+    std::sort(scored.begin(), scored.end(), [](const auto& a, const auto& b) {
+        if(a.first != b.first)
+            return a.first > b.first;
+		return a.second.get_int() < b.second.get_int();
+        });
 
     for (size_t i = 0; i < moves.size(); ++i) moves[i]=scored[i].second;
 }
-int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, ThreadLocalData* tls) {
+int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply,
+    ThreadLocalData* tls, uint64_t checkers) {
+    if (stop_search.load(std::memory_order_relaxed)) {
+        return 0;
+    }
     if (tls) {
         tls->qnodes++;
         tls->flush_counters(this);
+        if (tls->should_check_time() && is_time_up()) {
+            stop_search.store(true, std::memory_order_relaxed);
+            return 0;
+        }
     }
-    if(is_time_up())
-    {
-        stop_search.store(true, std::memory_order_relaxed);
+    if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
         return 0;
-	}
-    uint64_t hash = board.get_hash();
-
-    int tt_score;
-    Move tt_move;
-    bool depth_0 = 0;
-    if (probe_tt(hash, 0, alpha, beta, tt_score, tt_move, depth_0, TTMode::Quiescence)) {
-        return tt_score;
     }
-    bool in_check = board.in_check();
+    if (checkers == CHECKERS_UNKNOWN) {
+        checkers = board.get_checkers();
+    }
+    bool in_check = checkers != 0;
+    constexpr int max_qply_index = ThreadLocalData::QSEARCH_PLY_CAPACITY - 1;
+    const int qmove_list_index = std::min(qply, max_qply_index);
+    MoveList& moves = tls->qmove_lists[qmove_list_index];
+    moves.clear();
 
-    if (ply >= MAX_QUIET_PLY) {
+    if (qply >= MAX_QUIET_PLY || qply >= max_qply_index) {
         if (in_check) {
-            MoveList evasions;
-            MoveGenerator::generate_moves(board, evasions);
-            if (evasions.empty()) return -MATE_SCORE + ply;
+            MoveGenerator::generate_moves(board, moves, checkers);
+            if (moves.empty()) return -MATE_SCORE + search_ply;
         }
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     }
 
-    MoveList moves;
     if (in_check) {
-        MoveGenerator::generate_moves(board, moves);
-        if (moves.empty()) return -MATE_SCORE + ply;
+        MoveGenerator::generate_moves(board, moves, checkers);
+        if (moves.empty()) return -MATE_SCORE + search_ply;
     }
     else {
         int stand_pat = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
         if (stand_pat >= beta) return stand_pat;
         if (stand_pat > alpha) alpha = stand_pat;
 
-        MoveGenerator::generate_captures(board, moves);
+        MoveGenerator::generate_captures(board, moves, checkers);
     }
 
     int best_score = in_check ? -MATE_SCORE : alpha;
     int scores[256];
-    score_quiet_moves(moves, scores, board, in_check);
+    score_qsearch_moves(moves, scores);
 
-    for (int i = 0; i < (int)moves.size(); ++i) {
-        if(stop_search.load(std::memory_order_relaxed)|| is_time_up())
-        {
-			stop_search.store(true, std::memory_order_relaxed);
+    for (int i = 0; i < (int)moves.size();) {
+        if (stop_search.load(std::memory_order_relaxed)) {
             break;
-		}
+        }
         pick_best(moves, scores, i);
         Move move = moves[i];
 
         if (!in_check) {
-            int see = see_move(board, move);
-            if (see < 0) continue; // tune; or start with see < 0
+            if (scores[i] == std::numeric_limits<int>::min()) break;
+            if (see_move(board, move) < 0) {
+                scores[i] = std::numeric_limits<int>::min();
+                continue;
+            }
         }
 
         board.make_move(move);
-        int score = -quiescence_search(board, -beta, -alpha, ply + 1, tls);
+        const uint64_t child_checkers = board.get_checkers();
+        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers);
         board.undo_move(move);
+		++i;
 
         if (score > best_score) best_score = score;
         if (score > alpha) alpha = score;
@@ -343,6 +364,16 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int ply, Thread
     }
 
     return best_score;
+}
+double interpolate_phase(double phase, double endgame_value, double midgame_value, double opening_value) {
+    phase = std::clamp(phase, 0.0, 24.0);
+    if (phase <= 12) {
+        const double t = phase / 12.0;
+		return endgame_value + t * (midgame_value - endgame_value);
+    }
+
+	const double t = (phase - 12.0) / 12.0;
+	return midgame_value + t * (opening_value - midgame_value);
 }
 TimeControlDecision Engine::decide_time_control(const Board& position, const SearchLimits& limits) {
     TimeControlDecision tc{};
@@ -352,31 +383,38 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
 		tc.max_time_ms = limits.movetime;
     }
     else if (limits.wtime > 0 || limits.btime > 0) {
-        int time_left = (position.get_turn() == Color::WHITE) ? limits.wtime : limits.btime;
-        int inc = (position.get_turn() == Color::WHITE) ? limits.winc : limits.binc;
+		const bool white_to_move = position.get_turn() == Color::WHITE;
 
-        if (position.get_move_count() < 10) {
-        tc.time_ms = time_left / OPT_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
-        tc.max_time_ms = time_left / MAX_TIME_ALLOCATION_DIVISOR + inc / INCREMENT_DIVISOR;
-        }else if(position.get_move_count() < 30){
-            tc.time_ms = time_left / (OPT_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
-            tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_MG) + inc / INCREMENT_DIVISOR;
-        }
-        else {
-            tc.time_ms = time_left / (OPT_TIME_ALLOCATION_DIVISOR_EG) + inc / INCREMENT_DIVISOR;
-			tc.max_time_ms = time_left / (MAX_TIME_ALLOCATION_DIVISOR_EG)+inc / INCREMENT_DIVISOR;
-        }
+        const int time_left = (position.get_turn() == Color::WHITE) ? limits.wtime : limits.btime;
+        const int inc = (position.get_turn() == Color::WHITE) ? limits.winc : limits.binc;
 
-        if (tc.time_ms > time_left / 2){
-            tc.time_ms = time_left / 40;
-            tc.max_time_ms = time_left / 40;
-        }
+        const int usable_time = std::max(1, time_left - MOVE_OVERHEAD_MS);
 
-        // Near 50-move rule: use half of remaining time to avoid draw
-        int half_moves = position.get_half_moves();
-        if ((half_moves == 50 || half_moves == 51) && time_left > 500) {
-            tc.time_ms =std::min(time_left / 2,30000);
-        }
+        const double phase = position.get_game_phase();
+
+		double moves_to_go = interpolate_phase(phase, MOVES_TO_GO_EG, MOVES_TO_GO_MG, MOVES_TO_GO);
+
+		const int moves_after_threshold = std::max(0, position.get_move_count() - MOVE_COUNT_THRESHOLD);
+
+        moves_to_go -= std::min(MAX_MOVE_COUNT_REDUCTION,MOVE_COUNT_WEIGHT * moves_after_threshold);
+        moves_to_go = std::clamp(moves_to_go, MIN_MOVES_TO_GO, MAX_MOVES_TO_GO);
+
+        const double increment_contribution = inc * INC_USAGE_FACTOR;
+        
+        const double base_time = usable_time / moves_to_go + increment_contribution;
+
+        //Estimate the clock resources avalable over the expected remainng number of moves
+
+        const double effective_time = usable_time + inc * moves_to_go;
+
+        const double time_scale = std::clamp(effective_time / REFERENCE_TIME, 0.0, 1.0);
+
+        double max_multiplier = MAX_MULTIPLIER_FAST + time_scale * (MAX_MULTIPLIER_SLOW - MAX_MULTIPLIER_FAST);
+        max_multiplier=std::max(1.0,max_multiplier);
+
+        tc.time_ms = std::clamp(static_cast<int>(base_time), 1, usable_time);
+		tc.max_time_ms = std::clamp(static_cast<int>(base_time * max_multiplier), tc.time_ms, usable_time);
+
     }
     else if (limits.depth > 0) {
         tc.time_ms = INFINITE_TIME_MS;
@@ -390,19 +428,23 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
     }
     return tc;
 }
-bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move,bool depth_0,TTMode mode) {
-    TTCluster& cluster = tt[hash % tt.size()];
+bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score,
+    Move& out_move, int ply, bool depth_0, TTMode mode) {
+    TTCluster& cluster = tt[hash & (tt.size() - 1)];
+    const uint16_t key16 = static_cast<uint16_t>(hash >> 48);
     bool hits = false;
     for (int i = 0; i < 4; i++) {
         TTEntry& slot = cluster.entries[i];
         uint64_t w = tt_load(slot);
         TTEntry entry;
         entry.entry = w;
-		if (entry.empty()) continue;
-		if (entry.key() != (static_cast<uint16_t>(hash >> 48))) continue;
+		if (entry.empty()) return false;
+		if (entry.key() != key16) continue;
+		tt_refresh_generation(slot, w, generation);
 
         out_move = entry.move();
-        out_score = entry.score();
+        const int score = score_from_tt(entry.score(), ply);
+        out_score = score;
         if (entry.depth() < depth) {
             return false;
         }
@@ -410,7 +452,6 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         if (entry.flag() == TEMPERED) {
             return false;
         }
-        int score = entry.score();
         int a = alpha, b = beta;
         if (entry.flag() == EXACT) {
             if (out_move.from_square == NO_SQUARE) return false;
@@ -432,7 +473,8 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
     return false;
 
 }
-bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score, Move& best_move,bool is_best_tempered, bool is_any_tempered, TTMode mode) {
+bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score,
+    Move& best_move, int ply, bool is_best_tempered, bool is_any_tempered, TTMode mode) {
     bool score_tempered=false;
     TTFlag flag_to_store;
     // Do some position from repeat logic here
@@ -468,8 +510,9 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         }
     }
 
-    TTEntry new_entry = TTEntry(best_score, depth, flag_to_store, generation, best_move, static_cast<uint16_t>(hash >> 48));
-	TTCluster& cluster = tt[hash % tt.size()];
+    TTEntry new_entry = TTEntry(score_to_tt(best_score, ply), depth, flag_to_store,
+        generation, best_move, static_cast<uint16_t>(hash >> 48));
+	TTCluster& cluster = tt[hash & (tt.size() - 1)];
 
     uint16_t key16 = static_cast<uint16_t>(hash >> 48);
     for(int i=0;i<4;i++){
@@ -479,6 +522,10 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         if (!old.empty() && old.key() == key16) {
             if (old.depth() <= depth) {
                 tt_store(cluster.entries[i],new_entry.entry);
+            }
+            else {
+                // Preserve the deeper result but mark it as used by this search.
+                tt_refresh_generation(cluster.entries[i], oldw, generation);
             }
 
             
@@ -503,7 +550,7 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
     int pos_depth = depth;
     for (size_t i = 0; i < 4; ++i) {
 		TTEntry e; e.entry = tt_load(cluster.entries[i]);
-		int8_t curr_gen_diff = dist_mod64_fast(e.generation(),generation);
+		uint8_t curr_gen_diff = generation_age(e.generation(),generation);
         if (curr_gen_diff>max_generation_diff) {
             pos_index = i;
             max_generation_diff = curr_gen_diff;
@@ -522,7 +569,7 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
 
 }
 bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move) {
-	if (depth > 2) return false;
+	if (depth > 3) return false;
     bool is_quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
     if (in_check || !is_quiet) return false;
     if (depth == 1 && eval + FUTILITY_MARGIN_D1 <= alpha) return true;
@@ -536,24 +583,41 @@ int Engine::late_move_reduction(int depth, int moves_searched, const Move& move,
     if (is_killer) return 0;
     bool is_quiet = move.is_quiet();
     if (is_quiet) {
-        //return Q_REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
-        return std::clamp(static_cast<int>(Q_LOG_BASE + std::log(depth) * std::log(moves_searched) / Q_LOG_DIV), 0, depth - 1);
+        return quiet_lmr[depth][moves_searched];
     }
     else {
-
-        //return REDUCTION_AMOUNT[depth - 1][moves_searched - 1];
-
-        return std::clamp(static_cast<int>(LOG_BASE + std::log(depth) * std::log(moves_searched) / LOG_DIV), 0, depth - 1);
+        return tactical_lmr[depth][moves_searched];
     }
 }
-bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply, int& out_score,ThreadLocalData* tls) {
+void Engine::initialize_lmr_tables() {
+    for (int depth = 0; depth < LMR_DEPTH_COUNT; ++depth) {
+        for (int move_count = 0; move_count < LMR_MOVE_COUNT; ++move_count) {
+            if (depth <= 1 || move_count <= 1) {
+                quiet_lmr[depth][move_count] = 0;
+                tactical_lmr[depth][move_count] = 0;
+                continue;
+            }
+            quiet_lmr[depth][move_count] = static_cast<uint8_t>(std::clamp(
+                static_cast<int>(Q_LOG_BASE + std::log(depth) * std::log(move_count) / Q_LOG_DIV), 0, depth - 1));
+            tactical_lmr[depth][move_count] = static_cast<uint8_t>(std::clamp(
+                static_cast<int>(LOG_BASE + std::log(depth) * std::log(move_count) / LOG_DIV), 0, depth - 1));
+        }
+    }
+}
+bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply,
+    int static_eval, int& out_score,ThreadLocalData* tls) {
 	bool is_mate_score_possible = (alpha >= MATE_THRESHOLD || beta <= -MATE_THRESHOLD);
 
     if(is_mate_score_possible|| depth < NMP_MIN_DEPTH || king_is_in_check || !board.has_enough_material_for_nmp()) {
         return false;
 	}
+	const int eval_reduction = std::clamp((static_eval - beta) / std::max(1, NMP_EVAL_DIVISOR),
+        0, NMP_MAX_EVAL_REDUCTION);
+	const int reduction = NMP_REDUCTION + depth / std::max(1, NMP_DEPTH_DIVISOR) + eval_reduction;
+	const int null_depth = std::max(0, depth - 1 - reduction);
 	int original_ep_square = board.make_null_move();
-	int null_move_score = negamax(board, depth - NMP_REDUCTION, -beta, -beta + 1, ply + 1,tls).score;
+	int null_move_score = negamax(board, null_depth, -beta, -beta + 1, ply + 1,tls,
+        Move(), CHECKERS_UNKNOWN, false).score;
 	null_move_score = -null_move_score;
 	board.undo_null_move(original_ep_square);
     if (stop_search.load(std::memory_order_relaxed)) {
@@ -599,6 +663,7 @@ void Engine::init_tt(size_t tt_size_mb) {
     size_t bytes = tt_size_mb * 1024ull * 1024ull;
     size_t clusters = bytes / sizeof(TTCluster);
     if (clusters == 0) clusters = 1;
+    clusters = std::bit_floor(clusters);
     tt.resize(clusters);
 }
 bool Engine::move_could_result_in_repetition(Board& board, Move& move, int count) {
@@ -614,22 +679,63 @@ void Engine::recover_move_fully(Move& move,const Board& board) {
     move.is_en_passant = move.piece_moved == PieceType::PAWN && move.to_square==board.get_en_passant_rights();
 }
 void Engine::score_moves(const MoveList& moves, int* scores,
-    int ply, const Move& tt_move, bool tt_depth_0,const Board& board,ThreadLocalData* tls,const Move& previous_move) {
-    for (int i = 0; i < (int)moves.size(); ++i)
-        scores[i] = score_move(moves[i], ply, tt_move, tt_depth_0,board, tls,previous_move);
+    int ply, const Move& tt_move, bool tt_depth_0,const Board& board,ThreadLocalData* tls,
+    const Move& previous_move, bool lazy_see) {
+    for (int i = 0; i < (int)moves.size(); ++i) {
+        const Move& move = moves[i];
+        const bool is_tt_move = move == tt_move && !tt_depth_0;
+        if (lazy_see && !is_tt_move && move.promotion_piece == PieceType::NONE &&
+            move.piece_captured != PieceType::NONE) {
+            const int attacker = PIECE_VALUES_MG[to_int(move.piece_moved)];
+            const int victim = PIECE_VALUES_MG[to_int(move.piece_captured)];
+            // The offset marks captures whose SEE has not been evaluated yet while
+            // keeping them between promotions and killers in the staged ordering.
+            scores[i] = MVV_LVA_STAGE * 100000 + 50000 +
+                (victim - attacker) / CAPTURE_SCORE_TIEBREAK_DIVISOR;
+        }
+        else {
+            scores[i] = score_move(move, ply, tt_move, tt_depth_0,board, tls,previous_move);
+        }
+    }
 }
-void Engine::score_quiet_moves(const MoveList& moves, int* scores,const Board& board,bool evade_check) {
+void Engine::pick_next_staged(MoveList& moves, int* scores, int start, const Board& board) {
+    while (true) {
+        int best = start;
+        for (int i = start + 1; i < static_cast<int>(moves.size()); ++i) {
+            if (scores[i] > scores[best]) best = i;
+        }
+
+        const Move& candidate = moves[best];
+        const bool untested_capture = candidate.piece_captured != PieceType::NONE &&
+            candidate.promotion_piece == PieceType::NONE &&
+            scores[best] >= MVV_LVA_STAGE * 100000 + 40000 &&
+            scores[best] < MVV_LVA_STAGE * 100000 + 60000;
+        if (untested_capture) {
+            const int see = see_move(board, candidate);
+            if (see < 0) {
+                scores[best] = LOSING_CAPTURE_STAGE * 100000 + see;
+                continue;
+            }
+            const int attacker = PIECE_VALUES_MG[to_int(candidate.piece_moved)];
+            const int victim = PIECE_VALUES_MG[to_int(candidate.piece_captured)];
+            scores[best] = MVV_LVA_STAGE * 100000 + see +
+                (victim - attacker) / CAPTURE_SCORE_TIEBREAK_DIVISOR;
+        }
+
+        if (best != start) {
+            std::swap(moves[best], moves[start]);
+            std::swap(scores[best], scores[start]);
+        }
+        return;
+    }
+}
+void Engine::score_qsearch_moves(const MoveList& moves, int* scores) {
     for (int i = 0; i < (int)moves.size(); ++i) {
         scores[i] = 0;
 		const Move& m = moves[i];
-        if (!evade_check) {
-            int see = see_move(board, m);
-            scores[i] += see;
-        }
-        
-        int victim = PIECE_VALUES_QU[to_int(m.piece_captured)]/100;
-        int attacker = PIECE_VALUES_QU[to_int(m.piece_moved)]/100;
-        scores[i]+= victim - attacker;
+        int victim = PIECE_VALUES_MG[to_int(m.piece_captured)]/100;
+        int attacker = PIECE_VALUES_MG[to_int(m.piece_moved)]/100;
+        scores[i] += victim - attacker;
     }
 }
 int Engine::relevant_pawn_push(const Board& board, const Move& move) {
@@ -667,14 +773,21 @@ void Engine::set_threads(int n) {
     start_thread_pool(n);
 }
 void Engine::start_thread_pool(int n) {
-	thread_count = n;
-    terminate_pool = false;
+	uint64_t initial_job_id;
+    {
+        std::lock_guard<std::mutex> lk(pool_mtx);
+        thread_count = n;
+        terminate_pool = false;
+        active_workers = 0;
+        job_thread_count = 1;
+        initial_job_id = job_id;
+    }
 	tls_data.clear_counters();
     workers.clear();
 	workers.reserve((size_t)thread_count - 1);
 
     for (int t = 1; t < thread_count; ++t) {
-		workers.emplace_back([this, t]() {worker_loop(t); });
+		workers.emplace_back([this, t, initial_job_id]() {worker_loop(t, initial_job_id); });
     }
 
 }
@@ -690,28 +803,39 @@ void Engine::stop_thread_pool() {
 			th.join();
     }
     workers.clear();
-    terminate_pool = false;
-    thread_count = 1;
+    {
+        std::lock_guard<std::mutex> lk(pool_mtx);
+        terminate_pool = false;
+        thread_count = 1;
+        active_workers = 0;
+        job_thread_count = 1;
+    }
     tls_data.clear_counters();
 }
 
-void Engine::worker_loop(int thread_id) {
-    uint64_t seen_job = 0;
+void Engine::worker_loop(int thread_id, uint64_t initial_job_id) {
+    uint64_t seen_job = initial_job_id;
     Move local_best;
     int local_score = 0;
 
     while (true) {
         Board pos;
         SearchLimits limits;
+        uint64_t assigned_job = 0;
+        bool participates = false;
         {
 			std::unique_lock<std::mutex> lk(pool_mtx);
 			cv_start.wait(lk, [&] {return terminate_pool || job_id != seen_job; });
 			if (terminate_pool) return;
 			seen_job = job_id;
+            assigned_job = job_id;
+            participates = thread_id < job_thread_count;
+            if (!participates) continue;
             pos = job_position;
             limits = job_limits;
         }
 
+        tls_data.clear_counters();
         Move tmp_best = local_best;
 		int tmp_score = local_score;    
 		TimeControlDecision tc = decide_time_control(pos, limits);
@@ -721,8 +845,11 @@ void Engine::worker_loop(int thread_id) {
 		local_score = tmp_score;
         {
             std::lock_guard<std::mutex> lk(pool_mtx);
-            active_workers--;
-            if (active_workers == 0) cv_done.notify_one();
+            // Only workers assigned to the current job may complete its counter.
+            if (assigned_job == job_id && active_workers > 0) {
+                active_workers--;
+                if (active_workers == 0) cv_done.notify_one();
+            }
         }
     }
 }
@@ -740,7 +867,9 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
     double predicted_next_iteration_ms = 0;
     Move recent_best_moves[MAX_RECENT_BEST_COUNT] = { };
     int recent_best_move_count = 0;
-    int dynamic_soft_time_ms = tc.time_ms;
+    const int initial_budget_ms = tc.time_ms;
+    const int maximum_budget = tc.max_time_ms;
+    int current_budget_ms = initial_budget_ms;
 
     int prev_root_score = 0;
     bool has_prev_root_score = false;
@@ -831,12 +960,12 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             recent_best_moves[recent_best_move_count % MAX_RECENT_BEST_COUNT] = best_move;
             recent_best_move_count++;
 
-            if (recent_best_move_count >= 6 && tc.max_time_ms > tc.time_ms) {
+            if (recent_best_move_count >= 6 && current_budget_ms < maximum_budget) {
                 int changes = 0;
                 int consecutive_changes = 0;
                 bool has_two_consecutive_changes = false;
                 int start = recent_best_move_count - MAX_RECENT_BEST_COUNT;
-                for (int i = 0; i < 5; ++i) {
+                for (int i = 0; i < MAX_RECENT_BEST_COUNT; ++i) {
                     const Move& a = recent_best_moves[(start + i) % MAX_RECENT_BEST_COUNT];
                     const Move& b = recent_best_moves[(start + i + 1) % MAX_RECENT_BEST_COUNT];
                     if (a != b) {
@@ -852,7 +981,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                 }
 				const bool unstable = has_two_consecutive_changes || changes >= 3;
                     if (unstable) {
-                        int gap = tc.max_time_ms - tc.time_ms;
+                        int gap = std::max(0, maximum_budget-current_budget_ms);
                         double extra_fraction = 0.0;
                         if (has_two_consecutive_changes) {
 							extra_fraction = (changes >= 3) ? TIME_CHANGES_COUNT_BIG : TIME_CHANGES_COUNT_MEDIUM;
@@ -861,11 +990,11 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                             extra_fraction = TIME_CHANGES_COUNT_SMALL;
                         }
                         int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
-                        tc.time_ms = std::clamp(tc.time_ms + extra_time_ms, tc.time_ms, tc.max_time_ms);
-                        set_time_budget_ms(tc.time_ms);
+                        current_budget_ms = std::clamp(current_budget_ms + extra_time_ms, initial_budget_ms, maximum_budget);
+                        set_time_budget_ms(current_budget_ms);
                     }
             }
-            if (tc.max_time_ms > tc.time_ms && has_prev_root_score) {
+            if (maximum_budget > current_budget_ms && has_prev_root_score) {
                 const bool curr_is_mate = std::abs(best_score) >= MATE_THRESHOLD;
                 const bool prev_is_mate = std::abs(prev_root_score) >= MATE_THRESHOLD;
 
@@ -875,7 +1004,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
                     // Tuning: ab ~50cp Unterschied reagieren
                     if (delta_cp >= DELTA_BEST_SCORE || sign_flip) {
-                        const int gap = tc.max_time_ms - tc.time_ms;
+                        const int gap = std::max(0, maximum_budget - current_budget_ms);
 
                         // sanfte Skalierung
                         const double volatility = std::clamp(static_cast<double>(delta_cp - DELTA_BEST_SCORE) / VOLATILITY_DIV, 0.0, 1.0);
@@ -886,8 +1015,8 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
                         int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
 
-                        tc.time_ms = std::clamp(tc.time_ms + extra_time_ms, tc.time_ms, tc.max_time_ms);
-                        set_time_budget_ms(tc.time_ms);
+                        current_budget_ms = std::clamp(current_budget_ms + extra_time_ms, initial_budget_ms, maximum_budget);
+                        set_time_budget_ms(current_budget_ms);
                     }
                 }
             }
@@ -996,16 +1125,17 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
 
         const Move m = root_moves[i];
         b.make_move(m);
+        const uint64_t child_checkers = b.get_checkers();
 
         SearchResult r;
         if (i == 0) {
-            r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m);
+            r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m, child_checkers);
         }
 		else {
-            r = negamax(b, current_depth - 1, -(local_alpha + 1), -local_alpha, 1, tls, m);
+            r = negamax(b, current_depth - 1, -(local_alpha + 1), -local_alpha, 1, tls, m, child_checkers);
             int score = -r.score;
             if (!stop_search.load(std::memory_order_relaxed) && score > local_alpha && score < beta) {
-                r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m);
+                r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m, child_checkers);
             }
         }
 
@@ -1037,6 +1167,8 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
 Move Engine::search(const Board& position, const SearchLimits& limits) {
     //decide time control
 	auto tc = decide_time_control(position, limits);
+    initialize_lmr_tables();
+    generation = static_cast<uint8_t>((generation + 1) & 0x3F);
     int use_threads = thread_count;
     if (tc.time_ms < 20) use_threads = 1;
 
@@ -1088,12 +1220,13 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 
 		job_position = position;
         job_limits = limits;
+		job_thread_count = use_threads;
 		active_workers = std::max(0, use_threads - 1);
         job_id++;
     }
-    if (use_threads > 1) {
-        cv_start.notify_all();
-    }
+    // Wake every worker so non-participants also consume this job id and remain
+    // synchronized for the next search.
+    cv_start.notify_all();
 
     //master search in this thread (thread_id=0)
 	iterative_deepening_new(0, true, best_move_so_far, best_score_so_far, position, tc, &tls_data);
@@ -1127,12 +1260,12 @@ void Engine::resize_tt(size_t tt_size_mb) {
     int saved_threads = thread_count;
     stop_thread_pool();
 
-    // TT neu allokieren (löscht alle alten Einträge)
+    // TT neu allokieren (lÃ¶scht alle alten EintrÃ¤ge)
     tt.clear();
     init_tt(tt_size_mb);
 
-    std::cerr << "info string TT resized to " << tt_size_mb
-              << " MB, entries=" << 4 * tt.size() << "\n";
+    //std::cerr << "info string TT resized to " << tt_size_mb
+    //          << " MB, entries=" << 4 * tt.size() << "\n";
 
     // Thread-Pool mit gleicher Thread-Anzahl wieder hochfahren
     start_thread_pool(saved_threads);
@@ -1143,7 +1276,7 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
     Board b = board;
     b.make_move(best_move);
 
-    // Sammle bis zu depth-1 weitere Züge aus der TT
+    // Sammle bis zu depth-1 weitere ZÃ¼ge aus der TT
     for (int i = 1; i < depth; ++i) {
         if (b.is_fifty_move_rule_draw() || b.is_repetition_draw(2)) {
             break;
@@ -1154,15 +1287,15 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         bool depth_0 = false;
 
         // depth=0 akzeptiert jeden TT-Eintrag mit depth>=0
-        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, depth_0))
+        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, i, depth_0))
             break;
         if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)
             break;
 
-        // TT speichert nur from/to/promotion — Rest muss rekonstruiert werden
+        // TT speichert nur from/to/promotion Â— Rest muss rekonstruiert werden
         recover_move_fully(tt_move, b);
 
-        // Prüfe ob der rekonstruierte Zug gültig ist (piece_moved darf nicht NONE sein)
+        // PrÃ¼fe ob der rekonstruierte Zug gÃ¼ltig ist (piece_moved darf nicht NONE sein)
         if (tt_move.piece_moved == PieceType::NONE)
             break;
 

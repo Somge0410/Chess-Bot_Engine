@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+﻿cmake_minimum_required(VERSION 3.10)
 project(Chess-Bot_Engine LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -7,16 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. Hardware Optimization Toggle
 option(USE_NATIVE_ARCH "Optimize for current CPU" ON)
 
-# 2. Platform-dependent default TT size (in MB)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64|arm64")
-    set(DEFAULT_TT_MB 128)
-else()
-    set(DEFAULT_TT_MB 512)
-endif()
+# 2. Conservative default TT size (in MB).
+# GUIs can still select a larger Hash value for long searches.
+set(DEFAULT_TT_MB 128)
 set(TT_SIZE_MB ${DEFAULT_TT_MB} CACHE STRING "Transposition table size in MB")
 
 # 3. Define the Executable
 add_executable(Chess-Bot_Engine
+    src/benchmark.cpp
     src/board.cpp
     src/engine.cpp
     src/evaluation.cpp
@@ -25,7 +23,7 @@ add_executable(Chess-Bot_Engine
     src/notation_utils.cpp
     src/zobrist.cpp
     src/uci.cpp
- "include/pst.h" "include/adjustable_parameters.h" "include/Squares.h" "include/evaluation.h" "src/evaluation.cpp" "src/weights.cpp")
+ "include/pst.h"  "include/Squares.h" "include/evaluation.h" "src/evaluation.cpp" "src/weights.cpp")
 
 target_include_directories(Chess-Bot_Engine PUBLIC include)
 

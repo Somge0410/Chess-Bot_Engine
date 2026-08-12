@@ -14,23 +14,29 @@ MoveGenerator::MoveGenerator()
 }
 template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_moves(const Board& board,MoveList& move_list){
+	generate_moves<captures_only, with_checks>(board, move_list, board.get_checkers());
+}
+
+template <bool captures_only, bool with_checks>
+void MoveGenerator::generate_moves(const Board& board, MoveList& move_list, uint64_t checkers){
 	//if (board.is_fifty_move_rule_draw() || board.is_repetition_draw()) return move_list;
     Color own_color=board.get_turn();
     Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
     int king_square=board.get_king_square(own_color);
 	uint64_t pinned_info = calculate_pinned_pieces(board, own_color,opponent_color,king_square);
-    CheckInfo check_info=board.count_attacker_on_square(king_square,opponent_color);
+	const int check_count = popcount(checkers);
     uint64_t own_pieces=board.get_color_pieces(own_color);
-    if (check_info.count>1)
+    if (check_count>1)
     { 
         generate_king_moves<captures_only>(move_list, board, own_color, own_pieces, king_square);
-    }else if (check_info.count==1)
+    }else if (check_count==1)
     {  
         generate_king_moves<captures_only>(move_list,board, own_color,own_pieces ,king_square);
         
-        PieceType checker=board.get_piece_on_square(check_info.attacker_square);
-        uint64_t remedy_mask=(1ULL<< check_info.attacker_square);
-        if (checker==PieceType::QUEEN || checker==PieceType::ROOK|| checker==PieceType::BISHOP) remedy_mask|=LINE_BETWEEN[king_square][check_info.attacker_square];
+        const int checker_square = get_lsb(checkers);
+        PieceType checker=board.get_piece_on_square(checker_square);
+        uint64_t remedy_mask=(1ULL<< checker_square);
+        if (checker==PieceType::QUEEN || checker==PieceType::ROOK|| checker==PieceType::BISHOP) remedy_mask|=LINE_BETWEEN[king_square][checker_square];
         
         generate_queen_moves<captures_only,with_checks>(move_list,board, own_color, pinned_info, remedy_mask);
         
@@ -500,6 +506,9 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Board& board, C
 void MoveGenerator::generate_captures(const Board& board, MoveList& moves){
     return generate_moves<true,false>(board,moves);
 }
+void MoveGenerator::generate_captures(const Board& board, MoveList& moves, uint64_t checkers){
+    return generate_moves<true, false>(board, moves, checkers);
+}
 void MoveGenerator::generate_captures_with_checks(const Board& board,MoveList& moves){
     return generate_moves<true,true>(board,moves);
 }
@@ -511,3 +520,7 @@ template void MoveGenerator::generate_moves<false, false>(const Board&, MoveList
 template void MoveGenerator::generate_moves<true, false>(const Board&, MoveList&);
 template void MoveGenerator::generate_moves<false, true>(const Board&, MoveList&);
 template void MoveGenerator::generate_moves<true, true>(const Board&, MoveList&);
+template void MoveGenerator::generate_moves<false, false>(const Board&, MoveList&, uint64_t);
+template void MoveGenerator::generate_moves<true, false>(const Board&, MoveList&, uint64_t);
+template void MoveGenerator::generate_moves<false, true>(const Board&, MoveList&, uint64_t);
+template void MoveGenerator::generate_moves<true, true>(const Board&, MoveList&, uint64_t);
