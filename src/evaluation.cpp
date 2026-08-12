@@ -18,14 +18,6 @@ void build_attack_info(EvalContext& ctx) {
 		side_info.by_type[to_int(PieceType::PAWN)] = pawn_left_attacks | pawn_right_attacks;
 		side_info.all |= side_info.by_type[to_int(PieceType::PAWN)];
 
-		side_info.attacked_twice |= pawn_left_attacks & pawn_right_attacks;
-
-
-		const int enemy_king = ctx.board.get_king_square(flip_color(side));
-		const uint64_t king_zone = KING_ZONE[enemy_king];
-		const uint64_t attacking_pawns = pawns & get_pawn_attacks(king_zone, flip_color(side));
-		side_info.king_zone_attackers[to_int(PieceType::PAWN)] = popcount(attacking_pawns);
-
 	}
 
 	for (int color = 0; color < 2; ++color) {
@@ -37,9 +29,6 @@ void build_attack_info(EvalContext& ctx) {
 
 		const uint64_t mobility_area = ~own_pieces & ~enemy_pawn_attacks;
 
-		const int enemy_king = ctx.board.get_king_square(to_color(enemy));
-		const uint64_t king_zone = KING_ZONE[enemy_king];
-
 		for (PieceType pt : {
 			PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN }) {
 			uint64_t pieces = ctx.get_pieces(to_color(color), pt);
@@ -49,7 +38,6 @@ void build_attack_info(EvalContext& ctx) {
 				const uint64_t attacks = get_piece_attacks(pt, square, occupied);
 
 				side_info.by_type[to_int(pt)] |= attacks;
-				side_info.attacked_twice |= side_info.all & attacks;
 				side_info.all |= attacks;
 				const int mobility = popcount(attacks & mobility_area);
 				side_info.mobility[to_int(pt) - 1] += mobility;
@@ -58,10 +46,6 @@ void build_attack_info(EvalContext& ctx) {
 				}
 				if(pt== PieceType::BISHOP && mobility <= 3) {
 					side_info.restricted_bishops++;
-				}
-
-				if (attacks & king_zone) {
-					side_info.king_zone_attackers[to_int(pt)]++;
 				}
 			}
 		}
@@ -484,26 +468,10 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 
 				op_bishop_queen_on_mask &= op_bishop_queen_on_mask - 1;
 			}
-			// 6. King-zone danger. Piece involvement and square pressure are
-			// deliberately separate: a queen that attacks three ring squares is
-			// still only one attacker.
-			constexpr int PIECE_ATTACK_UNIT[6] = { 0, 2, 2, 3, 5, 0 };
+			// 6. Weak squares in the immediate king ring. King defenses are
+			// excluded so that merely standing next to a square does not defend it.
 			const SideAttackInfo& enemy_attacks = ctx.attack_info.side[ecolor];
-			int attacker_count = 0;
-			int attacker_units = 0;
-			for (PieceType pt : {
-				PieceType::KNIGHT,
-				PieceType::BISHOP,
-				PieceType::ROOK,
-				PieceType::QUEEN }) {
-				const int p = to_int(pt);
-				const int count = enemy_attacks.king_zone_attackers[p];
-				attacker_count += count;
-				attacker_units += PIECE_ATTACK_UNIT[p] * count;
-			}
-
 			const uint64_t small_king_zone = SMALL_KING_ZONE[king_squares[color]];
-			const uint64_t big_king_zone = KING_ZONE[king_squares[color]] & ~small_king_zone;
 			const SideAttackInfo& own_attacks = ctx.attack_info.side[color];
 			uint64_t enemy_non_king_attacks = 0;
 			uint64_t own_non_king_attacks = 0;
@@ -519,42 +487,8 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 			}
 
 			const uint64_t weak_small_squares = small_king_zone & enemy_non_king_attacks & ~own_non_king_attacks;
-			const uint64_t weak_big_squares = big_king_zone & enemy_non_king_attacks & ~own_non_king_attacks;
 			const int weak_small_count = popcount(weak_small_squares);
 			weak_king_ring_squares_count += color == 0 ? -weak_small_count : weak_small_count;
-
-			const bool has_queen = ctx.get_pieces(enemy_color, PieceType::QUEEN) != 0;
-			if (attacker_count >= 2 && has_queen) {
-				// The cheapest qualifying pair is two minor pieces (four units).
-				// The queen only has to be present; it need not attack the zone itself.
-				constexpr int MIN_COORDINATED_ATTACK_UNITS = 4;
-				const int danger = attacker_units - MIN_COORDINATED_ATTACK_UNITS
-					+ popcount(weak_big_squares)
-					+ 2 * popcount(small_king_zone & enemy_attacks.attacked_twice);
-				// TODO: Add safe checks and restricted king escape squares as
-				// separate signals instead of folding them into this proxy.
-
-				int danger_bucket = danger;
-				if (danger > 21) {
-					danger_bucket = 15;
-				}
-				else if (danger > 17) {
-					danger_bucket = 14;
-				}
-				else if (danger > 14) {
-					danger_bucket = 13;
-				}
-				else if (danger > 12) {
-					danger_bucket = 12;
-				}
-				else if (danger > 10) {
-					danger_bucket = 11;
-				}
-				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger_bucket), color == 0 ? -1 : 1, trace);
-			}
-
-
-
 		}
 		addTerm<isTracing>(score, EvalParam::WEAK_KING_RING_SQUARES, weak_king_ring_squares_count, trace);
 		addTerm<isTracing>(score, EvalParam::PAWN_SHIELD_BONUS, pawn_shield_count, trace);

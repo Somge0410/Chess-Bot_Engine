@@ -140,23 +140,7 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         { 25, -44 },      // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+4
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+5
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+6
-        { -5, 12 },       // KING_DANGER_START+0
-        { 8, -8 },        // KING_DANGER_START+1
-        { 3, 12 },        // KING_DANGER_START+2
-        { -2, -10 },      // KING_DANGER_START+3
-        { 13, -13 },      // KING_DANGER_START+4
-        { 9, 14 },        // KING_DANGER_START+5
-        { 25, 1 },        // KING_DANGER_START+6
-        { 33, 7 },        // KING_DANGER_START+7
-        { 46, 4 },        // KING_DANGER_START+8
-        { 45, 8 },        // KING_DANGER_START+9
-        { 43, -6 },       // KING_DANGER_START+10
-        { 43, -1 },       // KING_DANGER_START+11
-        { 25, -5 },       // KING_DANGER_START+12
-        { 11, -1 },       // KING_DANGER_START+13
-        { -3, -5 },       // KING_DANGER_START+14
-        { -1, -1 },       // KING_DANGER_START+15
-        { 21, -8 },       // PARAM_606
+        { 21, 0 },        // WEAK_KING_RING_SQUARES
         { 7, -1 },        // MOBILITY_START+0
         { 6, 0 }, // MOBILITY_START+1
         { 4, 2 }, // MOBILITY_START+2

@@ -7,12 +7,6 @@ struct SideAttackInfo {
 	uint64_t by_type[6] = { 0 };
 	uint64_t all = 0;
 	int mobility[4] = { 0 }; // knight, bishop, rook, queen
-
-	// Attacks against the opponent's king
-	// Each physical piece is counted at most once, even if it attacks several
-	// squares or both parts of the king zone.
-	int king_zone_attackers[6] = { 0 };
-	uint64_t attacked_twice = 0;
 	int restricted_knights =  0 ;
 	int restricted_bishops =  0 ;
 };
@@ -128,10 +122,7 @@ void build_attack_info(EvalContext& ctx);
 
 inline EvaluationResult effective_eval_weight(
 	const EvaluationResult weights[PARAM_COUNT], EvalParam param) {
-	const bool king_safety_mg_only =
-		(param >= EvalParam::KING_DANGER_START && param <= EvalParam::KING_DANGER_END)
-		|| param == EvalParam::WEAK_KING_RING_SQUARES;
-	return king_safety_mg_only
+	return param == EvalParam::WEAK_KING_RING_SQUARES
 		? EvaluationResult{ weights[param].mg_score, 0 }
 		: weights[param];
 }
