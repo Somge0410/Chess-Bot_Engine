@@ -416,6 +416,7 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 		int directly_on_semi_open_count_next_to_open = 0;
 		int next_to_semi_open_count = 0;
 		int next_to_open_diagonal_count[7] = { 0,0,0,0,0,0,0 };
+		int weak_king_ring_squares_count = 0;
 		for (size_t color = 0; color < 2; color++) {
 			int ecolor = color == 0 ? 1 : 0;
 			const Color own_color = static_cast<Color>(color);
@@ -520,40 +521,42 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 			const uint64_t weak_small_squares = small_king_zone & enemy_non_king_attacks & ~own_non_king_attacks;
 			const uint64_t weak_big_squares = big_king_zone & enemy_non_king_attacks & ~own_non_king_attacks;
 			const int weak_small_count = popcount(weak_small_squares);
-			int danger = weak_small_count;
-			if (attacker_count >= 2) {
-				danger = attacker_units
-					+ 2 * weak_small_count
+			weak_king_ring_squares_count += color == 0 ? -weak_small_count : weak_small_count;
+
+			const bool has_queen = ctx.get_pieces(enemy_color, PieceType::QUEEN) != 0;
+			if (attacker_count >= 2 && has_queen) {
+				// The cheapest qualifying pair is two minor pieces (four units).
+				// The queen only has to be present; it need not attack the zone itself.
+				constexpr int MIN_COORDINATED_ATTACK_UNITS = 4;
+				const int danger = attacker_units - MIN_COORDINATED_ATTACK_UNITS
 					+ popcount(weak_big_squares)
 					+ 2 * popcount(small_king_zone & enemy_attacks.attacked_twice);
-			}
+				// TODO: Add safe checks and restricted king escape squares as
+				// separate signals instead of folding them into this proxy.
 
-			if (ctx.get_pieces(enemy_color, PieceType::QUEEN) == 0) {
-				danger = (danger + 1) / 2;
+				int danger_bucket = danger;
+				if (danger > 21) {
+					danger_bucket = 15;
+				}
+				else if (danger > 17) {
+					danger_bucket = 14;
+				}
+				else if (danger > 14) {
+					danger_bucket = 13;
+				}
+				else if (danger > 12) {
+					danger_bucket = 12;
+				}
+				else if (danger > 10) {
+					danger_bucket = 11;
+				}
+				addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger_bucket), color == 0 ? -1 : 1, trace);
 			}
-
-			int danger_bucket = danger;
-			if (danger > 21) {
-				danger_bucket = 15;
-			}
-			else if (danger > 17) {
-				danger_bucket = 14;
-			}
-			else if (danger > 14) {
-				danger_bucket = 13;
-			}
-			else if (danger > 12) {
-				danger_bucket = 12;
-			}
-			else if (danger > 10) {
-				danger_bucket = 11;
-			}
-			addTerm<isTracing>(score, static_cast<EvalParam>(EvalParam::KING_DANGER_START + danger_bucket), color == 0 ? -1 : 1, trace);
 
 
 
 		}
-		// TODO: Replace the binary queenless reduction with smoother enemy-material scaling.
+		addTerm<isTracing>(score, EvalParam::WEAK_KING_RING_SQUARES, weak_king_ring_squares_count, trace);
 		addTerm<isTracing>(score, EvalParam::PAWN_SHIELD_BONUS, pawn_shield_count, trace);
 		addTerm<isTracing>(score, EvalParam::DIRECTLY_ON_OPEN_FILE_NOT_NEXT_TO_OPEN_PENALTY, directly_on_open_not_next_to_open_count, trace);
 		addTerm<isTracing>(score, EvalParam::DIRECTLY_ON_OPEN_FILE_NEXT_TO_OPEN_PENALTY, directly_on_open_next_to_open_count, trace);

@@ -140,22 +140,23 @@ EvaluationResult EvalWeights[PARAM_COUNT] = {
         { 25, -44 },      // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+4
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+5
         { 0, 0 }, // NEXT_TO_OPEN_DIAGONAL_PENALTY_START+6
-        { -32, 17 },      // KING_DANGER_START+0
-        { -21, 3 },       // KING_DANGER_START+1
-        { -12, 4 },       // KING_DANGER_START+2
-        { -10, 4 },       // KING_DANGER_START+3
-        { -34, 16 },      // KING_DANGER_START+4
-        { -18, 6 },       // KING_DANGER_START+5
-        { -15, 2 },       // KING_DANGER_START+6
-        { -27, 4 },       // KING_DANGER_START+7
-        { -11, -5 },      // KING_DANGER_START+8
-        { -19, 0 },       // KING_DANGER_START+9
-        { -8, -8 },       // KING_DANGER_START+10
-        { 4, 3 }, // KING_DANGER_START+11
-        { 37, -2 },       // KING_DANGER_START+12
-        { 72, -6 },       // KING_DANGER_START+13
-        { 76, -10 },      // KING_DANGER_START+14
-        { 23, -23 },      // KING_DANGER_START+15
+        { 0, 0 }, // KING_DANGER_START+0
+        { 0, 0 }, // KING_DANGER_START+1
+        { 0, 0 }, // KING_DANGER_START+2
+        { 0, 0 }, // KING_DANGER_START+3
+        { 0, 0 }, // KING_DANGER_START+4
+        { 0, 0 }, // KING_DANGER_START+5
+        { 0, 0 }, // KING_DANGER_START+6
+        { 0, 0 }, // KING_DANGER_START+7
+        { 0, 0 }, // KING_DANGER_START+8
+        { 0, 0 }, // KING_DANGER_START+9
+        { 0, 0 }, // KING_DANGER_START+10
+        { 0, 0 }, // KING_DANGER_START+11 (danger 11-12)
+        { 0, 0 }, // KING_DANGER_START+12 (danger 13-14)
+        { 0, 0 }, // KING_DANGER_START+13 (danger 15-17)
+        { 0, 0 }, // KING_DANGER_START+14 (danger 18-21)
+        { 0, 0 }, // KING_DANGER_START+15 (danger 22+)
+        { 0, 0 }, // WEAK_KING_RING_SQUARES
         { 7, -1 },        // MOBILITY_START+0
         { 6, 0 }, // MOBILITY_START+1
         { 4, 2 }, // MOBILITY_START+2

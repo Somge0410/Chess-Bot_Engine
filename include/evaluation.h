@@ -126,6 +126,16 @@ inline int tapered(EvaluationResult score, int game_phase) {
 
 void build_attack_info(EvalContext& ctx);
 
+inline EvaluationResult effective_eval_weight(
+	const EvaluationResult weights[PARAM_COUNT], EvalParam param) {
+	const bool king_safety_mg_only =
+		(param >= EvalParam::KING_DANGER_START && param <= EvalParam::KING_DANGER_END)
+		|| param == EvalParam::WEAK_KING_RING_SQUARES;
+	return king_safety_mg_only
+		? EvaluationResult{ weights[param].mg_score, 0 }
+		: weights[param];
+}
+
 struct Trace {
 	int counts[PARAM_COUNT] = { 0 };
 	void add(EvalParam param, int count = 1) {
@@ -135,7 +145,8 @@ struct Trace {
 static int get_trace_eval(Trace* trace, const EvaluationResult weights[PARAM_COUNT], int game_phase) {
 	EvaluationResult eval = { 0,0 };
 	for (int i = 0; i < PARAM_COUNT; i++) {
-		eval += weights[i] * trace->counts[i];
+		const EvalParam param = static_cast<EvalParam>(i);
+		eval += effective_eval_weight(weights, param) * trace->counts[i];
 	}
 	return tapered(eval, game_phase);
 }
@@ -144,7 +155,7 @@ bool trace_eval_agree(const Board& board, const EvaluationResult weights[PARAM_C
 
 template <bool isTracing>
 void addTerm(EvaluationResult& score, EvalParam param, int count = 1, Trace* trace = nullptr) {
-	score += EvalWeights[param] * count;
+	score += effective_eval_weight(EvalWeights, param) * count;
 	if constexpr (isTracing) {
 		if (trace) trace->add(param, count);
 	}
