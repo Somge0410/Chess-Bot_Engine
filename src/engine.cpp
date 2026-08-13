@@ -48,18 +48,36 @@ void TTDiagnostics::add(const TTDiagnostics& other) {
 #define ADD_TT_DIAGNOSTIC(field) field += other.field;
     TT_DIAGNOSTIC_FIELDS(ADD_TT_DIAGNOSTIC)
 #undef ADD_TT_DIAGNOSTIC
+    for (std::size_t i = 0; i < TT_PROBE_CATEGORY_COUNT; ++i) {
+        category_probes[i] += other.category_probes[i];
+        category_key_hits[i] += other.category_key_hits[i];
+        category_usable_hits[i] += other.category_usable_hits[i];
+        category_cutoffs[i] += other.category_cutoffs[i];
+    }
 }
 
 void AtomicTTDiagnostics::add(const TTDiagnostics& diagnostics) {
 #define ADD_ATOMIC_TT_DIAGNOSTIC(field) field.fetch_add(diagnostics.field, std::memory_order_relaxed);
     TT_DIAGNOSTIC_FIELDS(ADD_ATOMIC_TT_DIAGNOSTIC)
 #undef ADD_ATOMIC_TT_DIAGNOSTIC
+    for (std::size_t i = 0; i < TT_PROBE_CATEGORY_COUNT; ++i) {
+        category_probes[i].fetch_add(diagnostics.category_probes[i], std::memory_order_relaxed);
+        category_key_hits[i].fetch_add(diagnostics.category_key_hits[i], std::memory_order_relaxed);
+        category_usable_hits[i].fetch_add(diagnostics.category_usable_hits[i], std::memory_order_relaxed);
+        category_cutoffs[i].fetch_add(diagnostics.category_cutoffs[i], std::memory_order_relaxed);
+    }
 }
 
 void AtomicTTDiagnostics::reset() {
 #define RESET_ATOMIC_TT_DIAGNOSTIC(field) field.store(0, std::memory_order_relaxed);
     TT_DIAGNOSTIC_FIELDS(RESET_ATOMIC_TT_DIAGNOSTIC)
 #undef RESET_ATOMIC_TT_DIAGNOSTIC
+    for (std::size_t i = 0; i < TT_PROBE_CATEGORY_COUNT; ++i) {
+        category_probes[i].store(0, std::memory_order_relaxed);
+        category_key_hits[i].store(0, std::memory_order_relaxed);
+        category_usable_hits[i].store(0, std::memory_order_relaxed);
+        category_cutoffs[i].store(0, std::memory_order_relaxed);
+    }
 }
 
 TTDiagnostics AtomicTTDiagnostics::snapshot() const {
@@ -67,6 +85,12 @@ TTDiagnostics AtomicTTDiagnostics::snapshot() const {
 #define SNAPSHOT_ATOMIC_TT_DIAGNOSTIC(field) diagnostics.field = field.load(std::memory_order_relaxed);
     TT_DIAGNOSTIC_FIELDS(SNAPSHOT_ATOMIC_TT_DIAGNOSTIC)
 #undef SNAPSHOT_ATOMIC_TT_DIAGNOSTIC
+    for (std::size_t i = 0; i < TT_PROBE_CATEGORY_COUNT; ++i) {
+        diagnostics.category_probes[i] = category_probes[i].load(std::memory_order_relaxed);
+        diagnostics.category_key_hits[i] = category_key_hits[i].load(std::memory_order_relaxed);
+        diagnostics.category_usable_hits[i] = category_usable_hits[i].load(std::memory_order_relaxed);
+        diagnostics.category_cutoffs[i] = category_cutoffs[i].load(std::memory_order_relaxed);
+    }
     return diagnostics;
 }
 
@@ -131,6 +155,10 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
             engine->tt_diagnostics[i].add(tt_diagnostics[i]);
             tt_diagnostics[i] = {};
         }
+        for (std::size_t i = 0; i < SEARCH_DIAG_COUNTER_COUNT; ++i) {
+            engine->detail_diagnostics[i].fetch_add(detail_diagnostics[i], std::memory_order_relaxed);
+            detail_diagnostics[i] = 0;
+        }
 #endif
     }
 }
@@ -146,8 +174,89 @@ TTDiagnostics* active_tt_diagnostics(TTMode mode) {
     return &tls_data.tt_diagnostics[static_cast<std::size_t>(mode)];
 }
 
+constexpr std::size_t diagnostic_index(SearchDiagCounter counter) {
+    return static_cast<std::size_t>(counter);
+}
+
+void increment_diagnostic(ThreadLocalData* tls, SearchDiagCounter counter, uint64_t value = 1) {
+    if (tls) {
+        tls->detail_diagnostics[diagnostic_index(counter)] += value;
+    }
+}
+
+SearchDiagCounter move_index_bucket(uint32_t index, bool cutoff) {
+    const SearchDiagCounter base = cutoff ? SearchDiagCounter::CutoffIndex1 : SearchDiagCounter::BestIndex1;
+    std::size_t offset = 0;
+    if (index == 1) offset = 0;
+    else if (index == 2) offset = 1;
+    else if (index <= 4) offset = 2;
+    else if (index <= 8) offset = 3;
+    else if (index <= 16) offset = 4;
+    else if (index <= 32) offset = 5;
+    else offset = 6;
+    return static_cast<SearchDiagCounter>(diagnostic_index(base) + offset);
+}
+
+SearchDiagCounter qply_bucket(int qply) {
+    std::size_t offset = 0;
+    if (qply <= 0) offset = 0;
+    else if (qply == 1) offset = 1;
+    else if (qply == 2) offset = 2;
+    else if (qply <= 4) offset = 3;
+    else if (qply <= 8) offset = 4;
+    else if (qply <= 12) offset = 5;
+    else offset = 6;
+    return static_cast<SearchDiagCounter>(diagnostic_index(SearchDiagCounter::QPly0) + offset);
+}
+
+void increment_move_source(ThreadLocalData* tls, MoveOrderSource source, bool cutoff) {
+    if (!tls || source == MoveOrderSource::Unknown) {
+        return;
+    }
+    const SearchDiagCounter base = cutoff
+        ? SearchDiagCounter::CutoffSourceTT
+        : SearchDiagCounter::BestSourceTT;
+    increment_diagnostic(tls, static_cast<SearchDiagCounter>(
+        diagnostic_index(base) + static_cast<std::size_t>(source)));
+}
+
+enum class TTProbeDiagnosticEvent { Probe, KeyHit, UsableHit, Cutoff };
+
+void record_tt_probe_categories(TTDiagnostics* diagnostics, int depth, int alpha, int beta,
+    bool in_check, TTProbeDiagnosticEvent event) {
+    if (!diagnostics) {
+        return;
+    }
+    std::array<bool, TT_PROBE_CATEGORY_COUNT> categories{
+        depth == 0,
+        depth > 0,
+        beta - alpha > 1,
+        beta - alpha <= 1,
+        in_check
+    };
+    for (std::size_t i = 0; i < categories.size(); ++i) {
+        if (!categories[i]) continue;
+        switch (event) {
+        case TTProbeDiagnosticEvent::Probe:
+            diagnostics->category_probes[i]++;
+            break;
+        case TTProbeDiagnosticEvent::KeyHit:
+            diagnostics->category_key_hits[i]++;
+            break;
+        case TTProbeDiagnosticEvent::UsableHit:
+            diagnostics->category_usable_hits[i]++;
+            break;
+        case TTProbeDiagnosticEvent::Cutoff:
+            diagnostics->category_cutoffs[i]++;
+            break;
+        }
+    }
+}
+
 void record_move_order_diagnostics(ThreadLocalData* tls, uint32_t moves_searched,
-    uint32_t best_move_index, uint32_t beta_cutoff_index) {
+    uint32_t best_move_index, uint32_t beta_cutoff_index,
+    MoveOrderSource best_source = MoveOrderSource::Unknown,
+    MoveOrderSource cutoff_source = MoveOrderSource::Unknown) {
     if (!tls || moves_searched == 0 || best_move_index == 0) {
         return;
     }
@@ -156,14 +265,40 @@ void record_move_order_diagnostics(ThreadLocalData* tls, uint32_t moves_searched
     tls->best_move_index_sum += best_move_index;
     tls->best_move_first += best_move_index == 1;
     tls->max_best_move_index = std::max(tls->max_best_move_index, best_move_index);
+    increment_diagnostic(tls, move_index_bucket(best_move_index, false));
+    increment_move_source(tls, best_source, false);
     if (beta_cutoff_index > 0) {
         tls->beta_cutoffs++;
         tls->beta_cutoff_index_sum += beta_cutoff_index;
         tls->first_move_beta_cutoffs += beta_cutoff_index == 1;
+        increment_diagnostic(tls, move_index_bucket(beta_cutoff_index, true));
+        increment_move_source(tls, cutoff_source, true);
     }
 }
 #endif
 constexpr int PIECE_VALUES_MG[7] = {100,320,320,500,900,10000,0};
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+MoveOrderSource classify_move_order_source(const Move& move, const Move& tt_move, bool tt_depth_0,
+    const Board& board, ThreadLocalData* tls, const Move& previous_move, int ply) {
+    if (move == tt_move && !tt_depth_0) return MoveOrderSource::TT;
+    if (move.promotion_piece != PieceType::NONE) return MoveOrderSource::Promotion;
+    if (move.piece_captured != PieceType::NONE) {
+        return see_move(board, move) >= 0
+            ? MoveOrderSource::WinningCapture
+            : MoveOrderSource::LosingCapture;
+    }
+    if (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]) {
+        return MoveOrderSource::Killer;
+    }
+    if (previous_move.from_square != NO_SQUARE &&
+        move == tls->counter_moves[to_int(previous_move.move_color)]
+            [to_int(previous_move.piece_moved)][previous_move.to_square]) {
+        return MoveOrderSource::Countermove;
+    }
+    return MoveOrderSource::History;
+}
+#endif
 
 Engine::Engine(size_t tt_size_mb){
     init_tt(tt_size_mb);
@@ -193,15 +328,33 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             return { .score = 0,.best_move = Move(),.is_tempered = true };
         }
     }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (board.is_fifty_move_rule_draw()) {
+        increment_diagnostic(tls, SearchDiagCounter::SearchFiftyMoveDraws);
+        return { .score = 0,.best_move = Move(),.is_tempered = true };
+    }
+    if (board.is_repetition_draw(3)) {
+        increment_diagnostic(tls, SearchDiagCounter::SearchRepetitionDraws);
+        return { .score = 0,.best_move = Move(),.is_tempered = true };
+    }
+#else
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
+#endif
     uint64_t hash=board.get_hash();
     int original_alpha=alpha;
     int tt_score;
     Move tt_move;
 
     bool is_from_depth_0 = false;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (checkers == CHECKERS_UNKNOWN) {
+        checkers = board.get_checkers();
+    }
+    tls->current_tt_probe_in_check = checkers != 0;
+    tls->last_tt_probe_was_shallow = false;
+#endif
     if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move, ply, is_from_depth_0)) {
         bool is_draw = move_could_result_in_repetition(board, tt_move);
         //is_draw = false;
@@ -209,6 +362,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             recover_move_fully(tt_move, board);
             return { tt_score,tt_move};
         }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::TTRepetitionRejectedReturns);
+#endif
     }
     
     if (depth==0)
@@ -227,14 +383,27 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     // 
 
     bool is_pv_node = (beta - alpha) > 1;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    increment_diagnostic(tls, is_pv_node ? SearchDiagCounter::PvNodes : SearchDiagCounter::NonPvNodes);
+    if (king_is_in_check) increment_diagnostic(tls, SearchDiagCounter::InCheckNodes);
+#endif
     const bool nmp_candidate = null_move_allowed && !is_pv_node && depth >= NMP_MIN_DEPTH && !king_is_in_check &&
         std::abs(beta) < MATE_THRESHOLD && board.has_enough_material_for_nmp();
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (nmp_candidate) increment_diagnostic(tls, SearchDiagCounter::NmpCandidates);
+#endif
     if (!king_is_in_check && ((depth <= REVERSE_FUTILITY_MAX_DEPTH && !is_pv_node) || nmp_candidate)) {
         static_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::RfpAttempts);
+#endif
         int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
         if (static_eval - rfp_margin >= beta) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::RfpCutoffs);
+#endif
             return { static_eval,Move() };
         }
     }
@@ -242,9 +411,15 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     
     // NULL Move Pruning Here
     int nmp_score;
-    if(nmp_candidate && static_eval >= beta &&
-        try_null_move_pruning(board,king_is_in_check,depth,alpha,beta,ply,static_eval,nmp_score,tls))
+    if(nmp_candidate && static_eval >= beta
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        && (increment_diagnostic(tls, SearchDiagCounter::NmpSearches), true)
+#endif
+        && try_null_move_pruning(board,king_is_in_check,depth,alpha,beta,ply,static_eval,nmp_score,tls))
     {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::NmpCutoffs);
+#endif
         return {nmp_score,Move()};
 	}
     // End of Null-move pruning
@@ -254,6 +429,12 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     moves.clear();
 	searched_quiets.clear();
     MoveGenerator::generate_moves(board,moves,checkers);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    increment_diagnostic(tls, SearchDiagCounter::MainMovesGenerated, moves.size());
+    increment_diagnostic(tls, is_pv_node ? SearchDiagCounter::PvMovesGenerated : SearchDiagCounter::NonPvMovesGenerated,
+        moves.size());
+    if (king_is_in_check) increment_diagnostic(tls, SearchDiagCounter::InCheckMovesGenerated, moves.size());
+#endif
 	//If only one move available, no need to search further
     if ((ply == 0) && (moves.size() == 1)) {
         return { 0,moves[0] };
@@ -284,6 +465,10 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #if ENABLE_QSEARCH_DIAGNOSTICS
     uint32_t best_move_discovery_index = 0;
     uint32_t beta_cutoff_index = 0;
+    MoveOrderSource best_move_source = MoveOrderSource::Unknown;
+    MoveOrderSource beta_cutoff_source = MoveOrderSource::Unknown;
+    const bool shallow_tt_move = tls->last_tt_probe_was_shallow &&
+        tt_move.from_square != NO_SQUARE;
 #endif
     // PVS 
     bool first = true;
@@ -296,10 +481,24 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     {   
 		pick_next_staged(moves, scores, i, board);
 		const Move move = moves[i];
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        const MoveOrderSource current_move_source = classify_move_order_source(
+            move, tt_move, is_from_depth_0, board, tls, previous_move, ply);
+        if (shallow_tt_move && i == 0 && move == tt_move) {
+            increment_diagnostic(tls, SearchDiagCounter::ShallowTTMoveFirst);
+        }
+#endif
         // Now do futility pruning. If positions evaluation is already way worse than alpha, cut it off since it is
         //unlikely to get that much better in just 1 or two moves
-        if(!first && should_futility_prune(depth,current_eval,alpha,king_is_in_check,move))
+        if(!first
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            && (increment_diagnostic(tls, SearchDiagCounter::FutilityChecks), true)
+#endif
+            && should_futility_prune(depth,current_eval,alpha,king_is_in_check,move))
         {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::FutilityPrunes);
+#endif
             continue;
 		}
         // Late Move Reduction
@@ -307,6 +506,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         if (!board.is_dangerous_passer_push(move)) {
             reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
         }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (reduction > 0) increment_diagnostic(tls, SearchDiagCounter::LmrReductions);
+#endif
         moves_searched++;
         //Now make the move
         board.make_move(move);
@@ -317,6 +519,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         if (child_checkers != 0 && ply<64 && depth<=3)
         {
             extension=1;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::CheckExtensions);
+#endif
 		}
         int evaluation;
         if (first) { 
@@ -326,6 +531,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 			first = false;
         }
         else {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::PvsZeroWindowSearches);
+#endif
             int new_depth = depth - 1 + extension;
 			int reduced_depth = new_depth - reduction;
 
@@ -334,12 +542,21 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             current_move_tempered = other_result.is_tempered;
 
             if (reduction > 0 && evaluation > alpha) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::LmrResearches);
+#endif
                 other_result = negamax(board, new_depth, -alpha - 1, -alpha, ply + 1,tls,move,child_checkers);
                 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                if (evaluation > alpha) increment_diagnostic(tls, SearchDiagCounter::LmrResearchImproved);
+#endif
             }
 
             if(evaluation > alpha && evaluation < beta) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::PvsFullWindowResearches);
+#endif
                  other_result = negamax(board, new_depth, -beta, -alpha, ply + 1,tls,move,child_checkers);
 				 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
@@ -364,6 +581,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             is_best_move_tempered = current_move_tempered;
 #if ENABLE_QSEARCH_DIAGNOSTICS
             best_move_discovery_index = static_cast<uint32_t>(moves_searched);
+            best_move_source = current_move_source;
 #endif
         }
         alpha = std::max(alpha, best_score);
@@ -375,6 +593,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         {   
 #if ENABLE_QSEARCH_DIAGNOSTICS
             beta_cutoff_index = static_cast<uint32_t>(moves_searched);
+            beta_cutoff_source = current_move_source;
 #endif
 			update_history_killer(move, depth, ply,tls,previous_move,searched_quiets);
             break;
@@ -383,8 +602,16 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     }
 
 #if ENABLE_QSEARCH_DIAGNOSTICS
+    increment_diagnostic(tls, SearchDiagCounter::MainMovesSearched, moves_searched);
+    increment_diagnostic(tls, is_pv_node ? SearchDiagCounter::PvMovesSearched : SearchDiagCounter::NonPvMovesSearched,
+        moves_searched);
+    if (king_is_in_check) increment_diagnostic(tls, SearchDiagCounter::InCheckMovesSearched, moves_searched);
+    if (shallow_tt_move && best_move == tt_move) {
+        increment_diagnostic(tls, SearchDiagCounter::ShallowTTMoveBest);
+        if (beta_cutoff_index > 0) increment_diagnostic(tls, SearchDiagCounter::ShallowTTMoveCutoff);
+    }
     record_move_order_diagnostics(tls, static_cast<uint32_t>(moves_searched),
-        best_move_discovery_index, beta_cutoff_index);
+        best_move_discovery_index, beta_cutoff_index, best_move_source, beta_cutoff_source);
 #endif
     bool is_result_tempered = store_tt(hash, depth, original_alpha, beta, best_score,
         best_move, ply, is_best_move_tempered, is_any_tempered);
@@ -446,6 +673,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 #if ENABLE_QSEARCH_DIAGNOSTICS
         tls->qply_sum += static_cast<uint64_t>(qply);
         tls->max_qply = std::max(tls->max_qply, static_cast<uint32_t>(qply));
+        increment_diagnostic(tls, qply_bucket(qply));
 #endif
         tls->flush_counters(this);
         if (tls->should_check_time() && is_time_up()) {
@@ -453,9 +681,20 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             return 0;
         }
     }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (board.is_fifty_move_rule_draw()) {
+        increment_diagnostic(tls, SearchDiagCounter::QFiftyMoveDraws);
+        return 0;
+    }
+    if (board.is_repetition_draw(3)) {
+        increment_diagnostic(tls, SearchDiagCounter::QRepetitionDraws);
+        return 0;
+    }
+#else
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
         return 0;
     }
+#endif
     if (checkers == CHECKERS_UNKNOWN) {
         checkers = board.get_checkers();
     }
@@ -482,6 +721,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 	tls->qsearch_hashes[qply] = hash;
 
     if(qply >= MAX_QUIET_PLY && !in_check) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::QSoftCapStaticReturns);
+#endif
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
 	}
     if (qply >=max_qply_index) {
@@ -491,9 +733,15 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
 #endif
         if(!in_check) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::QHardCapStaticReturns);
+#endif
             return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
         }
         else {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::QHardCapDrawReturns);
+#endif
             return 0; // emergency heuristic, after so many checks its likely a repetitive check.
         }
     }
@@ -501,11 +749,21 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 
     if (in_check) {
         MoveGenerator::generate_moves(board, moves, checkers);
-        if (moves.empty()) return -MATE_SCORE + search_ply;
+        if (moves.empty()) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::QCheckmates);
+#endif
+            return -MATE_SCORE + search_ply;
+        }
     }
     else {
         int stand_pat = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
-        if (stand_pat >= beta) return stand_pat;
+        if (stand_pat >= beta) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::QStandPatCutoffs);
+#endif
+            return stand_pat;
+        }
         if (stand_pat > alpha) alpha = stand_pat;
 		const bool include_quiet_checks = qply == 0 || after_check_invasions;
         if(include_quiet_checks)
@@ -513,10 +771,16 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         else
 			MoveGenerator::generate_captures(board, moves, checkers);
     }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    increment_diagnostic(tls, SearchDiagCounter::QMovesGenerated, moves.size());
+#endif
 
     int best_score = in_check ? -MATE_SCORE : alpha;
     int scores[256];
     score_qsearch_moves(moves, scores);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    uint64_t qmoves_searched = 0;
+#endif
 
     for (int i = 0; i < (int)moves.size();) {
         if (stop_search.load(std::memory_order_relaxed)) {
@@ -529,6 +793,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             if (scores[i] == std::numeric_limits<int>::min()) break;
             const bool is_capture = move.piece_captured != PieceType::NONE;
             if (is_capture && see_move(board, move) < 0) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::QSeePrunes);
+#endif
                 scores[i] = std::numeric_limits<int>::min();
                 continue;
             }
@@ -546,11 +813,37 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check);
         board.undo_move(move);
 		++i;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        qmoves_searched++;
+        increment_diagnostic(tls, SearchDiagCounter::QMovesSearched);
+#endif
 
         if (score > best_score) best_score = score;
         if (score > alpha) alpha = score;
-        if (alpha >= beta) break;
+        if (alpha >= beta) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (in_check) {
+                increment_diagnostic(tls, SearchDiagCounter::QEvasionBetaCutoffs);
+            }
+            else if (move.piece_captured != PieceType::NONE) {
+                increment_diagnostic(tls, SearchDiagCounter::QCaptureBetaCutoffs);
+            }
+            else if (move.promotion_piece != PieceType::NONE) {
+                increment_diagnostic(tls, SearchDiagCounter::QPromotionBetaCutoffs);
+            }
+            else if (child_checkers != 0) {
+                increment_diagnostic(tls, SearchDiagCounter::QQuietCheckBetaCutoffs);
+            }
+#endif
+            break;
+        }
     }
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (!stop_search.load(std::memory_order_relaxed) && !in_check && qmoves_searched == 0) {
+        increment_diagnostic(tls, SearchDiagCounter::QNoTacticalMoves);
+    }
+#endif
 
     return best_score;
 }
@@ -621,8 +914,13 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
     Move& out_move, int ply, bool depth_0, TTMode mode) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
     TTDiagnostics* diagnostics = active_tt_diagnostics(mode);
+    const int diagnostic_alpha = alpha;
+    const int diagnostic_beta = beta;
+    tls_data.last_tt_probe_was_shallow = false;
     if (diagnostics) {
         diagnostics->probes++;
+        record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
+            tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::Probe);
     }
 #endif
     TTCluster& cluster = tt[hash & (tt.size() - 1)];
@@ -650,6 +948,8 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (diagnostics) {
             diagnostics->key_hits++;
+            record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
+                tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::KeyHit);
         }
 #endif
 		tt_refresh_generation(slot, w, generation);
@@ -662,6 +962,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
             if (diagnostics) {
                 diagnostics->shallow_hits++;
             }
+            tls_data.last_tt_probe_was_shallow = true;
 #endif
             return false;
         }
@@ -687,6 +988,8 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 #if ENABLE_QSEARCH_DIAGNOSTICS
             if (diagnostics) {
                 diagnostics->exact_hits++;
+                record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
+                    tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::UsableHit);
             }
 #endif
             return true;
@@ -716,6 +1019,10 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 #if ENABLE_QSEARCH_DIAGNOSTICS
             if (diagnostics) {
                 diagnostics->bound_cutoffs++;
+                record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
+                    tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::UsableHit);
+                record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
+                    tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::Cutoff);
             }
 #endif
             return true;
@@ -936,9 +1243,17 @@ bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int dept
 }
 SearchResult Engine::terminal_eval(const Board& board, bool king_is_in_check,int ply) {
     if (king_is_in_check) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(&tls_data, SearchDiagCounter::TerminalCheckmates);
+#endif
 		return { -MATE_SCORE+ply, Move() };
     }
-    else return { 0,Move() };
+    else {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(&tls_data, SearchDiagCounter::TerminalStalemates);
+#endif
+        return { 0,Move() };
+    }
 }
 void Engine::update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls,const Move& previous_move,
     const MoveList& serached_quiets) {
@@ -1181,6 +1496,9 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
     int second_best_score = -MATE_SCORE;
     for (int current_depth = start_depth; current_depth <= tc.max_depth; ++current_depth) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        const Move previous_iteration_best = io_best_move;
+#endif
         Board board = position;
         MoveList root_moves;
 
@@ -1225,12 +1543,20 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
         Move best_move = root_moves[0];
         //Retry loop for aspiration failures: re-search the whole root with a wider window.
         for (int attempt = 0; attempt < 4; ++attempt) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (current_depth > 1) increment_diagnostic(tls, SearchDiagCounter::AspirationAttempts);
+#endif
             root_pvs(position, root_moves, current_depth, alpha, beta, best_score, best_move,second_best_score,second_best_move, tls);
             if (stop_search.load(std::memory_order_relaxed)) break;
 
             if (current_depth == 1) break; // no aspiration on depth 1
 
             if (best_score <= alpha || best_score >= beta) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, best_score <= alpha
+                    ? SearchDiagCounter::AspirationFailLows
+                    : SearchDiagCounter::AspirationFailHighs);
+#endif
 
                 //WIden around the reported score and try again.
                 window = std::min(static_cast<int>(window * ASPIRATION_WINDOW_MULTIPLIER), MATE_SCORE);
@@ -1254,6 +1580,12 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
         // --- UCI info output (nur Master-Thread, auf stdout) ---
         if (is_master) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::IterationsCompleted);
+            if (current_depth > start_depth && best_move != previous_iteration_best) {
+                increment_diagnostic(tls, SearchDiagCounter::BestMoveChanges);
+            }
+#endif
             const auto now_tp = std::chrono::steady_clock::now();
             const int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
                 now_tp.time_since_epoch()
@@ -1294,7 +1626,18 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                             extra_fraction = TIME_CHANGES_COUNT_SMALL;
                         }
                         int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                        const int previous_budget_ms = current_budget_ms;
+#endif
                         current_budget_ms = std::clamp(current_budget_ms + extra_time_ms, initial_budget_ms, maximum_budget);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                        const int added_ms = current_budget_ms - previous_budget_ms;
+                        if (added_ms > 0) {
+                            increment_diagnostic(tls, SearchDiagCounter::InstabilityTimeExtensions);
+                            increment_diagnostic(tls, SearchDiagCounter::InstabilityTimeAddedMs,
+                                static_cast<uint64_t>(added_ms));
+                        }
+#endif
                         set_time_budget_ms(current_budget_ms);
                     }
             }
@@ -1305,6 +1648,9 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                 if (!curr_is_mate && !prev_is_mate) {
                     const int delta_cp = std::abs(best_score - prev_root_score);
                     const bool sign_flip = (best_score > 0) != (prev_root_score > 0);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                    if (sign_flip) increment_diagnostic(tls, SearchDiagCounter::ScoreSignFlips);
+#endif
 
                     // Tuning: ab ~50cp Unterschied reagieren
                     if (delta_cp >= DELTA_BEST_SCORE || sign_flip) {
@@ -1319,7 +1665,18 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
                         int extra_time_ms = static_cast<int>(static_cast<double>(gap) * extra_fraction);
 
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                        const int previous_budget_ms = current_budget_ms;
+#endif
                         current_budget_ms = std::clamp(current_budget_ms + extra_time_ms, initial_budget_ms, maximum_budget);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                        const int added_ms = current_budget_ms - previous_budget_ms;
+                        if (added_ms > 0) {
+                            increment_diagnostic(tls, SearchDiagCounter::ScoreTimeExtensions);
+                            increment_diagnostic(tls, SearchDiagCounter::ScoreTimeAddedMs,
+                                static_cast<uint64_t>(added_ms));
+                        }
+#endif
                         set_time_budget_ms(current_budget_ms);
                     }
                 }
@@ -1351,6 +1708,20 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             std::cout.flush();
 			iteration_nodes = total_nodes - prev_total_nodes;
 			iteration_ms = elapsed_ms - prev_elapsed_ms;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (current_depth >= 0 && current_depth < static_cast<int>(DIAGNOSTIC_ITERATION_DEPTH_COUNT)) {
+                diagnostic_iteration_nodes[static_cast<std::size_t>(current_depth)] = iteration_nodes;
+                diagnostic_iteration_time_ms[static_cast<std::size_t>(current_depth)] = iteration_ms;
+            }
+            if (predicted_next_iteration_ms > 0.0) {
+                const uint64_t predicted_ms = static_cast<uint64_t>(std::llround(predicted_next_iteration_ms));
+                increment_diagnostic(tls, SearchDiagCounter::PredictionSamples);
+                increment_diagnostic(tls, SearchDiagCounter::PredictedIterationMs, predicted_ms);
+                increment_diagnostic(tls, SearchDiagCounter::ActualIterationMs, iteration_ms);
+                increment_diagnostic(tls, SearchDiagCounter::AbsolutePredictionErrorMs,
+                    predicted_ms > iteration_ms ? predicted_ms - iteration_ms : iteration_ms - predicted_ms);
+            }
+#endif
 			if (prev_iteration_nodes > 0) {
                 effective_branching_factor = static_cast<double>(iteration_nodes) / static_cast<double>(prev_iteration_nodes);
 			}
@@ -1370,9 +1741,15 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
             const int64_t HARD_SAFETY_MS = 10 + tc.time_ms / 50;
 
             if (remaining_ms <= HARD_SAFETY_MS) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::HardSafetyStops);
+#endif
                 break;
             }
             if (static_cast<double>(predicted_next_iteration_ms) * TIME_MARGIN > static_cast<double>(remaining_ms)) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::PredictedIterationStops);
+#endif
                 break;
             }
         }
@@ -1425,6 +1802,9 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
     uint32_t root_moves_searched = 0;
     uint32_t root_best_move_discovery_index = 0;
     uint32_t root_beta_cutoff_index = 0;
+    increment_diagnostic(tls, SearchDiagCounter::PvNodes);
+    increment_diagnostic(tls, SearchDiagCounter::MainMovesGenerated, root_moves.size());
+    increment_diagnostic(tls, SearchDiagCounter::PvMovesGenerated, root_moves.size());
 #endif
 
 
@@ -1441,9 +1821,15 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
             r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m, child_checkers);
         }
 		else {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::PvsZeroWindowSearches);
+#endif
             r = negamax(b, current_depth - 1, -(local_alpha + 1), -local_alpha, 1, tls, m, child_checkers);
             int score = -r.score;
             if (!stop_search.load(std::memory_order_relaxed) && score > local_alpha && score < beta) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::PvsFullWindowResearches);
+#endif
                 r = negamax(b, current_depth - 1, -beta, -local_alpha, 1, tls, m, child_checkers);
             }
         }
@@ -1481,6 +1867,8 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
 
 #if ENABLE_QSEARCH_DIAGNOSTICS
     if (!stop_search.load(std::memory_order_relaxed)) {
+        increment_diagnostic(tls, SearchDiagCounter::MainMovesSearched, root_moves_searched);
+        increment_diagnostic(tls, SearchDiagCounter::PvMovesSearched, root_moves_searched);
         record_move_order_diagnostics(tls, root_moves_searched,
             root_best_move_discovery_index, root_beta_cutoff_index);
     }
@@ -1516,6 +1904,11 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
     beta_cutoff_index_sum.store(0, std::memory_order_relaxed);
     first_move_beta_cutoffs.store(0, std::memory_order_relaxed);
     max_best_move_index.store(0, std::memory_order_relaxed);
+    for (std::atomic<uint64_t>& counter : detail_diagnostics) {
+        counter.store(0, std::memory_order_relaxed);
+    }
+    diagnostic_iteration_nodes.fill(0);
+    diagnostic_iteration_time_ms.fill(0);
     for (AtomicTTDiagnostics& diagnostics : tt_diagnostics) {
         diagnostics.reset();
     }
@@ -1701,21 +2094,29 @@ SearchDiagnostics Engine::get_search_diagnostics() {
     diagnostics.beta_cutoff_index_sum = beta_cutoff_index_sum.load(std::memory_order_relaxed);
     diagnostics.first_move_beta_cutoffs = first_move_beta_cutoffs.load(std::memory_order_relaxed);
     diagnostics.max_best_move_index = max_best_move_index.load(std::memory_order_relaxed);
+    for (std::size_t i = 0; i < SEARCH_DIAG_COUNTER_COUNT; ++i) {
+        diagnostics.detail[i] = detail_diagnostics[i].load(std::memory_order_relaxed);
+    }
+    diagnostics.iteration_nodes = diagnostic_iteration_nodes;
+    diagnostics.iteration_time_ms = diagnostic_iteration_time_ms;
     for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
         diagnostics.tt[i] = tt_diagnostics[i].snapshot();
     }
     diagnostics.tt_capacity_entries = static_cast<uint64_t>(tt.size()) * 4ULL;
     for (TTCluster& cluster : tt) {
+        std::size_t cluster_occupancy = 0;
         for (TTEntry& slot : cluster.entries) {
             TTEntry entry(tt_load(slot));
             if (entry.empty()) {
                 continue;
             }
             diagnostics.tt_occupied_entries++;
+            cluster_occupancy++;
             if (entry.generation() == generation) {
                 diagnostics.tt_current_generation_entries++;
             }
         }
+        diagnostics.tt_cluster_occupancy[cluster_occupancy]++;
     }
     return diagnostics;
 }
