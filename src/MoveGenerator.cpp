@@ -1,4 +1,4 @@
-
+﻿
 #include "MoveGenerator.h"
 #include <cstdint>
 #include "utils.h"
@@ -131,19 +131,21 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Board& board,const
             }
             
         }
-		if ((board.get_castle_rights() & queen_castle_mask) != 0)
-        {
-            uint64_t line_between=LINE_BETWEEN[king_square-1][king_square-3];
-            if ((line_between & board.get_all_pieces())==0)
+        if (!captures_only) {
+            if ((board.get_castle_rights() & queen_castle_mask) != 0)
             {
-                if (board.count_attacker_on_square(king_square-1,other_color,1,false).count==0 && board.count_attacker_on_square(king_square-2,other_color,1,false).count==0)
+                uint64_t line_between = LINE_BETWEEN[king_square - 1][king_square - 3];
+                if ((line_between & board.get_all_pieces()) == 0)
                 {
-                    moves.push_back(Move(king_square,king_square-2,PieceType::KING,own_color,
-                        PieceType::NONE,PieceType::NONE,true));
+                    if (board.count_attacker_on_square(king_square - 1, other_color, 1, false).count == 0 && board.count_attacker_on_square(king_square - 2, other_color, 1, false).count == 0)
+                    {
+                        moves.push_back(Move(king_square, king_square - 2, PieceType::KING, own_color,
+                            PieceType::NONE, PieceType::NONE, true));
+                    }
+
                 }
-                
+
             }
-            
         }
     return;
 }
@@ -509,8 +511,8 @@ void MoveGenerator::generate_captures(const Board& board, MoveList& moves){
 void MoveGenerator::generate_captures(const Board& board, MoveList& moves, uint64_t checkers){
     return generate_moves<true, false>(board, moves, checkers);
 }
-void MoveGenerator::generate_captures_with_checks(const Board& board,MoveList& moves){
-    return generate_moves<true,true>(board,moves);
+void MoveGenerator::generate_captures_with_checks(const Board& board,MoveList& moves, uint64_t checkers){
+    return generate_moves<true,true>(board,moves, checkers);
 }
 
 

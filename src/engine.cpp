@@ -302,7 +302,6 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
     }
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
-        std::cout << "ooops";
         return 0;
     }
     if (checkers == CHECKERS_UNKNOWN) {
@@ -313,6 +312,14 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
     const int qmove_list_index = std::min(qply, max_qply_index);
     MoveList& moves = tls->qmove_lists[qmove_list_index];
     moves.clear();
+	const uint64_t hash = board.get_hash();
+
+    for(int previous =qply-2;previous >=0; previous -= 2) {
+        if (tls->qsearch_hashes[previous]== hash) {
+            return 0;
+        }
+	}
+	tls->qsearch_hashes[qply] = hash;
 
     if(qply >= MAX_QUIET_PLY && !in_check) {
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
@@ -322,7 +329,6 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
         }
         else {
-            std::cout << "OOOOOOOPS";
             return 0; // emergency heuristic, after so many checks its likely a repetitive check.
         }
     }
@@ -337,7 +343,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (stand_pat >= beta) return stand_pat;
         if (stand_pat > alpha) alpha = stand_pat;
 
-        MoveGenerator::generate_captures(board, moves, checkers);
+        MoveGenerator::generate_captures_with_checks(board, moves, checkers);
     }
 
     int best_score = in_check ? -MATE_SCORE : alpha;
@@ -353,7 +359,8 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 
         if (!in_check) {
             if (scores[i] == std::numeric_limits<int>::min()) break;
-            if (see_move(board, move) < 0) {
+            const bool is_capture = move.piece_captured != PieceType::NONE;
+            if (is_capture && see_move(board, move) < 0) {
                 scores[i] = std::numeric_limits<int>::min();
                 continue;
             }

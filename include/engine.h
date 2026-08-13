@@ -155,6 +155,7 @@ struct ThreadLocalData {
 
     MoveList move_lists[MAX_PLY];
     MoveList qmove_lists[QSEARCH_PLY_CAPACITY];
+	uint64_t qsearch_hashes[QSEARCH_PLY_CAPACITY] = {};
     int move_scores[MAX_PLY][256] = {};
     Move killer_moves[128][2] = {};
     MoveList searched_quiets[MAX_PLY];
