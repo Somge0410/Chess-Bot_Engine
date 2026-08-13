@@ -133,7 +133,7 @@ struct SearchResult {
 class Engine;
 struct ThreadLocalData {
     static constexpr uint32_t TIME_CHECK_INTERVAL = 1024;
-    static constexpr int QSEARCH_PLY_CAPACITY = 33;
+    static constexpr int QSEARCH_PLY_CAPACITY = 25;
 
     void clear_counters() {
         nodes = 0;
