@@ -116,14 +116,6 @@ int run_benchmark(
     std::cout << "QNodes while in check: " << total_diagnostics.qnodes_in_check << '\n';
     std::cout << "Cycle cutoffs: " << total_diagnostics.cycle_cutoffs << '\n';
     std::cout << "Hard-cap hits: " << total_diagnostics.hard_cap_hits << '\n';
-#else
-    const double qnode_percentage = total_nodes > 0
-        ? 100.0 * static_cast<double>(total_qnodes) / static_cast<double>(total_nodes)
-        : 0.0;
-    std::cout << "Main nodes: " << total_nodes - total_qnodes << '\n';
-    std::cout << "QNodes: " << total_qnodes << '\n';
-    std::cout << "QNode percentage: " << std::fixed << std::setprecision(2)
-              << qnode_percentage << "%\n";
 #endif
     std::cout.flush();
     return 0;
