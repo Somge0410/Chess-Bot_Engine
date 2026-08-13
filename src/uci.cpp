@@ -476,7 +476,7 @@ void uci_loop() {
             }
 
             if (bench_mode) {
-                run_benchmark(get_default_positions());
+                run_benchmark(get_bench_positions());
                 continue;
             }
 
