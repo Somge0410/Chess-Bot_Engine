@@ -302,6 +302,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
     }
     if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
+        std::cout << "ooops";
         return 0;
     }
     if (checkers == CHECKERS_UNKNOWN) {
@@ -313,13 +314,19 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
     MoveList& moves = tls->qmove_lists[qmove_list_index];
     moves.clear();
 
-    if (qply >= MAX_QUIET_PLY || qply >= max_qply_index) {
-        if (in_check) {
-            MoveGenerator::generate_moves(board, moves, checkers);
-            if (moves.empty()) return -MATE_SCORE + search_ply;
-        }
+    if(qply >= MAX_QUIET_PLY && !in_check) {
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+	}
+    if (qply >=max_qply_index) {
+        if(!in_check) {
+            return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+        }
+        else {
+            std::cout << "OOOOOOOPS";
+            return 0; // emergency heuristic, after so many checks its likely a repetitive check.
+        }
     }
+
 
     if (in_check) {
         MoveGenerator::generate_moves(board, moves, checkers);
