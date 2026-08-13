@@ -1,4 +1,4 @@
-#include "benchmark.h"
+﻿#include "benchmark.h"
 
 #include <chrono>
 #include <cstdint>
@@ -16,6 +16,7 @@ int run_benchmark(
     limits.depth = depth;
 
     uint64_t total_nodes = 0;
+    uint64_t total_qnodes = 0;
     uint64_t total_time_ms = 0;
 
     std::cout << "info string bench start positions " << positions.size()
@@ -33,8 +34,9 @@ int run_benchmark(
         const uint64_t elapsed_ms = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
         const uint64_t nodes = engine.get_total_nodes();
-
+		const uint64_t qnodes = engine.get_qnodes();
         total_nodes += nodes;
+		total_qnodes += qnodes;
         total_time_ms += elapsed_ms;
 
         std::cout << "info string bench pos " << name
@@ -57,6 +59,7 @@ int run_benchmark(
               << " nps " << nps << "\n";
     std::cout << "Nodes searched: " << total_nodes << "\n";
     std::cout << "Nodes/second: " << nps << '\n';
+	std::cout << "q-nodes percentage " << (total_qnodes*100)/total_nodes << "%\n";
     std::cout.flush();
     return 0;
 }

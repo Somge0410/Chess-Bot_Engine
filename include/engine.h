@@ -175,6 +175,7 @@ class Engine {
         void shutdown();
         void flush_node_counters();
         uint64_t get_total_nodes();
+        uint64_t get_qnodes();
         int checks_count;
         int ep_count;
         int capture_count;

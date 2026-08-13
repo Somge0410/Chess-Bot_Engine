@@ -1347,3 +1347,7 @@ uint64_t Engine::get_total_nodes() {
     flush_node_counters();
     return nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
 }
+uint64_t Engine::get_qnodes() {
+	flush_node_counters();
+	return qnodes.load(std::memory_order_relaxed);
+}
