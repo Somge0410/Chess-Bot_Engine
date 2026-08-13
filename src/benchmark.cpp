@@ -10,6 +10,76 @@
 #include "engine.h"
 #include "uci_helpers.h"
 
+#if ENABLE_QSEARCH_DIAGNOSTICS
+namespace {
+double percentage(uint64_t value, uint64_t total) {
+    return total > 0
+        ? 100.0 * static_cast<double>(value) / static_cast<double>(total)
+        : 0.0;
+}
+
+void print_tt_diagnostics(const char* mode_name, const TTDiagnostics& diagnostics) {
+    if (diagnostics.probes == 0 && diagnostics.stores == 0) {
+        std::cout << "TT " << mode_name << ": inactive (no probes or stores)\n";
+        return;
+    }
+
+    const uint64_t usable_hits = diagnostics.exact_hits + diagnostics.bound_cutoffs;
+    std::cout << "TT " << mode_name << " probes: " << diagnostics.probes << '\n';
+    std::cout << "TT " << mode_name << " raw key hits: " << diagnostics.key_hits
+              << " (" << percentage(diagnostics.key_hits, diagnostics.probes) << "%)\n";
+    std::cout << "TT " << mode_name << " usable hits: " << usable_hits
+              << " (" << percentage(usable_hits, diagnostics.probes) << "%)\n";
+    std::cout << "TT " << mode_name << " exact hits: " << diagnostics.exact_hits
+              << " (" << percentage(diagnostics.exact_hits, diagnostics.probes) << "%)\n";
+    std::cout << "TT " << mode_name << " bound hits: " << diagnostics.bound_hits
+              << " (" << percentage(diagnostics.bound_hits, diagnostics.probes) << "%)\n";
+    std::cout << "TT " << mode_name << " bound cutoffs: " << diagnostics.bound_cutoffs
+              << " (" << percentage(diagnostics.bound_cutoffs, diagnostics.probes) << "%)\n";
+    std::cout << "TT " << mode_name << " shallow rejections: " << diagnostics.shallow_hits
+              << " (" << percentage(diagnostics.shallow_hits, diagnostics.key_hits) << "% of key hits)\n";
+    std::cout << "TT " << mode_name << " tempered rejections: " << diagnostics.tempered_rejections
+              << " (" << percentage(diagnostics.tempered_rejections, diagnostics.key_hits) << "% of key hits)\n";
+    std::cout << "TT " << mode_name << " invalid-move rejections: " << diagnostics.invalid_move_rejections
+              << " (" << percentage(diagnostics.invalid_move_rejections, diagnostics.key_hits) << "% of key hits)\n";
+    std::cout << "TT " << mode_name << " empty terminations: " << diagnostics.empty_terminations
+              << " (" << percentage(diagnostics.empty_terminations, diagnostics.probes) << "% of probes)\n";
+    const double average_slots = diagnostics.probes > 0
+        ? static_cast<double>(diagnostics.slots_examined) / static_cast<double>(diagnostics.probes)
+        : 0.0;
+    std::cout << "TT " << mode_name << " average slots examined: " << average_slots << '\n';
+
+    std::cout << "TT " << mode_name << " stores: " << diagnostics.stores << '\n';
+    std::cout << "TT " << mode_name << " store flags exact/lower/upper/tempered: "
+              << diagnostics.exact_stores << '/' << diagnostics.lowerbound_stores << '/'
+              << diagnostics.upperbound_stores << '/' << diagnostics.tempered_stores << '\n';
+    std::cout << "TT " << mode_name << " same-key updates: " << diagnostics.same_key_updates
+              << " (" << percentage(diagnostics.same_key_updates, diagnostics.stores) << "%)\n";
+    std::cout << "TT " << mode_name << " deeper entries kept: " << diagnostics.deeper_entries_kept
+              << " (" << percentage(diagnostics.deeper_entries_kept, diagnostics.stores) << "%)\n";
+    std::cout << "TT " << mode_name << " empty inserts: " << diagnostics.empty_inserts
+              << " (" << percentage(diagnostics.empty_inserts, diagnostics.stores) << "%)\n";
+    std::cout << "TT " << mode_name << " replacements: " << diagnostics.replacements
+              << " (" << percentage(diagnostics.replacements, diagnostics.stores) << "%)\n";
+    std::cout << "TT " << mode_name << " dropped stores: " << diagnostics.dropped_stores
+              << " (" << percentage(diagnostics.dropped_stores, diagnostics.stores) << "%)\n";
+
+    if (diagnostics.replacements > 0) {
+        const double average_replaced_depth = static_cast<double>(diagnostics.replaced_depth_sum)
+            / static_cast<double>(diagnostics.replacements);
+        const double average_replacement_depth = static_cast<double>(diagnostics.replacement_depth_sum)
+            / static_cast<double>(diagnostics.replacements);
+        const double average_replaced_age = static_cast<double>(diagnostics.replaced_age_sum)
+            / static_cast<double>(diagnostics.replacements);
+        std::cout << "TT " << mode_name << " replacement avg old/new depth: "
+                  << average_replaced_depth << '/' << average_replacement_depth << '\n';
+        std::cout << "TT " << mode_name << " replacement average age: "
+                  << average_replaced_age << '\n';
+    }
+}
+}
+#endif
+
 int run_benchmark(
     const std::vector<std::pair<std::string, std::string>>& positions,
     int depth,
@@ -52,6 +122,9 @@ int run_benchmark(
         total_diagnostics.cycle_cutoffs += diagnostics.cycle_cutoffs;
         total_diagnostics.hard_cap_hits += diagnostics.hard_cap_hits;
         total_diagnostics.max_qply = std::max(total_diagnostics.max_qply, diagnostics.max_qply);
+        for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
+            total_diagnostics.tt[i].add(diagnostics.tt[i]);
+        }
 #endif
         total_time_ms += elapsed_ms;
 
@@ -78,7 +151,16 @@ int run_benchmark(
                   << " quietchecks " << diagnostics.quiet_checks_searched
                   << " inchecknodes " << diagnostics.qnodes_in_check
                   << " cyclecutoffs " << diagnostics.cycle_cutoffs
-                  << " hardcaphits " << diagnostics.hard_cap_hits;
+                  << " hardcaphits " << diagnostics.hard_cap_hits
+                  << " ttprobes " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].probes
+                  << " ttrawhits " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].key_hits
+                  << " ttusablehits "
+                  << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].exact_hits
+                      + diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].bound_cutoffs
+                  << " ttcutoffs " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].bound_cutoffs
+                  << " ttstores " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].stores
+                  << " ttreplacements " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].replacements
+                  << " ttdrops " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].dropped_stores;
 #endif
         std::cout << "\n";
         std::cout.flush();
@@ -116,6 +198,8 @@ int run_benchmark(
     std::cout << "QNodes while in check: " << total_diagnostics.qnodes_in_check << '\n';
     std::cout << "Cycle cutoffs: " << total_diagnostics.cycle_cutoffs << '\n';
     std::cout << "Hard-cap hits: " << total_diagnostics.hard_cap_hits << '\n';
+    print_tt_diagnostics("Negamax", total_diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)]);
+    print_tt_diagnostics("Quiescence", total_diagnostics.tt[static_cast<std::size_t>(TTMode::Quiescence)]);
 #endif
     std::cout.flush();
     return 0;

@@ -14,6 +14,7 @@
 #include <cstring>
 #include <condition_variable>
 #include <limits>
+#include <array>
 
 #ifndef ENABLE_QSEARCH_DIAGNOSTICS
 #define ENABLE_QSEARCH_DIAGNOSTICS 0
@@ -129,13 +130,75 @@ struct TimeControlDecision {
     int max_depth;
     int max_time_ms;
 };
-enum class TTMode {Negamax, Quiescence};
+enum class TTMode {Negamax, Quiescence, PrincipalVariation};
 struct SearchResult {
     int score;
     Move best_move;
     bool is_tempered=false;
 };
 #if ENABLE_QSEARCH_DIAGNOSTICS
+constexpr std::size_t TT_DIAGNOSTIC_MODE_COUNT = 2;
+
+struct TTDiagnostics {
+    uint64_t probes = 0;
+    uint64_t slots_examined = 0;
+    uint64_t empty_terminations = 0;
+    uint64_t key_hits = 0;
+    uint64_t shallow_hits = 0;
+    uint64_t tempered_rejections = 0;
+    uint64_t invalid_move_rejections = 0;
+    uint64_t exact_hits = 0;
+    uint64_t bound_hits = 0;
+    uint64_t bound_cutoffs = 0;
+
+    uint64_t stores = 0;
+    uint64_t exact_stores = 0;
+    uint64_t lowerbound_stores = 0;
+    uint64_t upperbound_stores = 0;
+    uint64_t tempered_stores = 0;
+    uint64_t same_key_updates = 0;
+    uint64_t deeper_entries_kept = 0;
+    uint64_t empty_inserts = 0;
+    uint64_t replacements = 0;
+    uint64_t dropped_stores = 0;
+    uint64_t replaced_depth_sum = 0;
+    uint64_t replacement_depth_sum = 0;
+    uint64_t replaced_age_sum = 0;
+
+    void add(const TTDiagnostics& other);
+};
+
+struct AtomicTTDiagnostics {
+    std::atomic<uint64_t> probes{ 0 };
+    std::atomic<uint64_t> slots_examined{ 0 };
+    std::atomic<uint64_t> empty_terminations{ 0 };
+    std::atomic<uint64_t> key_hits{ 0 };
+    std::atomic<uint64_t> shallow_hits{ 0 };
+    std::atomic<uint64_t> tempered_rejections{ 0 };
+    std::atomic<uint64_t> invalid_move_rejections{ 0 };
+    std::atomic<uint64_t> exact_hits{ 0 };
+    std::atomic<uint64_t> bound_hits{ 0 };
+    std::atomic<uint64_t> bound_cutoffs{ 0 };
+
+    std::atomic<uint64_t> stores{ 0 };
+    std::atomic<uint64_t> exact_stores{ 0 };
+    std::atomic<uint64_t> lowerbound_stores{ 0 };
+    std::atomic<uint64_t> upperbound_stores{ 0 };
+    std::atomic<uint64_t> tempered_stores{ 0 };
+    std::atomic<uint64_t> same_key_updates{ 0 };
+    std::atomic<uint64_t> deeper_entries_kept{ 0 };
+    std::atomic<uint64_t> empty_inserts{ 0 };
+    std::atomic<uint64_t> replacements{ 0 };
+    std::atomic<uint64_t> dropped_stores{ 0 };
+    std::atomic<uint64_t> replaced_depth_sum{ 0 };
+    std::atomic<uint64_t> replacement_depth_sum{ 0 };
+    std::atomic<uint64_t> replaced_age_sum{ 0 };
+
+    void add(const TTDiagnostics& diagnostics);
+    void reset();
+    TTDiagnostics snapshot() const;
+};
+
 struct SearchDiagnostics {
     uint64_t main_nodes = 0;
     uint64_t qnodes = 0;
@@ -145,6 +208,7 @@ struct SearchDiagnostics {
     uint64_t cycle_cutoffs = 0;
     uint64_t hard_cap_hits = 0;
     uint32_t max_qply = 0;
+    std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt{};
 };
 #endif
 class Engine;
@@ -162,6 +226,9 @@ struct ThreadLocalData {
         cycle_cutoffs = 0;
         hard_cap_hits = 0;
         max_qply = 0;
+        for (TTDiagnostics& diagnostics : tt_diagnostics) {
+            diagnostics = {};
+        }
 #endif
         nodes_until_time_check = TIME_CHECK_INTERVAL;
     }
@@ -195,6 +262,7 @@ struct ThreadLocalData {
     uint64_t cycle_cutoffs{ 0 };
     uint64_t hard_cap_hits{ 0 };
     uint32_t max_qply{ 0 };
+    std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
 #endif
     uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
     void flush_counters(Engine* engine,bool force=false);
@@ -226,6 +294,7 @@ class Engine {
         std::atomic<uint64_t> cycle_cutoffs{ 0 };
         std::atomic<uint64_t> hard_cap_hits{ 0 };
         std::atomic<uint32_t> max_qply{ 0 };
+        std::array<AtomicTTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
 #endif
         uint8_t generation=0;
 

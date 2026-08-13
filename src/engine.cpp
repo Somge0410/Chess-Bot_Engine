@@ -18,6 +18,61 @@
 #include <cmath>
 #include "uci_helpers.h"
 #include "SPSA_parameters.h"
+#if ENABLE_QSEARCH_DIAGNOSTICS
+#define TT_DIAGNOSTIC_FIELDS(X) \
+    X(probes) \
+    X(slots_examined) \
+    X(empty_terminations) \
+    X(key_hits) \
+    X(shallow_hits) \
+    X(tempered_rejections) \
+    X(invalid_move_rejections) \
+    X(exact_hits) \
+    X(bound_hits) \
+    X(bound_cutoffs) \
+    X(stores) \
+    X(exact_stores) \
+    X(lowerbound_stores) \
+    X(upperbound_stores) \
+    X(tempered_stores) \
+    X(same_key_updates) \
+    X(deeper_entries_kept) \
+    X(empty_inserts) \
+    X(replacements) \
+    X(dropped_stores) \
+    X(replaced_depth_sum) \
+    X(replacement_depth_sum) \
+    X(replaced_age_sum)
+
+void TTDiagnostics::add(const TTDiagnostics& other) {
+#define ADD_TT_DIAGNOSTIC(field) field += other.field;
+    TT_DIAGNOSTIC_FIELDS(ADD_TT_DIAGNOSTIC)
+#undef ADD_TT_DIAGNOSTIC
+}
+
+void AtomicTTDiagnostics::add(const TTDiagnostics& diagnostics) {
+#define ADD_ATOMIC_TT_DIAGNOSTIC(field) field.fetch_add(diagnostics.field, std::memory_order_relaxed);
+    TT_DIAGNOSTIC_FIELDS(ADD_ATOMIC_TT_DIAGNOSTIC)
+#undef ADD_ATOMIC_TT_DIAGNOSTIC
+}
+
+void AtomicTTDiagnostics::reset() {
+#define RESET_ATOMIC_TT_DIAGNOSTIC(field) field.store(0, std::memory_order_relaxed);
+    TT_DIAGNOSTIC_FIELDS(RESET_ATOMIC_TT_DIAGNOSTIC)
+#undef RESET_ATOMIC_TT_DIAGNOSTIC
+}
+
+TTDiagnostics AtomicTTDiagnostics::snapshot() const {
+    TTDiagnostics diagnostics{};
+#define SNAPSHOT_ATOMIC_TT_DIAGNOSTIC(field) diagnostics.field = field.load(std::memory_order_relaxed);
+    TT_DIAGNOSTIC_FIELDS(SNAPSHOT_ATOMIC_TT_DIAGNOSTIC)
+#undef SNAPSHOT_ATOMIC_TT_DIAGNOSTIC
+    return diagnostics;
+}
+
+#undef TT_DIAGNOSTIC_FIELDS
+#endif
+
 void ThreadLocalData::flush_counters(Engine* engine,bool force) {
     if (force || nodes > 10000) {
         engine->nodes.fetch_add(nodes, std::memory_order_relaxed);
@@ -48,10 +103,26 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
         cycle_cutoffs = 0;
         hard_cap_hits = 0;
         max_qply = 0;
+
+        for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
+            engine->tt_diagnostics[i].add(tt_diagnostics[i]);
+            tt_diagnostics[i] = {};
+        }
 #endif
     }
 }
 static thread_local ThreadLocalData tls_data;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+static_assert(static_cast<std::size_t>(TTMode::Negamax) == 0);
+static_assert(static_cast<std::size_t>(TTMode::Quiescence) == 1);
+
+TTDiagnostics* active_tt_diagnostics(TTMode mode) {
+    if (mode == TTMode::PrincipalVariation) {
+        return nullptr;
+    }
+    return &tls_data.tt_diagnostics[static_cast<std::size_t>(mode)];
+}
+#endif
 constexpr int PIECE_VALUES_MG[7] = {100,320,320,500,900,10000,0};
 
 Engine::Engine(size_t tt_size_mb){
@@ -494,33 +565,83 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
 }
 bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score,
     Move& out_move, int ply, bool depth_0, TTMode mode) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    TTDiagnostics* diagnostics = active_tt_diagnostics(mode);
+    if (diagnostics) {
+        diagnostics->probes++;
+    }
+#endif
     TTCluster& cluster = tt[hash & (tt.size() - 1)];
     const uint16_t key16 = static_cast<uint16_t>(hash >> 48);
     bool hits = false;
     for (int i = 0; i < 4; i++) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (diagnostics) {
+            diagnostics->slots_examined++;
+        }
+#endif
         TTEntry& slot = cluster.entries[i];
         uint64_t w = tt_load(slot);
         TTEntry entry;
         entry.entry = w;
-		if (entry.empty()) return false;
+		if (entry.empty()) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (diagnostics) {
+                diagnostics->empty_terminations++;
+            }
+#endif
+            return false;
+        }
 		if (entry.key() != key16) continue;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (diagnostics) {
+            diagnostics->key_hits++;
+        }
+#endif
 		tt_refresh_generation(slot, w, generation);
 
         out_move = entry.move();
         const int score = score_from_tt(entry.score(), ply);
         out_score = score;
         if (entry.depth() < depth) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (diagnostics) {
+                diagnostics->shallow_hits++;
+            }
+#endif
             return false;
         }
 
         if (entry.flag() == TEMPERED) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (diagnostics) {
+                diagnostics->tempered_rejections++;
+            }
+#endif
             return false;
         }
         int a = alpha, b = beta;
         if (entry.flag() == EXACT) {
-            if (out_move.from_square == NO_SQUARE) return false;
+            if (out_move.from_square == NO_SQUARE) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                if (diagnostics) {
+                    diagnostics->invalid_move_rejections++;
+                }
+#endif
+                return false;
+            }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (diagnostics) {
+                diagnostics->exact_hits++;
+            }
+#endif
             return true;
 		}
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (diagnostics) {
+            diagnostics->bound_hits++;
+        }
+#endif
         if (entry.flag() == LOWERBOUND) a = std::max(a, score);
         if (entry.flag() == UPPERBOUND) b = std::min(b, score);
         
@@ -530,7 +651,19 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
             hits = true;
         }
         if (a >= b) {
-            if (out_move.from_square == NO_SQUARE) return false;
+            if (out_move.from_square == NO_SQUARE) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                if (diagnostics) {
+                    diagnostics->invalid_move_rejections++;
+                }
+#endif
+                return false;
+            }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (diagnostics) {
+                diagnostics->bound_cutoffs++;
+            }
+#endif
             return true;
         }
     }
@@ -539,6 +672,12 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 }
 bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score,
     Move& best_move, int ply, bool is_best_tempered, bool is_any_tempered, TTMode mode) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    TTDiagnostics* diagnostics = active_tt_diagnostics(mode);
+    if (diagnostics) {
+        diagnostics->stores++;
+    }
+#endif
     bool score_tempered=false;
     TTFlag flag_to_store;
     // Do some position from repeat logic here
@@ -574,6 +713,25 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         }
     }
 
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (diagnostics) {
+        switch (flag_to_store) {
+        case EXACT:
+            diagnostics->exact_stores++;
+            break;
+        case LOWERBOUND:
+            diagnostics->lowerbound_stores++;
+            break;
+        case UPPERBOUND:
+            diagnostics->upperbound_stores++;
+            break;
+        case TEMPERED:
+            diagnostics->tempered_stores++;
+            break;
+        }
+    }
+#endif
+
     TTEntry new_entry = TTEntry(score_to_tt(best_score, ply), depth, flag_to_store,
         generation, best_move, static_cast<uint16_t>(hash >> 48));
 	TTCluster& cluster = tt[hash & (tt.size() - 1)];
@@ -586,10 +744,20 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         if (!old.empty() && old.key() == key16) {
             if (old.depth() <= depth) {
                 tt_store(cluster.entries[i],new_entry.entry);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                if (diagnostics) {
+                    diagnostics->same_key_updates++;
+                }
+#endif
             }
             else {
                 // Preserve the deeper result but mark it as used by this search.
                 tt_refresh_generation(cluster.entries[i], oldw, generation);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                if (diagnostics) {
+                    diagnostics->deeper_entries_kept++;
+                }
+#endif
             }
 
             
@@ -603,6 +771,11 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
         TTEntry old; old.entry = oldw;
         if (old.empty()) {
             tt_store(cluster.entries[i],new_entry.entry);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            if (diagnostics) {
+                diagnostics->empty_inserts++;
+            }
+#endif
 			return score_tempered;
         }
     }
@@ -627,7 +800,20 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
     }
     if (pos_index != -1) {
         tt_store(cluster.entries[pos_index],new_entry.entry);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (diagnostics) {
+            diagnostics->replacements++;
+            diagnostics->replaced_depth_sum += static_cast<uint64_t>(pos_depth);
+            diagnostics->replacement_depth_sum += static_cast<uint64_t>(depth);
+            diagnostics->replaced_age_sum += static_cast<uint64_t>(max_generation_diff);
+        }
+#endif
     }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    else if (diagnostics) {
+        diagnostics->dropped_stores++;
+    }
+#endif
     return score_tempered;
    
 
@@ -1245,6 +1431,9 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
     cycle_cutoffs.store(0, std::memory_order_relaxed);
     hard_cap_hits.store(0, std::memory_order_relaxed);
     max_qply.store(0, std::memory_order_relaxed);
+    for (AtomicTTDiagnostics& diagnostics : tt_diagnostics) {
+        diagnostics.reset();
+    }
 #endif
     tls_data.clear_counters();
 
@@ -1359,7 +1548,8 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         bool depth_0 = false;
 
         // depth=0 akzeptiert jeden TT-Eintrag mit depth>=0
-        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, i, depth_0))
+        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, i, depth_0,
+            TTMode::PrincipalVariation))
             break;
         if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)
             break;
@@ -1409,15 +1599,18 @@ uint64_t Engine::get_qnodes() {
 #if ENABLE_QSEARCH_DIAGNOSTICS
 SearchDiagnostics Engine::get_search_diagnostics() {
     flush_node_counters();
-    return {
-        nodes.load(std::memory_order_relaxed),
-        qnodes.load(std::memory_order_relaxed),
-        qply_sum.load(std::memory_order_relaxed),
-        quiet_checks_searched.load(std::memory_order_relaxed),
-        qnodes_in_check.load(std::memory_order_relaxed),
-        cycle_cutoffs.load(std::memory_order_relaxed),
-        hard_cap_hits.load(std::memory_order_relaxed),
-        max_qply.load(std::memory_order_relaxed)
-    };
+    SearchDiagnostics diagnostics{};
+    diagnostics.main_nodes = nodes.load(std::memory_order_relaxed);
+    diagnostics.qnodes = qnodes.load(std::memory_order_relaxed);
+    diagnostics.qply_sum = qply_sum.load(std::memory_order_relaxed);
+    diagnostics.quiet_checks_searched = quiet_checks_searched.load(std::memory_order_relaxed);
+    diagnostics.qnodes_in_check = qnodes_in_check.load(std::memory_order_relaxed);
+    diagnostics.cycle_cutoffs = cycle_cutoffs.load(std::memory_order_relaxed);
+    diagnostics.hard_cap_hits = hard_cap_hits.load(std::memory_order_relaxed);
+    diagnostics.max_qply = max_qply.load(std::memory_order_relaxed);
+    for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
+        diagnostics.tt[i] = tt_diagnostics[i].snapshot();
+    }
+    return diagnostics;
 }
 #endif
