@@ -88,11 +88,26 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
         engine->qnodes_in_check.fetch_add(qnodes_in_check, std::memory_order_relaxed);
         engine->cycle_cutoffs.fetch_add(cycle_cutoffs, std::memory_order_relaxed);
         engine->hard_cap_hits.fetch_add(hard_cap_hits, std::memory_order_relaxed);
+        engine->move_order_nodes.fetch_add(move_order_nodes, std::memory_order_relaxed);
+        engine->moves_searched_sum.fetch_add(moves_searched_sum, std::memory_order_relaxed);
+        engine->best_move_index_sum.fetch_add(best_move_index_sum, std::memory_order_relaxed);
+        engine->best_move_first.fetch_add(best_move_first, std::memory_order_relaxed);
+        engine->beta_cutoffs.fetch_add(beta_cutoffs, std::memory_order_relaxed);
+        engine->beta_cutoff_index_sum.fetch_add(beta_cutoff_index_sum, std::memory_order_relaxed);
+        engine->first_move_beta_cutoffs.fetch_add(first_move_beta_cutoffs, std::memory_order_relaxed);
 
         uint32_t observed_max = engine->max_qply.load(std::memory_order_relaxed);
         while (observed_max < max_qply &&
             !engine->max_qply.compare_exchange_weak(
                 observed_max, max_qply,
+                std::memory_order_relaxed,
+                std::memory_order_relaxed)) {
+        }
+
+        observed_max = engine->max_best_move_index.load(std::memory_order_relaxed);
+        while (observed_max < max_best_move_index &&
+            !engine->max_best_move_index.compare_exchange_weak(
+                observed_max, max_best_move_index,
                 std::memory_order_relaxed,
                 std::memory_order_relaxed)) {
         }
@@ -103,6 +118,14 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
         cycle_cutoffs = 0;
         hard_cap_hits = 0;
         max_qply = 0;
+        move_order_nodes = 0;
+        moves_searched_sum = 0;
+        best_move_index_sum = 0;
+        best_move_first = 0;
+        beta_cutoffs = 0;
+        beta_cutoff_index_sum = 0;
+        first_move_beta_cutoffs = 0;
+        max_best_move_index = 0;
 
         for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
             engine->tt_diagnostics[i].add(tt_diagnostics[i]);
@@ -121,6 +144,23 @@ TTDiagnostics* active_tt_diagnostics(TTMode mode) {
         return nullptr;
     }
     return &tls_data.tt_diagnostics[static_cast<std::size_t>(mode)];
+}
+
+void record_move_order_diagnostics(ThreadLocalData* tls, uint32_t moves_searched,
+    uint32_t best_move_index, uint32_t beta_cutoff_index) {
+    if (!tls || moves_searched == 0 || best_move_index == 0) {
+        return;
+    }
+    tls->move_order_nodes++;
+    tls->moves_searched_sum += moves_searched;
+    tls->best_move_index_sum += best_move_index;
+    tls->best_move_first += best_move_index == 1;
+    tls->max_best_move_index = std::max(tls->max_best_move_index, best_move_index);
+    if (beta_cutoff_index > 0) {
+        tls->beta_cutoffs++;
+        tls->beta_cutoff_index_sum += beta_cutoff_index;
+        tls->first_move_beta_cutoffs += beta_cutoff_index == 1;
+    }
 }
 #endif
 constexpr int PIECE_VALUES_MG[7] = {100,320,320,500,900,10000,0};
@@ -239,8 +279,12 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     
-	// Late Move Reduction prerequisites here
+    // Late Move Reduction prerequisites here
     int moves_searched=0;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    uint32_t best_move_discovery_index = 0;
+    uint32_t beta_cutoff_index = 0;
+#endif
     // PVS 
     bool first = true;
     bool is_any_tempered = false;
@@ -318,6 +362,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             best_score = evaluation;
             best_move = move;
             is_best_move_tempered = current_move_tempered;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            best_move_discovery_index = static_cast<uint32_t>(moves_searched);
+#endif
         }
         alpha = std::max(alpha, best_score);
        
@@ -326,12 +373,19 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
         if (beta<=alpha)
         {   
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            beta_cutoff_index = static_cast<uint32_t>(moves_searched);
+#endif
 			update_history_killer(move, depth, ply,tls,previous_move,searched_quiets);
             break;
         }
         
     }
 
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    record_move_order_diagnostics(tls, static_cast<uint32_t>(moves_searched),
+        best_move_discovery_index, beta_cutoff_index);
+#endif
     bool is_result_tempered = store_tt(hash, depth, original_alpha, beta, best_score,
         best_move, ply, is_best_move_tempered, is_any_tempered);
     return {best_score,best_move,is_result_tempered};
@@ -1367,6 +1421,11 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
 	Move local_second_best_move = out_second_best_move;
     Move best_move = root_moves[0];
     int local_alpha = alpha;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    uint32_t root_moves_searched = 0;
+    uint32_t root_best_move_discovery_index = 0;
+    uint32_t root_beta_cutoff_index = 0;
+#endif
 
 
     Board b = pos;
@@ -1393,12 +1452,18 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
         b.undo_move(m);
 
         if (stop_search.load(std::memory_order_relaxed)) break;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        root_moves_searched = static_cast<uint32_t>(i + 1);
+#endif
 
         if (i == 0 || score > best_score) {
             second_best_score = best_score;
             local_second_best_move = best_move;
             best_score = score;
             best_move = m;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            root_best_move_discovery_index = static_cast<uint32_t>(i + 1);
+#endif
         } 
 		else if (score > second_best_score) {
             second_best_score = score;
@@ -1406,8 +1471,20 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
         }
 
         if (score > local_alpha) local_alpha = score;
-        if (local_alpha >= beta) break;
+        if (local_alpha >= beta) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            root_beta_cutoff_index = static_cast<uint32_t>(i + 1);
+#endif
+            break;
+        }
     }
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (!stop_search.load(std::memory_order_relaxed)) {
+        record_move_order_diagnostics(tls, root_moves_searched,
+            root_best_move_discovery_index, root_beta_cutoff_index);
+    }
+#endif
 
     out_best_score = best_score;
     out_best_move = best_move;
@@ -1431,6 +1508,14 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
     cycle_cutoffs.store(0, std::memory_order_relaxed);
     hard_cap_hits.store(0, std::memory_order_relaxed);
     max_qply.store(0, std::memory_order_relaxed);
+    move_order_nodes.store(0, std::memory_order_relaxed);
+    moves_searched_sum.store(0, std::memory_order_relaxed);
+    best_move_index_sum.store(0, std::memory_order_relaxed);
+    best_move_first.store(0, std::memory_order_relaxed);
+    beta_cutoffs.store(0, std::memory_order_relaxed);
+    beta_cutoff_index_sum.store(0, std::memory_order_relaxed);
+    first_move_beta_cutoffs.store(0, std::memory_order_relaxed);
+    max_best_move_index.store(0, std::memory_order_relaxed);
     for (AtomicTTDiagnostics& diagnostics : tt_diagnostics) {
         diagnostics.reset();
     }
@@ -1608,6 +1693,14 @@ SearchDiagnostics Engine::get_search_diagnostics() {
     diagnostics.cycle_cutoffs = cycle_cutoffs.load(std::memory_order_relaxed);
     diagnostics.hard_cap_hits = hard_cap_hits.load(std::memory_order_relaxed);
     diagnostics.max_qply = max_qply.load(std::memory_order_relaxed);
+    diagnostics.move_order_nodes = move_order_nodes.load(std::memory_order_relaxed);
+    diagnostics.moves_searched_sum = moves_searched_sum.load(std::memory_order_relaxed);
+    diagnostics.best_move_index_sum = best_move_index_sum.load(std::memory_order_relaxed);
+    diagnostics.best_move_first = best_move_first.load(std::memory_order_relaxed);
+    diagnostics.beta_cutoffs = beta_cutoffs.load(std::memory_order_relaxed);
+    diagnostics.beta_cutoff_index_sum = beta_cutoff_index_sum.load(std::memory_order_relaxed);
+    diagnostics.first_move_beta_cutoffs = first_move_beta_cutoffs.load(std::memory_order_relaxed);
+    diagnostics.max_best_move_index = max_best_move_index.load(std::memory_order_relaxed);
     for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
         diagnostics.tt[i] = tt_diagnostics[i].snapshot();
     }

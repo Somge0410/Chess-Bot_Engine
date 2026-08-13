@@ -122,6 +122,15 @@ int run_benchmark(
         total_diagnostics.cycle_cutoffs += diagnostics.cycle_cutoffs;
         total_diagnostics.hard_cap_hits += diagnostics.hard_cap_hits;
         total_diagnostics.max_qply = std::max(total_diagnostics.max_qply, diagnostics.max_qply);
+        total_diagnostics.move_order_nodes += diagnostics.move_order_nodes;
+        total_diagnostics.moves_searched_sum += diagnostics.moves_searched_sum;
+        total_diagnostics.best_move_index_sum += diagnostics.best_move_index_sum;
+        total_diagnostics.best_move_first += diagnostics.best_move_first;
+        total_diagnostics.beta_cutoffs += diagnostics.beta_cutoffs;
+        total_diagnostics.beta_cutoff_index_sum += diagnostics.beta_cutoff_index_sum;
+        total_diagnostics.first_move_beta_cutoffs += diagnostics.first_move_beta_cutoffs;
+        total_diagnostics.max_best_move_index = std::max(
+            total_diagnostics.max_best_move_index, diagnostics.max_best_move_index);
         for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
             total_diagnostics.tt[i].add(diagnostics.tt[i]);
         }
@@ -137,6 +146,14 @@ int run_benchmark(
             : 0.0;
         const double average_qply = diagnostics.qnodes > 0
             ? static_cast<double>(diagnostics.qply_sum) / static_cast<double>(diagnostics.qnodes)
+            : 0.0;
+        const double average_moves_searched = diagnostics.move_order_nodes > 0
+            ? static_cast<double>(diagnostics.moves_searched_sum)
+                / static_cast<double>(diagnostics.move_order_nodes)
+            : 0.0;
+        const double average_best_move_index = diagnostics.move_order_nodes > 0
+            ? static_cast<double>(diagnostics.best_move_index_sum)
+                / static_cast<double>(diagnostics.move_order_nodes)
             : 0.0;
 #endif
 
@@ -164,6 +181,13 @@ int run_benchmark(
                   << " ttstores " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].stores
                   << " ttreplacements " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].replacements
                   << " ttdrops " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].dropped_stores
+                  << " avgmovessearched " << average_moves_searched
+                  << " avgbestmoveindex " << average_best_move_index
+                  << " bestmovefirst " << percentage(diagnostics.best_move_first,
+                      diagnostics.move_order_nodes)
+                  << " maxbestmoveindex " << diagnostics.max_best_move_index
+                  << " firstmovecutoffs " << percentage(diagnostics.first_move_beta_cutoffs,
+                      diagnostics.beta_cutoffs)
                   << " ttfill " << percentage(diagnostics.tt_occupied_entries,
                       diagnostics.tt_capacity_entries)
                   << " ttcurrentfill " << percentage(diagnostics.tt_current_generation_entries,
@@ -185,6 +209,18 @@ int run_benchmark(
     const double average_qply = total_diagnostics.qnodes > 0
         ? static_cast<double>(total_diagnostics.qply_sum) / static_cast<double>(total_diagnostics.qnodes)
         : 0.0;
+    const double average_moves_searched = total_diagnostics.move_order_nodes > 0
+        ? static_cast<double>(total_diagnostics.moves_searched_sum)
+            / static_cast<double>(total_diagnostics.move_order_nodes)
+        : 0.0;
+    const double average_best_move_index = total_diagnostics.move_order_nodes > 0
+        ? static_cast<double>(total_diagnostics.best_move_index_sum)
+            / static_cast<double>(total_diagnostics.move_order_nodes)
+        : 0.0;
+    const double average_beta_cutoff_index = total_diagnostics.beta_cutoffs > 0
+        ? static_cast<double>(total_diagnostics.beta_cutoff_index_sum)
+            / static_cast<double>(total_diagnostics.beta_cutoffs)
+        : 0.0;
 #endif
 
     std::cout << "info string bench total positions " << positions.size()
@@ -205,6 +241,18 @@ int run_benchmark(
     std::cout << "QNodes while in check: " << total_diagnostics.qnodes_in_check << '\n';
     std::cout << "Cycle cutoffs: " << total_diagnostics.cycle_cutoffs << '\n';
     std::cout << "Hard-cap hits: " << total_diagnostics.hard_cap_hits << '\n';
+    std::cout << "Move-order nodes: " << total_diagnostics.move_order_nodes << '\n';
+    std::cout << "Average moves searched per node: " << average_moves_searched << '\n';
+    std::cout << "Average best-move discovery index: " << average_best_move_index << '\n';
+    std::cout << "Best move found first: "
+              << percentage(total_diagnostics.best_move_first,
+                  total_diagnostics.move_order_nodes) << "%\n";
+    std::cout << "Maximum best-move discovery index: "
+              << total_diagnostics.max_best_move_index << '\n';
+    std::cout << "Average beta-cutoff index: " << average_beta_cutoff_index << '\n';
+    std::cout << "Beta cutoffs on first move: "
+              << percentage(total_diagnostics.first_move_beta_cutoffs,
+                  total_diagnostics.beta_cutoffs) << "%\n";
     std::cout << "TT occupied entries: " << total_diagnostics.tt_occupied_entries
               << '/' << total_diagnostics.tt_capacity_entries << '\n';
     std::cout << "TT fill rate: "

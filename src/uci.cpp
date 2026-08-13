@@ -105,6 +105,78 @@ static void wait_for_search(Engine& engine, std::thread& search_thread) {
     }
 }
 
+#if ENABLE_QSEARCH_DIAGNOSTICS
+static double diagnostic_percentage(uint64_t value, uint64_t total) {
+    return total > 0
+        ? 100.0 * static_cast<double>(value) / static_cast<double>(total)
+        : 0.0;
+}
+
+static void print_search_diagnostics(Engine& engine) {
+    const SearchDiagnostics diagnostics = engine.get_search_diagnostics();
+    const TTDiagnostics& negamax_tt =
+        diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)];
+    const TTDiagnostics& qsearch_tt =
+        diagnostics.tt[static_cast<std::size_t>(TTMode::Quiescence)];
+
+    const uint64_t total_nodes = diagnostics.main_nodes + diagnostics.qnodes;
+    const uint64_t usable_tt_hits = negamax_tt.exact_hits + negamax_tt.bound_cutoffs;
+    const double average_qply = diagnostics.qnodes > 0
+        ? static_cast<double>(diagnostics.qply_sum) / static_cast<double>(diagnostics.qnodes)
+        : 0.0;
+    const double average_moves_searched = diagnostics.move_order_nodes > 0
+        ? static_cast<double>(diagnostics.moves_searched_sum)
+            / static_cast<double>(diagnostics.move_order_nodes)
+        : 0.0;
+    const double average_best_move_index = diagnostics.move_order_nodes > 0
+        ? static_cast<double>(diagnostics.best_move_index_sum)
+            / static_cast<double>(diagnostics.move_order_nodes)
+        : 0.0;
+    const double average_cutoff_index = diagnostics.beta_cutoffs > 0
+        ? static_cast<double>(diagnostics.beta_cutoff_index_sum)
+            / static_cast<double>(diagnostics.beta_cutoffs)
+        : 0.0;
+
+    std::cout << "info string qdiag qsearch mainnodes " << diagnostics.main_nodes
+              << " qnodes " << diagnostics.qnodes
+              << " qpercent " << diagnostic_percentage(diagnostics.qnodes, total_nodes)
+              << " maxqply " << diagnostics.max_qply
+              << " avgqply " << average_qply
+              << " quietchecks " << diagnostics.quiet_checks_searched
+              << " inchecknodes " << diagnostics.qnodes_in_check
+              << " cyclecutoffs " << diagnostics.cycle_cutoffs
+              << " hardcaphits " << diagnostics.hard_cap_hits << '\n';
+    std::cout << "info string qdiag moveorder nodes " << diagnostics.move_order_nodes
+              << " avgsearched " << average_moves_searched
+              << " avgbestindex " << average_best_move_index
+              << " bestfirstpercent "
+              << diagnostic_percentage(diagnostics.best_move_first, diagnostics.move_order_nodes)
+              << " maxbestindex " << diagnostics.max_best_move_index
+              << " avgcutoffindex " << average_cutoff_index
+              << " firstcutoffpercent "
+              << diagnostic_percentage(diagnostics.first_move_beta_cutoffs,
+                  diagnostics.beta_cutoffs) << '\n';
+    std::cout << "info string qdiag tt negamax probes " << negamax_tt.probes
+              << " rawhitpercent " << diagnostic_percentage(negamax_tt.key_hits, negamax_tt.probes)
+              << " usablehitpercent " << diagnostic_percentage(usable_tt_hits, negamax_tt.probes)
+              << " cutoffpercent " << diagnostic_percentage(negamax_tt.bound_cutoffs, negamax_tt.probes)
+              << " shallowpercent " << diagnostic_percentage(negamax_tt.shallow_hits, negamax_tt.key_hits)
+              << " stores " << negamax_tt.stores
+              << " replacements " << negamax_tt.replacements
+              << " dropped " << negamax_tt.dropped_stores << '\n';
+    std::cout << "info string qdiag tt quiescence probes " << qsearch_tt.probes
+              << " stores " << qsearch_tt.stores << '\n';
+    std::cout << "info string qdiag ttfill occupied " << diagnostics.tt_occupied_entries
+              << " capacity " << diagnostics.tt_capacity_entries
+              << " fillpercent "
+              << diagnostic_percentage(diagnostics.tt_occupied_entries,
+                  diagnostics.tt_capacity_entries)
+              << " currentgenerationpercent "
+              << diagnostic_percentage(diagnostics.tt_current_generation_entries,
+                  diagnostics.tt_capacity_entries) << '\n';
+}
+#endif
+
 static void print_legal_moves(const Board& board) {
     MoveList moves;
     MoveGenerator::generate_moves(board, moves);
@@ -503,6 +575,9 @@ void uci_loop() {
             // Launch search on a joinable thread (not detached!)
             search_thread = std::thread([&engine, board, limits]() mutable {
                 Move best = engine.search(board, limits);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                print_search_diagnostics(engine);
+#endif
                 std::string best_uci = move_to_uci(best);
                 std::cout << "bestmove " << best_uci << "\n";
                 std::cout.flush();

@@ -208,6 +208,14 @@ struct SearchDiagnostics {
     uint64_t cycle_cutoffs = 0;
     uint64_t hard_cap_hits = 0;
     uint32_t max_qply = 0;
+    uint64_t move_order_nodes = 0;
+    uint64_t moves_searched_sum = 0;
+    uint64_t best_move_index_sum = 0;
+    uint64_t best_move_first = 0;
+    uint64_t beta_cutoffs = 0;
+    uint64_t beta_cutoff_index_sum = 0;
+    uint64_t first_move_beta_cutoffs = 0;
+    uint32_t max_best_move_index = 0;
     std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt{};
     uint64_t tt_capacity_entries = 0;
     uint64_t tt_occupied_entries = 0;
@@ -229,6 +237,14 @@ struct ThreadLocalData {
         cycle_cutoffs = 0;
         hard_cap_hits = 0;
         max_qply = 0;
+        move_order_nodes = 0;
+        moves_searched_sum = 0;
+        best_move_index_sum = 0;
+        best_move_first = 0;
+        beta_cutoffs = 0;
+        beta_cutoff_index_sum = 0;
+        first_move_beta_cutoffs = 0;
+        max_best_move_index = 0;
         for (TTDiagnostics& diagnostics : tt_diagnostics) {
             diagnostics = {};
         }
@@ -265,6 +281,14 @@ struct ThreadLocalData {
     uint64_t cycle_cutoffs{ 0 };
     uint64_t hard_cap_hits{ 0 };
     uint32_t max_qply{ 0 };
+    uint64_t move_order_nodes{ 0 };
+    uint64_t moves_searched_sum{ 0 };
+    uint64_t best_move_index_sum{ 0 };
+    uint64_t best_move_first{ 0 };
+    uint64_t beta_cutoffs{ 0 };
+    uint64_t beta_cutoff_index_sum{ 0 };
+    uint64_t first_move_beta_cutoffs{ 0 };
+    uint32_t max_best_move_index{ 0 };
     std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
 #endif
     uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
@@ -297,6 +321,14 @@ class Engine {
         std::atomic<uint64_t> cycle_cutoffs{ 0 };
         std::atomic<uint64_t> hard_cap_hits{ 0 };
         std::atomic<uint32_t> max_qply{ 0 };
+        std::atomic<uint64_t> move_order_nodes{ 0 };
+        std::atomic<uint64_t> moves_searched_sum{ 0 };
+        std::atomic<uint64_t> best_move_index_sum{ 0 };
+        std::atomic<uint64_t> best_move_first{ 0 };
+        std::atomic<uint64_t> beta_cutoffs{ 0 };
+        std::atomic<uint64_t> beta_cutoff_index_sum{ 0 };
+        std::atomic<uint64_t> first_move_beta_cutoffs{ 0 };
+        std::atomic<uint32_t> max_best_move_index{ 0 };
         std::array<AtomicTTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
 #endif
         uint8_t generation=0;
