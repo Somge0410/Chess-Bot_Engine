@@ -36,7 +36,7 @@ void print_tt_diagnostics(const char* mode_name, const TTDiagnostics& diagnostic
               << " (" << percentage(diagnostics.bound_hits, diagnostics.probes) << "%)\n";
     std::cout << "TT " << mode_name << " bound cutoffs: " << diagnostics.bound_cutoffs
               << " (" << percentage(diagnostics.bound_cutoffs, diagnostics.probes) << "%)\n";
-    std::cout << "TT " << mode_name << " shallow rejections: " << diagnostics.shallow_hits
+    std::cout << "TT " << mode_name << " shallow score rejections: " << diagnostics.shallow_hits
               << " (" << percentage(diagnostics.shallow_hits, diagnostics.key_hits) << "% of key hits)\n";
     std::cout << "TT " << mode_name << " tempered rejections: " << diagnostics.tempered_rejections
               << " (" << percentage(diagnostics.tempered_rejections, diagnostics.key_hits) << "% of key hits)\n";
@@ -125,6 +125,9 @@ int run_benchmark(
         for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
             total_diagnostics.tt[i].add(diagnostics.tt[i]);
         }
+        total_diagnostics.tt_capacity_entries += diagnostics.tt_capacity_entries;
+        total_diagnostics.tt_occupied_entries += diagnostics.tt_occupied_entries;
+        total_diagnostics.tt_current_generation_entries += diagnostics.tt_current_generation_entries;
 #endif
         total_time_ms += elapsed_ms;
 
@@ -160,7 +163,11 @@ int run_benchmark(
                   << " ttcutoffs " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].bound_cutoffs
                   << " ttstores " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].stores
                   << " ttreplacements " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].replacements
-                  << " ttdrops " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].dropped_stores;
+                  << " ttdrops " << diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)].dropped_stores
+                  << " ttfill " << percentage(diagnostics.tt_occupied_entries,
+                      diagnostics.tt_capacity_entries)
+                  << " ttcurrentfill " << percentage(diagnostics.tt_current_generation_entries,
+                      diagnostics.tt_capacity_entries);
 #endif
         std::cout << "\n";
         std::cout.flush();
@@ -198,6 +205,14 @@ int run_benchmark(
     std::cout << "QNodes while in check: " << total_diagnostics.qnodes_in_check << '\n';
     std::cout << "Cycle cutoffs: " << total_diagnostics.cycle_cutoffs << '\n';
     std::cout << "Hard-cap hits: " << total_diagnostics.hard_cap_hits << '\n';
+    std::cout << "TT occupied entries: " << total_diagnostics.tt_occupied_entries
+              << '/' << total_diagnostics.tt_capacity_entries << '\n';
+    std::cout << "TT fill rate: "
+              << percentage(total_diagnostics.tt_occupied_entries,
+                  total_diagnostics.tt_capacity_entries) << "%\n";
+    std::cout << "TT current-generation fill rate: "
+              << percentage(total_diagnostics.tt_current_generation_entries,
+                  total_diagnostics.tt_capacity_entries) << "%\n";
     print_tt_diagnostics("Negamax", total_diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)]);
     print_tt_diagnostics("Quiescence", total_diagnostics.tt[static_cast<std::size_t>(TTMode::Quiescence)]);
 #endif

@@ -209,6 +209,9 @@ struct SearchDiagnostics {
     uint64_t hard_cap_hits = 0;
     uint32_t max_qply = 0;
     std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt{};
+    uint64_t tt_capacity_entries = 0;
+    uint64_t tt_occupied_entries = 0;
+    uint64_t tt_current_generation_entries = 0;
 };
 #endif
 class Engine;

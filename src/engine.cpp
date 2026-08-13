@@ -1611,6 +1611,19 @@ SearchDiagnostics Engine::get_search_diagnostics() {
     for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
         diagnostics.tt[i] = tt_diagnostics[i].snapshot();
     }
+    diagnostics.tt_capacity_entries = static_cast<uint64_t>(tt.size()) * 4ULL;
+    for (TTCluster& cluster : tt) {
+        for (TTEntry& slot : cluster.entries) {
+            TTEntry entry(tt_load(slot));
+            if (entry.empty()) {
+                continue;
+            }
+            diagnostics.tt_occupied_entries++;
+            if (entry.generation() == generation) {
+                diagnostics.tt_current_generation_entries++;
+            }
+        }
+    }
     return diagnostics;
 }
 #endif
