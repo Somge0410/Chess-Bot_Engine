@@ -289,7 +289,7 @@ void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& 
     for (size_t i = 0; i < moves.size(); ++i) moves[i]=scored[i].second;
 }
 int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply,
-    ThreadLocalData* tls, uint64_t checkers) {
+    ThreadLocalData* tls, uint64_t checkers, bool after_check_invasions) {
     if (stop_search.load(std::memory_order_relaxed)) {
         return 0;
     }
@@ -342,8 +342,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         int stand_pat = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
         if (stand_pat >= beta) return stand_pat;
         if (stand_pat > alpha) alpha = stand_pat;
-
-        MoveGenerator::generate_captures_with_checks(board, moves, checkers);
+		const bool include_quiet_checks = qply == 0 || after_check_invasions;
+        if(include_quiet_checks)
+            MoveGenerator::generate_captures_with_checks(board, moves, checkers);
+        else
+			MoveGenerator::generate_captures(board, moves, checkers);
     }
 
     int best_score = in_check ? -MATE_SCORE : alpha;
@@ -368,7 +371,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 
         board.make_move(move);
         const uint64_t child_checkers = board.get_checkers();
-        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers);
+        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check);
         board.undo_move(move);
 		++i;
 
