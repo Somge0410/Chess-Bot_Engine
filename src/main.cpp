@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     Zobrist::initialize_keys();
 
     if (argc >= 2 && std::string(argv[1]) == "bench") {
-        return run_benchmark(get_default_positions());
+        return run_benchmark(get_bench_positions());
     }
 
     Board board("k7/8/4P3/8/8/8/8/K3b3 w - - 0 1");

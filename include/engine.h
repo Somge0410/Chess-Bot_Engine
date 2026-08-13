@@ -14,6 +14,11 @@
 #include <cstring>
 #include <condition_variable>
 #include <limits>
+
+#ifndef ENABLE_QSEARCH_DIAGNOSTICS
+#define ENABLE_QSEARCH_DIAGNOSTICS 0
+#endif
+
 enum TTFlag {
     EXACT,
     LOWERBOUND,
@@ -130,6 +135,18 @@ struct SearchResult {
     Move best_move;
     bool is_tempered=false;
 };
+#if ENABLE_QSEARCH_DIAGNOSTICS
+struct SearchDiagnostics {
+    uint64_t main_nodes = 0;
+    uint64_t qnodes = 0;
+    uint64_t qply_sum = 0;
+    uint64_t quiet_checks_searched = 0;
+    uint64_t qnodes_in_check = 0;
+    uint64_t cycle_cutoffs = 0;
+    uint64_t hard_cap_hits = 0;
+    uint32_t max_qply = 0;
+};
+#endif
 class Engine;
 struct ThreadLocalData {
     static constexpr uint32_t TIME_CHECK_INTERVAL = 1024;
@@ -138,6 +155,14 @@ struct ThreadLocalData {
     void clear_counters() {
         nodes = 0;
         qnodes = 0;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        qply_sum = 0;
+        quiet_checks_searched = 0;
+        qnodes_in_check = 0;
+        cycle_cutoffs = 0;
+        hard_cap_hits = 0;
+        max_qply = 0;
+#endif
         nodes_until_time_check = TIME_CHECK_INTERVAL;
     }
     void clear_heuristics() {
@@ -163,6 +188,14 @@ struct ThreadLocalData {
     Move counter_moves[2][7][64] = {};
     uint64_t nodes{ 0 };
     uint64_t qnodes{ 0 };
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    uint64_t qply_sum{ 0 };
+    uint64_t quiet_checks_searched{ 0 };
+    uint64_t qnodes_in_check{ 0 };
+    uint64_t cycle_cutoffs{ 0 };
+    uint64_t hard_cap_hits{ 0 };
+    uint32_t max_qply{ 0 };
+#endif
     uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
     void flush_counters(Engine* engine,bool force=false);
 };
@@ -175,6 +208,10 @@ class Engine {
         void shutdown();
         void flush_node_counters();
         uint64_t get_total_nodes();
+        uint64_t get_qnodes();
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        SearchDiagnostics get_search_diagnostics();
+#endif
         int checks_count;
         int ep_count;
         int capture_count;
@@ -182,8 +219,15 @@ class Engine {
         int rev_fut_count = 0;
         std::atomic<uint64_t> nodes{ 0 };
         std::atomic<uint64_t>  qnodes{ 0 };
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        std::atomic<uint64_t> qply_sum{ 0 };
+        std::atomic<uint64_t> quiet_checks_searched{ 0 };
+        std::atomic<uint64_t> qnodes_in_check{ 0 };
+        std::atomic<uint64_t> cycle_cutoffs{ 0 };
+        std::atomic<uint64_t> hard_cap_hits{ 0 };
+        std::atomic<uint32_t> max_qply{ 0 };
+#endif
         uint8_t generation=0;
-
 
         Move search(const Board& position, const SearchLimits& limits);
         void stop_search_and_wait() {

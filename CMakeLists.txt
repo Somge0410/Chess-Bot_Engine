@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 1. Hardware Optimization Toggle
 option(USE_NATIVE_ARCH "Optimize for current CPU" ON)
+option(ENABLE_QSEARCH_DIAGNOSTICS "Collect detailed qsearch benchmark diagnostics" OFF)
 
 # 2. Conservative default TT size (in MB).
 # GUIs can still select a larger Hash value for long searches.
@@ -27,8 +28,11 @@ add_executable(Chess-Bot_Engine
 
 target_include_directories(Chess-Bot_Engine PUBLIC include)
 
-# 4. Pass TT size as compile definition
-target_compile_definitions(Chess-Bot_Engine PRIVATE DEFAULT_TT_MB=${TT_SIZE_MB})
+# 4. Pass build options as compile definitions
+target_compile_definitions(Chess-Bot_Engine PRIVATE
+    DEFAULT_TT_MB=${TT_SIZE_MB}
+    ENABLE_QSEARCH_DIAGNOSTICS=$<BOOL:${ENABLE_QSEARCH_DIAGNOSTICS}>
+)
 
 # 5. Git version info
 find_package(Git QUIET)

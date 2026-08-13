@@ -26,6 +26,29 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
     if (force || qnodes > 10000) {
         engine->qnodes.fetch_add(qnodes, std::memory_order_relaxed);
         qnodes = 0;
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        engine->qply_sum.fetch_add(qply_sum, std::memory_order_relaxed);
+        engine->quiet_checks_searched.fetch_add(quiet_checks_searched, std::memory_order_relaxed);
+        engine->qnodes_in_check.fetch_add(qnodes_in_check, std::memory_order_relaxed);
+        engine->cycle_cutoffs.fetch_add(cycle_cutoffs, std::memory_order_relaxed);
+        engine->hard_cap_hits.fetch_add(hard_cap_hits, std::memory_order_relaxed);
+
+        uint32_t observed_max = engine->max_qply.load(std::memory_order_relaxed);
+        while (observed_max < max_qply &&
+            !engine->max_qply.compare_exchange_weak(
+                observed_max, max_qply,
+                std::memory_order_relaxed,
+                std::memory_order_relaxed)) {
+        }
+
+        qply_sum = 0;
+        quiet_checks_searched = 0;
+        qnodes_in_check = 0;
+        cycle_cutoffs = 0;
+        hard_cap_hits = 0;
+        max_qply = 0;
+#endif
     }
 }
 static thread_local ThreadLocalData tls_data;
@@ -295,6 +318,10 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
     }
     if (tls) {
         tls->qnodes++;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        tls->qply_sum += static_cast<uint64_t>(qply);
+        tls->max_qply = std::max(tls->max_qply, static_cast<uint32_t>(qply));
+#endif
         tls->flush_counters(this);
         if (tls->should_check_time() && is_time_up()) {
             stop_search.store(true, std::memory_order_relaxed);
@@ -308,6 +335,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         checkers = board.get_checkers();
     }
     bool in_check = checkers != 0;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (tls && in_check) {
+        tls->qnodes_in_check++;
+    }
+#endif
     constexpr int max_qply_index = ThreadLocalData::QSEARCH_PLY_CAPACITY - 1;
     const int qmove_list_index = std::min(qply, max_qply_index);
     MoveList& moves = tls->qmove_lists[qmove_list_index];
@@ -316,6 +348,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 
     for(int previous =qply-2;previous >=0; previous -= 2) {
         if (tls->qsearch_hashes[previous]== hash) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            tls->cycle_cutoffs++;
+#endif
             return 0;
         }
 	}
@@ -325,6 +360,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
 	}
     if (qply >=max_qply_index) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (tls) {
+            tls->hard_cap_hits++;
+        }
+#endif
         if(!in_check) {
             return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
         }
@@ -371,6 +411,13 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 
         board.make_move(move);
         const uint64_t child_checkers = board.get_checkers();
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (tls && !in_check &&
+            move.piece_captured == PieceType::NONE &&
+            move.promotion_piece == PieceType::NONE && child_checkers != 0) {
+            tls->quiet_checks_searched++;
+        }
+#endif
         int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check);
         board.undo_move(move);
 		++i;
@@ -1191,6 +1238,14 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 
     nodes.store(0, std::memory_order_relaxed);
     qnodes.store(0, std::memory_order_relaxed);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    qply_sum.store(0, std::memory_order_relaxed);
+    quiet_checks_searched.store(0, std::memory_order_relaxed);
+    qnodes_in_check.store(0, std::memory_order_relaxed);
+    cycle_cutoffs.store(0, std::memory_order_relaxed);
+    hard_cap_hits.store(0, std::memory_order_relaxed);
+    max_qply.store(0, std::memory_order_relaxed);
+#endif
     tls_data.clear_counters();
 
     //reset timer +stop flag AFTER you publish job if you want workers to see consisten values
@@ -1347,3 +1402,22 @@ uint64_t Engine::get_total_nodes() {
     flush_node_counters();
     return nodes.load(std::memory_order_relaxed) + qnodes.load(std::memory_order_relaxed);
 }
+uint64_t Engine::get_qnodes() {
+	flush_node_counters();
+	return qnodes.load(std::memory_order_relaxed);
+}
+#if ENABLE_QSEARCH_DIAGNOSTICS
+SearchDiagnostics Engine::get_search_diagnostics() {
+    flush_node_counters();
+    return {
+        nodes.load(std::memory_order_relaxed),
+        qnodes.load(std::memory_order_relaxed),
+        qply_sum.load(std::memory_order_relaxed),
+        quiet_checks_searched.load(std::memory_order_relaxed),
+        qnodes_in_check.load(std::memory_order_relaxed),
+        cycle_cutoffs.load(std::memory_order_relaxed),
+        hard_cap_hits.load(std::memory_order_relaxed),
+        max_qply.load(std::memory_order_relaxed)
+    };
+}
+#endif
