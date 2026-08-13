@@ -133,7 +133,7 @@ struct SearchResult {
 class Engine;
 struct ThreadLocalData {
     static constexpr uint32_t TIME_CHECK_INTERVAL = 1024;
-    static constexpr int QSEARCH_PLY_CAPACITY = 65;
+    static constexpr int QSEARCH_PLY_CAPACITY = 33;
 
     void clear_counters() {
         nodes = 0;
@@ -155,6 +155,7 @@ struct ThreadLocalData {
 
     MoveList move_lists[MAX_PLY];
     MoveList qmove_lists[QSEARCH_PLY_CAPACITY];
+	uint64_t qsearch_hashes[QSEARCH_PLY_CAPACITY] = {};
     int move_scores[MAX_PLY][256] = {};
     Move killer_moves[128][2] = {};
     MoveList searched_quiets[MAX_PLY];

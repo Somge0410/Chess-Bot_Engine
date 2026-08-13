@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "board.h"
 #include <vector>
 #include <cstdint>
@@ -45,7 +45,7 @@ public:
 
     static void generate_captures(const Board& board,MoveList& moves);
 	static void generate_captures(const Board& board, MoveList& moves, uint64_t checkers);
-	static void generate_captures_with_checks(const Board& board,MoveList& moves);
+	static void generate_captures_with_checks(const Board& board,MoveList& moves, uint64_t checkers);
     };
 
 
