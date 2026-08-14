@@ -490,27 +490,36 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
         // Now do futility pruning. If positions evaluation is already way worse than alpha, cut it off since it is
         //unlikely to get that much better in just 1 or two moves
-        if (!may_give_check(board, move) && !board.is_dangerous_passer_push(move)) {
-            if (depth <= 2)
-            {
-                if (static_eval != -MATE_SCORE)
-                    current_eval = static_eval;
-				else if (current_eval == -MATE_SCORE)
-                    current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
-            }
+		bool is_dangerous_passer_push = board.is_dangerous_passer_push(move);
 
-            if (!first
+		if (depth <= 2 && !first && !king_is_in_check && move.is_quiet() && !is_dangerous_passer_push){
+            if (static_eval != -MATE_SCORE)
+                current_eval = static_eval;
+            else if (current_eval == -MATE_SCORE)
+                current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
 #if ENABLE_QSEARCH_DIAGNOSTICS
-                && (increment_diagnostic(tls, SearchDiagCounter::FutilityChecks), true)
-#endif      
-                && should_futility_prune(depth, current_eval, alpha, king_is_in_check, move))
-            {
-#if ENABLE_QSEARCH_DIAGNOSTICS
-                increment_diagnostic(tls, SearchDiagCounter::FutilityPrunes);
+            increment_diagnostic(
+                tls, SearchDiagCounter::FutilityChecks);
 #endif
-                continue;
+            if (should_futility_prune(depth, current_eval, alpha, king_is_in_check, move)) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::FutilityMarginCandidates);
+#endif
+                if (may_give_check(board, move)) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                    increment_diagnostic(tls, SearchDiagCounter::FutilityCheckGuards);
+#endif
+                }
+                else {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                    increment_diagnostic(tls, SearchDiagCounter::FutilityPrunes);
+#endif
+                    continue;
+                }
             }
+        }
         // Late Move Reduction
+        if(!is_dangerous_passer_push){
             reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (reduction > 0) increment_diagnostic(tls, SearchDiagCounter::LmrReductions);
@@ -2135,9 +2144,24 @@ bool Engine::may_give_check(const Board& board, const Move& move) {
 
     uint64_t occ = board.get_all_pieces();
 
-    uint64_t king_attack_rays = get_queen_attacks(king_square,occ);
-    if (king_attack_rays & bit64(move.from_square)) {
-        return true;
+    uint64_t king_rook_rays = get_rook_attacks(king_square,occ);
+	uint64_t king_bishop_rays = get_bishop_attacks(king_square, occ);
+
+    occ |= bit64(move.to_square);
+    occ &= ~bit64(move.from_square);
+    if (king_rook_rays & bit64(move.from_square)) {
+		uint64_t rays_after = get_rook_attacks(king_square, occ);
+		uint64_t pieces = board.get_pieces(board.get_turn(), PieceType::ROOK) | board.get_pieces(board.get_turn(), PieceType::QUEEN);
+        if (rays_after & ~king_bishop_rays & pieces) {
+            return true;
+        }
+    }
+    if (king_bishop_rays & bit64(move.from_square)) {
+        uint64_t rays_after = get_bishop_attacks(king_square, occ);
+        uint64_t pieces = board.get_pieces(board.get_turn(), PieceType::BISHOP) | board.get_pieces(board.get_turn(), PieceType::QUEEN);
+        if (rays_after & ~king_rook_rays & pieces) {
+            return true;
+        }
     }
     if(move.is_castle|| move.is_en_passant|| move.promotion_piece != PieceType::NONE) {
         return true;
@@ -2154,8 +2178,6 @@ bool Engine::may_give_check(const Board& board, const Move& move) {
         }
         return false;
 	}
-	occ |= bit64(move.to_square);
-	occ &= ~bit64(move.from_square);
     if(move.piece_moved == PieceType::BISHOP) {
         if(get_bishop_attacks(move.to_square,occ) & bit64(king_square)) {
             return true;

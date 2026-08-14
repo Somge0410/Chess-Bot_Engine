@@ -163,6 +163,8 @@ enum class SearchDiagCounter : std::size_t {
     NmpSearches,
     NmpCutoffs,
     FutilityChecks,
+    FutilityMarginCandidates,
+    FutilityCheckGuards,
     FutilityPrunes,
     LmrReductions,
     LmrResearches,

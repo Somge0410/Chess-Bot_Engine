@@ -228,9 +228,16 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
         diagnostic_text(value(SearchDiagCounter::NmpCutoffs), "  (",
             rate(SearchDiagCounter::NmpCutoffs, SearchDiagCounter::NmpSearches), "% of searches)"));
     print_diagnostic_row(p, "Futility checks", diagnostic_text(value(SearchDiagCounter::FutilityChecks)));
+    print_diagnostic_row(p, "Futility margin candidates",
+        diagnostic_text(value(SearchDiagCounter::FutilityMarginCandidates), "  (",
+            rate(SearchDiagCounter::FutilityMarginCandidates, SearchDiagCounter::FutilityChecks), "% of checks)"));
+    print_diagnostic_row(p, "Futility check guards",
+        diagnostic_text(value(SearchDiagCounter::FutilityCheckGuards), "  (",
+            rate(SearchDiagCounter::FutilityCheckGuards, SearchDiagCounter::FutilityMarginCandidates), "% of candidates)"));
     print_diagnostic_row(p, "Futility prunes",
         diagnostic_text(value(SearchDiagCounter::FutilityPrunes), "  (",
-            rate(SearchDiagCounter::FutilityPrunes, SearchDiagCounter::FutilityChecks), "%)"));
+            rate(SearchDiagCounter::FutilityPrunes, SearchDiagCounter::FutilityMarginCandidates), "% of candidates, ",
+            rate(SearchDiagCounter::FutilityPrunes, SearchDiagCounter::FutilityChecks), "% of checks)"));
     print_diagnostic_row(p, "LMR reductions", diagnostic_text(value(SearchDiagCounter::LmrReductions)));
     print_diagnostic_row(p, "LMR re-searches", diagnostic_text(value(SearchDiagCounter::LmrResearches)));
     print_diagnostic_row(p, "LMR still above alpha",
