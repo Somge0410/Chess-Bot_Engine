@@ -76,6 +76,9 @@ inline int ROOT_PERTURBATION_MAX_BAND_SIZE = 16;
 
 inline int REVERSE_FUTILITY_MAX_DEPTH = 7;
 inline int REVERSE_FUTILITY_MARGIN = 138;
+// Confirm cheap RFP candidates with the full evaluation only when their
+// surplus over beta is below this threshold. A value of 0 disables confirms.
+inline int RFP_CONFIRM_BAND = 256;
 
 inline int PAWN_PUSH_SCORE1 = 40;
 inline int PAWN_PUSH_SCORE2 = 20;

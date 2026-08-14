@@ -184,6 +184,23 @@ void increment_diagnostic(ThreadLocalData* tls, SearchDiagCounter counter, uint6
     }
 }
 
+SearchDiagCounter rfp_surplus_bucket(int surplus, SearchDiagCounter base) {
+    std::size_t offset = 0;
+    if (surplus <= 15) offset = 0;
+    else if (surplus <= 31) offset = 1;
+    else if (surplus <= 63) offset = 2;
+    else if (surplus <= 127) offset = 3;
+    else if (surplus <= 255) offset = 4;
+    else if (surplus <= 511) offset = 5;
+    else offset = 6;
+    return static_cast<SearchDiagCounter>(diagnostic_index(base) + offset);
+}
+
+SearchDiagCounter rfp_depth_bucket(int depth, SearchDiagCounter base) {
+    const std::size_t offset = static_cast<std::size_t>(std::clamp(depth, 1, 7) - 1);
+    return static_cast<SearchDiagCounter>(diagnostic_index(base) + offset);
+}
+
 SearchDiagCounter move_index_bucket(uint32_t index, bool cutoff) {
     const SearchDiagCounter base = cutoff ? SearchDiagCounter::CutoffIndex1 : SearchDiagCounter::BestIndex1;
     std::size_t offset = 0;
@@ -400,15 +417,44 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         increment_diagnostic(tls, SearchDiagCounter::RfpAttempts);
 #endif
         int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
-        if (static_eval - rfp_margin >= beta) {    
+        const int rfp_surplus = static_eval - rfp_margin - beta;
+        if (rfp_surplus >= 0) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::RfpCheapCandidates);
+            increment_diagnostic(tls, rfp_surplus_bucket(
+                rfp_surplus, SearchDiagCounter::RfpSurplusCandidate0To15));
+            increment_diagnostic(tls, rfp_depth_bucket(
+                depth, SearchDiagCounter::RfpDepthCandidate1));
+#endif
+            if (rfp_surplus >= RFP_CONFIRM_BAND) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::RfpBandBypasses);
+                increment_diagnostic(tls, SearchDiagCounter::RfpCutoffs);
+#endif
+                return { static_eval,Move() };
+            }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, rfp_surplus_bucket(
+                rfp_surplus, SearchDiagCounter::RfpSurplusEvaluated0To15));
+            increment_diagnostic(tls, rfp_depth_bucket(
+                depth, SearchDiagCounter::RfpDepthEvaluated1));
+#endif
             int full_eval = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
             if (full_eval - rfp_margin >= beta)
-            {   
+            {
 #if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::RfpFullConfirmations);
                 increment_diagnostic(tls, SearchDiagCounter::RfpCutoffs);
-#endif  
+#endif
                 return { full_eval,Move() };
             }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::RfpFullRejections);
+            increment_diagnostic(tls, rfp_surplus_bucket(
+                rfp_surplus, SearchDiagCounter::RfpSurplusReject0To15));
+            increment_diagnostic(tls, rfp_depth_bucket(
+                depth, SearchDiagCounter::RfpDepthReject1));
+#endif
         }
     }
    
@@ -487,12 +533,26 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #endif
         //For Late Move Reduction
         int reduction = 0;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        bool futility_check_guarded = false;
+        bool futility_passer_guarded = false;
+#endif
 
         // Now do futility pruning. If positions evaluation is already way worse than alpha, cut it off since it is
         //unlikely to get that much better in just 1 or two moves
-		bool is_dangerous_passer_push = board.is_dangerous_passer_push(move);
+		const bool is_dangerous_passer_push = board.is_dangerous_passer_push(move);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (is_dangerous_passer_push) {
+            increment_diagnostic(tls, SearchDiagCounter::DangerousPasserMoves);
+        }
+#endif
 
-		if (depth <= 2 && !first && !king_is_in_check && move.is_quiet() && !is_dangerous_passer_push){
+		const bool futility_move_eligible = depth <= 2 && !first && !king_is_in_check && move.is_quiet();
+#if ENABLE_QSEARCH_DIAGNOSTICS
+		if (futility_move_eligible) {
+#else
+		if (futility_move_eligible && !is_dangerous_passer_push) {
+#endif
             if (static_eval != -MATE_SCORE)
                 current_eval = static_eval;
             else if (current_eval == -MATE_SCORE)
@@ -505,8 +565,15 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 increment_diagnostic(tls, SearchDiagCounter::FutilityMarginCandidates);
 #endif
-                if (may_give_check(board, move)) {
+                if (is_dangerous_passer_push) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
+                    futility_passer_guarded = true;
+                    increment_diagnostic(tls, SearchDiagCounter::FutilityPasserGuards);
+#endif
+                }
+                else if (may_give_check(board, move)) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                    futility_check_guarded = true;
                     increment_diagnostic(tls, SearchDiagCounter::FutilityCheckGuards);
 #endif
                 }
@@ -519,12 +586,16 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             }
         }
         // Late Move Reduction
-        if(!is_dangerous_passer_push){
-            reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
+        const int default_reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
+        reduction = is_dangerous_passer_push ? std::min(default_reduction, 1) : default_reduction;
 #if ENABLE_QSEARCH_DIAGNOSTICS
+        if (reduction < default_reduction) {
+            increment_diagnostic(tls, SearchDiagCounter::LmrPasserGuards);
+            increment_diagnostic(tls, SearchDiagCounter::LmrPasserReductionPliesSaved,
+                static_cast<uint64_t>(default_reduction - reduction));
+        }
         if (reduction > 0) increment_diagnostic(tls, SearchDiagCounter::LmrReductions);
 #endif
-        }
         moves_searched++;
         //Now make the move
         board.make_move(move);
@@ -532,11 +603,27 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		//If in check, we should increase depth by 1
         int extension = 0;
         const uint64_t child_checkers = board.get_checkers();
-        if (child_checkers != 0 && ply<64 && depth<=3)
-        {
-            extension=1;
 #if ENABLE_QSEARCH_DIAGNOSTICS
-            increment_diagnostic(tls, SearchDiagCounter::CheckExtensions);
+        if (futility_check_guarded) {
+            increment_diagnostic(tls, child_checkers != 0
+                ? SearchDiagCounter::FutilityCheckGuardExactChecks
+                : SearchDiagCounter::FutilityCheckGuardFalsePositives);
+        }
+#endif
+        if (child_checkers != 0 && ply < 64 && depth <= 3) {
+            if (depth >= 2) {
+                extension = 1;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, depth == 2
+                    ? SearchDiagCounter::CheckExtensionsDepth2
+                    : SearchDiagCounter::CheckExtensionsDepth3);
+                increment_diagnostic(tls, SearchDiagCounter::CheckExtensions);
+#endif
+            }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            else {
+                increment_diagnostic(tls, SearchDiagCounter::CheckExtensionDepth1Skipped);
+            }
 #endif
 		}
         int evaluation;
@@ -590,6 +677,22 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         {   // Better: Best Move so far??
             return{0,Move(),true};
         }
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        const bool guard_raised_alpha = evaluation > alpha;
+        const bool guard_caused_beta_cutoff = evaluation >= beta;
+        if (futility_check_guarded && guard_raised_alpha) {
+            increment_diagnostic(tls, SearchDiagCounter::FutilityCheckGuardAlphaRaises);
+            if (guard_caused_beta_cutoff) {
+                increment_diagnostic(tls, SearchDiagCounter::FutilityCheckGuardBetaCutoffs);
+            }
+        }
+        if (futility_passer_guarded && guard_raised_alpha) {
+            increment_diagnostic(tls, SearchDiagCounter::FutilityPasserGuardAlphaRaises);
+            if (guard_caused_beta_cutoff) {
+                increment_diagnostic(tls, SearchDiagCounter::FutilityPasserGuardBetaCutoffs);
+            }
+        }
+#endif
         if (evaluation > best_score)
         {
             best_score = evaluation;
@@ -2152,6 +2255,7 @@ bool Engine::may_give_check(const Board& board, const Move& move) {
     if (king_rook_rays & bit64(move.from_square)) {
 		uint64_t rays_after = get_rook_attacks(king_square, occ);
 		uint64_t pieces = board.get_pieces(board.get_turn(), PieceType::ROOK) | board.get_pieces(board.get_turn(), PieceType::QUEEN);
+        pieces &= occ;
         if (rays_after & ~king_bishop_rays & pieces) {
             return true;
         }
@@ -2159,6 +2263,7 @@ bool Engine::may_give_check(const Board& board, const Move& move) {
     if (king_bishop_rays & bit64(move.from_square)) {
         uint64_t rays_after = get_bishop_attacks(king_square, occ);
         uint64_t pieces = board.get_pieces(board.get_turn(), PieceType::BISHOP) | board.get_pieces(board.get_turn(), PieceType::QUEEN);
+		pieces &= occ;
         if (rays_after & ~king_rook_rays & pieces) {
             return true;
         }

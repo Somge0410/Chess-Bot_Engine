@@ -163,6 +163,28 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
             ? static_cast<double>(value(numerator)) / static_cast<double>(value(denominator))
             : 0.0;
     };
+    const auto bucket_counts = [&](SearchDiagCounter base, std::size_t count) {
+        std::ostringstream output;
+        for (std::size_t i = 0; i < count; ++i) {
+            if (i > 0) output << " | ";
+            output << value(static_cast<SearchDiagCounter>(static_cast<std::size_t>(base) + i));
+        }
+        return output.str();
+    };
+    const auto bucket_rates = [&](SearchDiagCounter numerator_base,
+        SearchDiagCounter denominator_base, std::size_t count) {
+        std::ostringstream output;
+        output << std::fixed << std::setprecision(2);
+        for (std::size_t i = 0; i < count; ++i) {
+            if (i > 0) output << " | ";
+            const auto numerator = static_cast<SearchDiagCounter>(
+                static_cast<std::size_t>(numerator_base) + i);
+            const auto denominator = static_cast<SearchDiagCounter>(
+                static_cast<std::size_t>(denominator_base) + i);
+            output << percentage(value(numerator), value(denominator)) << '%';
+        }
+        return output.str();
+    };
 
     const uint64_t total_nodes = d.main_nodes + d.qnodes;
     const double average_qply = d.qnodes > 0
@@ -219,9 +241,52 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
 
     print_diagnostic_section(p, "PRUNING AND REDUCTIONS");
     print_diagnostic_row(p, "RFP attempts", diagnostic_text(value(SearchDiagCounter::RfpAttempts)));
+    print_diagnostic_row(p, "RFP cheap margin candidates",
+        diagnostic_text(value(SearchDiagCounter::RfpCheapCandidates), "  (",
+            rate(SearchDiagCounter::RfpCheapCandidates, SearchDiagCounter::RfpAttempts), "% of attempts)"));
+    const uint64_t rfp_full_eval_calls = value(SearchDiagCounter::RfpFullConfirmations) +
+        value(SearchDiagCounter::RfpFullRejections);
+    print_diagnostic_row(p, "RFP full-eval calls",
+        diagnostic_text(rfp_full_eval_calls, "  (",
+            percentage(rfp_full_eval_calls, value(SearchDiagCounter::RfpCheapCandidates)), "% of candidates)"));
+    print_diagnostic_row(p, "RFP full-eval confirmations",
+        diagnostic_text(value(SearchDiagCounter::RfpFullConfirmations), "  (",
+            percentage(value(SearchDiagCounter::RfpFullConfirmations), rfp_full_eval_calls), "% of full evaluations)"));
+    print_diagnostic_row(p, "RFP full-eval rejections",
+        diagnostic_text(value(SearchDiagCounter::RfpFullRejections), "  (",
+            percentage(value(SearchDiagCounter::RfpFullRejections), rfp_full_eval_calls), "% of full evaluations)"));
+    print_diagnostic_row(p, "RFP band-bypass cutoffs",
+        diagnostic_text(value(SearchDiagCounter::RfpBandBypasses), "  (",
+            rate(SearchDiagCounter::RfpBandBypasses, SearchDiagCounter::RfpCheapCandidates), "% of candidates)"));
+    print_diagnostic_row(p, "RFP candidate accounting",
+        diagnostic_text(value(SearchDiagCounter::RfpBandBypasses) +
+            value(SearchDiagCounter::RfpFullConfirmations) +
+            value(SearchDiagCounter::RfpFullRejections), " of ",
+            value(SearchDiagCounter::RfpCheapCandidates)));
+    print_diagnostic_row(p, "RFP surplus buckets", "0-15 | 16-31 | 32-63 | 64-127 | 128-255 | 256-511 | 512+");
+    print_diagnostic_row(p, "  candidates",
+        bucket_counts(SearchDiagCounter::RfpSurplusCandidate0To15, RFP_SURPLUS_BUCKET_COUNT));
+    print_diagnostic_row(p, "  full evaluations",
+        bucket_counts(SearchDiagCounter::RfpSurplusEvaluated0To15, RFP_SURPLUS_BUCKET_COUNT));
+    print_diagnostic_row(p, "  rejections",
+        bucket_counts(SearchDiagCounter::RfpSurplusReject0To15, RFP_SURPLUS_BUCKET_COUNT));
+    print_diagnostic_row(p, "  rejection rates / evaluated",
+        bucket_rates(SearchDiagCounter::RfpSurplusReject0To15,
+            SearchDiagCounter::RfpSurplusEvaluated0To15, RFP_SURPLUS_BUCKET_COUNT));
+    print_diagnostic_row(p, "RFP depth buckets", "1 | 2 | 3 | 4 | 5 | 6 | 7+");
+    print_diagnostic_row(p, "  candidates",
+        bucket_counts(SearchDiagCounter::RfpDepthCandidate1, RFP_DEPTH_BUCKET_COUNT));
+    print_diagnostic_row(p, "  full evaluations",
+        bucket_counts(SearchDiagCounter::RfpDepthEvaluated1, RFP_DEPTH_BUCKET_COUNT));
+    print_diagnostic_row(p, "  rejections",
+        bucket_counts(SearchDiagCounter::RfpDepthReject1, RFP_DEPTH_BUCKET_COUNT));
+    print_diagnostic_row(p, "  rejection rates / evaluated",
+        bucket_rates(SearchDiagCounter::RfpDepthReject1,
+            SearchDiagCounter::RfpDepthEvaluated1, RFP_DEPTH_BUCKET_COUNT));
     print_diagnostic_row(p, "RFP cutoffs",
         diagnostic_text(value(SearchDiagCounter::RfpCutoffs), "  (",
-            rate(SearchDiagCounter::RfpCutoffs, SearchDiagCounter::RfpAttempts), "%)"));
+            rate(SearchDiagCounter::RfpCutoffs, SearchDiagCounter::RfpAttempts), "% of attempts, ",
+            rate(SearchDiagCounter::RfpCutoffs, SearchDiagCounter::RfpCheapCandidates), "% of candidates)"));
     print_diagnostic_row(p, "NMP candidates", diagnostic_text(value(SearchDiagCounter::NmpCandidates)));
     print_diagnostic_row(p, "NMP searches", diagnostic_text(value(SearchDiagCounter::NmpSearches)));
     print_diagnostic_row(p, "NMP cutoffs",
@@ -234,10 +299,43 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     print_diagnostic_row(p, "Futility check guards",
         diagnostic_text(value(SearchDiagCounter::FutilityCheckGuards), "  (",
             rate(SearchDiagCounter::FutilityCheckGuards, SearchDiagCounter::FutilityMarginCandidates), "% of candidates)"));
+    print_diagnostic_row(p, "  exact checks",
+        diagnostic_text(value(SearchDiagCounter::FutilityCheckGuardExactChecks), "  (",
+            rate(SearchDiagCounter::FutilityCheckGuardExactChecks, SearchDiagCounter::FutilityCheckGuards), "% of check guards)"));
+    print_diagnostic_row(p, "  false positives",
+        diagnostic_text(value(SearchDiagCounter::FutilityCheckGuardFalsePositives), "  (",
+            rate(SearchDiagCounter::FutilityCheckGuardFalsePositives, SearchDiagCounter::FutilityCheckGuards), "% of check guards)"));
+    print_diagnostic_row(p, "  alpha raises",
+        diagnostic_text(value(SearchDiagCounter::FutilityCheckGuardAlphaRaises), "  (",
+            rate(SearchDiagCounter::FutilityCheckGuardAlphaRaises, SearchDiagCounter::FutilityCheckGuards), "% of check guards)"));
+    print_diagnostic_row(p, "  beta cutoffs",
+        diagnostic_text(value(SearchDiagCounter::FutilityCheckGuardBetaCutoffs), "  (",
+            rate(SearchDiagCounter::FutilityCheckGuardBetaCutoffs, SearchDiagCounter::FutilityCheckGuards), "% of check guards)"));
+    print_diagnostic_row(p, "Futility passer guards",
+        diagnostic_text(value(SearchDiagCounter::FutilityPasserGuards), "  (",
+            rate(SearchDiagCounter::FutilityPasserGuards, SearchDiagCounter::FutilityMarginCandidates), "% of candidates)"));
+    print_diagnostic_row(p, "  alpha raises",
+        diagnostic_text(value(SearchDiagCounter::FutilityPasserGuardAlphaRaises), "  (",
+            rate(SearchDiagCounter::FutilityPasserGuardAlphaRaises, SearchDiagCounter::FutilityPasserGuards), "% of passer guards)"));
+    print_diagnostic_row(p, "  beta cutoffs",
+        diagnostic_text(value(SearchDiagCounter::FutilityPasserGuardBetaCutoffs), "  (",
+            rate(SearchDiagCounter::FutilityPasserGuardBetaCutoffs, SearchDiagCounter::FutilityPasserGuards), "% of passer guards)"));
     print_diagnostic_row(p, "Futility prunes",
         diagnostic_text(value(SearchDiagCounter::FutilityPrunes), "  (",
             rate(SearchDiagCounter::FutilityPrunes, SearchDiagCounter::FutilityMarginCandidates), "% of candidates, ",
             rate(SearchDiagCounter::FutilityPrunes, SearchDiagCounter::FutilityChecks), "% of checks)"));
+    print_diagnostic_row(p, "Futility candidate accounting",
+        diagnostic_text(value(SearchDiagCounter::FutilityPrunes) +
+            value(SearchDiagCounter::FutilityCheckGuards) +
+            value(SearchDiagCounter::FutilityPasserGuards), " of ",
+            value(SearchDiagCounter::FutilityMarginCandidates)));
+    print_diagnostic_row(p, "Dangerous passer moves",
+        diagnostic_text(value(SearchDiagCounter::DangerousPasserMoves)));
+    print_diagnostic_row(p, "LMR passer guards",
+        diagnostic_text(value(SearchDiagCounter::LmrPasserGuards), "  (",
+            rate(SearchDiagCounter::LmrPasserGuards, SearchDiagCounter::DangerousPasserMoves), "% of dangerous passers)"));
+    print_diagnostic_row(p, "LMR passer reduction plies saved",
+        diagnostic_text(value(SearchDiagCounter::LmrPasserReductionPliesSaved)));
     print_diagnostic_row(p, "LMR reductions", diagnostic_text(value(SearchDiagCounter::LmrReductions)));
     print_diagnostic_row(p, "LMR re-searches", diagnostic_text(value(SearchDiagCounter::LmrResearches)));
     print_diagnostic_row(p, "LMR still above alpha",
@@ -248,7 +346,16 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
         diagnostic_text(value(SearchDiagCounter::PvsFullWindowResearches), "  (",
             rate(SearchDiagCounter::PvsFullWindowResearches,
                 SearchDiagCounter::PvsZeroWindowSearches), "%)"));
-    print_diagnostic_row(p, "Check extensions", diagnostic_text(value(SearchDiagCounter::CheckExtensions)));
+    print_diagnostic_row(p, "Check extensions / depth 1 skipped",
+        diagnostic_text(value(SearchDiagCounter::CheckExtensionDepth1Skipped)));
+    print_diagnostic_row(p, "Check extensions / depth 2",
+        diagnostic_text(value(SearchDiagCounter::CheckExtensionsDepth2)));
+    print_diagnostic_row(p, "Check extensions / depth 3",
+        diagnostic_text(value(SearchDiagCounter::CheckExtensionsDepth3)));
+    print_diagnostic_row(p, "Check extensions",
+        diagnostic_text(value(SearchDiagCounter::CheckExtensions), "  (",
+            value(SearchDiagCounter::CheckExtensionsDepth2) +
+            value(SearchDiagCounter::CheckExtensionsDepth3), " accounted)"));
 
     constexpr const char* source_names[MOVE_ORDER_SOURCE_COUNT] = {
         "TT", "win-cap", "promotion", "killer", "counter", "history", "lose-cap"
