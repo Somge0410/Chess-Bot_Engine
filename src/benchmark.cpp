@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 #include "board.h"
 #include "engine.h"
@@ -24,52 +25,71 @@ uint64_t detail_value(const SearchDiagnostics& diagnostics, SearchDiagCounter co
     return diagnostics.detail[static_cast<std::size_t>(counter)];
 }
 
+template <typename... Values>
+std::string diagnostic_text(const Values&... values) {
+    std::ostringstream output;
+    output << std::fixed << std::setprecision(2);
+    (output << ... << values);
+    return output.str();
+}
+
+void print_diagnostic_section(const std::string& prefix, const std::string& title) {
+    std::cout << prefix << "---- " << title << " ----\n";
+}
+
+void print_diagnostic_row(const std::string& prefix, const std::string& label,
+    const std::string& value) {
+    std::cout << prefix << "  " << std::left << std::setw(38) << label
+              << ": " << std::right << value << '\n';
+}
+
 void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
     const TTDiagnostics& diagnostics) {
+    print_diagnostic_section(prefix, diagnostic_text("TRANSPOSITION TABLE / ", mode_name));
     if (diagnostics.probes == 0 && diagnostics.stores == 0) {
-        std::cout << prefix << "TT " << mode_name << ": inactive (no probes or stores)\n";
+        print_diagnostic_row(prefix, "Status", "inactive (no probes or stores)");
         return;
     }
 
     const uint64_t usable_hits = diagnostics.exact_hits + diagnostics.bound_cutoffs;
-    std::cout << prefix << "TT " << mode_name << " probes: " << diagnostics.probes << '\n';
-    std::cout << prefix << "TT " << mode_name << " raw key hits: " << diagnostics.key_hits
-              << " (" << percentage(diagnostics.key_hits, diagnostics.probes) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " usable hits: " << usable_hits
-              << " (" << percentage(usable_hits, diagnostics.probes) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " exact hits: " << diagnostics.exact_hits
-              << " (" << percentage(diagnostics.exact_hits, diagnostics.probes) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " bound hits: " << diagnostics.bound_hits
-              << " (" << percentage(diagnostics.bound_hits, diagnostics.probes) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " bound cutoffs: " << diagnostics.bound_cutoffs
-              << " (" << percentage(diagnostics.bound_cutoffs, diagnostics.probes) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " shallow score rejections: " << diagnostics.shallow_hits
-              << " (" << percentage(diagnostics.shallow_hits, diagnostics.key_hits) << "% of key hits)\n";
-    std::cout << prefix << "TT " << mode_name << " tempered rejections: " << diagnostics.tempered_rejections
-              << " (" << percentage(diagnostics.tempered_rejections, diagnostics.key_hits) << "% of key hits)\n";
-    std::cout << prefix << "TT " << mode_name << " invalid-move rejections: " << diagnostics.invalid_move_rejections
-              << " (" << percentage(diagnostics.invalid_move_rejections, diagnostics.key_hits) << "% of key hits)\n";
-    std::cout << prefix << "TT " << mode_name << " empty terminations: " << diagnostics.empty_terminations
-              << " (" << percentage(diagnostics.empty_terminations, diagnostics.probes) << "% of probes)\n";
+    print_diagnostic_row(prefix, "Probes", diagnostic_text(diagnostics.probes));
+    print_diagnostic_row(prefix, "Raw key hits",
+        diagnostic_text(diagnostics.key_hits, "  (", percentage(diagnostics.key_hits, diagnostics.probes), "% of probes)"));
+    print_diagnostic_row(prefix, "Usable hits",
+        diagnostic_text(usable_hits, "  (", percentage(usable_hits, diagnostics.probes), "% of probes)"));
+    print_diagnostic_row(prefix, "Exact hits",
+        diagnostic_text(diagnostics.exact_hits, "  (", percentage(diagnostics.exact_hits, diagnostics.probes), "% of probes)"));
+    print_diagnostic_row(prefix, "Bound hits",
+        diagnostic_text(diagnostics.bound_hits, "  (", percentage(diagnostics.bound_hits, diagnostics.probes), "% of probes)"));
+    print_diagnostic_row(prefix, "Bound cutoffs",
+        diagnostic_text(diagnostics.bound_cutoffs, "  (", percentage(diagnostics.bound_cutoffs, diagnostics.probes), "% of probes)"));
+    print_diagnostic_row(prefix, "Shallow score rejections",
+        diagnostic_text(diagnostics.shallow_hits, "  (", percentage(diagnostics.shallow_hits, diagnostics.key_hits), "% of key hits)"));
+    print_diagnostic_row(prefix, "Tempered rejections",
+        diagnostic_text(diagnostics.tempered_rejections, "  (", percentage(diagnostics.tempered_rejections, diagnostics.key_hits), "% of key hits)"));
+    print_diagnostic_row(prefix, "Invalid-move rejections",
+        diagnostic_text(diagnostics.invalid_move_rejections, "  (", percentage(diagnostics.invalid_move_rejections, diagnostics.key_hits), "% of key hits)"));
+    print_diagnostic_row(prefix, "Empty probe terminations",
+        diagnostic_text(diagnostics.empty_terminations, "  (", percentage(diagnostics.empty_terminations, diagnostics.probes), "% of probes)"));
     const double average_slots = diagnostics.probes > 0
         ? static_cast<double>(diagnostics.slots_examined) / static_cast<double>(diagnostics.probes)
         : 0.0;
-    std::cout << prefix << "TT " << mode_name << " average slots examined: " << average_slots << '\n';
-
-    std::cout << prefix << "TT " << mode_name << " stores: " << diagnostics.stores << '\n';
-    std::cout << prefix << "TT " << mode_name << " store flags exact/lower/upper/tempered: "
-              << diagnostics.exact_stores << '/' << diagnostics.lowerbound_stores << '/'
-              << diagnostics.upperbound_stores << '/' << diagnostics.tempered_stores << '\n';
-    std::cout << prefix << "TT " << mode_name << " same-key updates: " << diagnostics.same_key_updates
-              << " (" << percentage(diagnostics.same_key_updates, diagnostics.stores) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " deeper entries kept: " << diagnostics.deeper_entries_kept
-              << " (" << percentage(diagnostics.deeper_entries_kept, diagnostics.stores) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " empty inserts: " << diagnostics.empty_inserts
-              << " (" << percentage(diagnostics.empty_inserts, diagnostics.stores) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " replacements: " << diagnostics.replacements
-              << " (" << percentage(diagnostics.replacements, diagnostics.stores) << "%)\n";
-    std::cout << prefix << "TT " << mode_name << " dropped stores: " << diagnostics.dropped_stores
-              << " (" << percentage(diagnostics.dropped_stores, diagnostics.stores) << "%)\n";
+    print_diagnostic_row(prefix, "Average slots examined", diagnostic_text(average_slots));
+    print_diagnostic_row(prefix, "Stores", diagnostic_text(diagnostics.stores));
+    print_diagnostic_row(prefix, "Store flag / exact", diagnostic_text(diagnostics.exact_stores));
+    print_diagnostic_row(prefix, "Store flag / lower bound", diagnostic_text(diagnostics.lowerbound_stores));
+    print_diagnostic_row(prefix, "Store flag / upper bound", diagnostic_text(diagnostics.upperbound_stores));
+    print_diagnostic_row(prefix, "Store flag / tempered", diagnostic_text(diagnostics.tempered_stores));
+    print_diagnostic_row(prefix, "Same-key updates",
+        diagnostic_text(diagnostics.same_key_updates, "  (", percentage(diagnostics.same_key_updates, diagnostics.stores), "% of stores)"));
+    print_diagnostic_row(prefix, "Deeper entries kept",
+        diagnostic_text(diagnostics.deeper_entries_kept, "  (", percentage(diagnostics.deeper_entries_kept, diagnostics.stores), "% of stores)"));
+    print_diagnostic_row(prefix, "Empty inserts",
+        diagnostic_text(diagnostics.empty_inserts, "  (", percentage(diagnostics.empty_inserts, diagnostics.stores), "% of stores)"));
+    print_diagnostic_row(prefix, "Replacements",
+        diagnostic_text(diagnostics.replacements, "  (", percentage(diagnostics.replacements, diagnostics.stores), "% of stores)"));
+    print_diagnostic_row(prefix, "Dropped stores",
+        diagnostic_text(diagnostics.dropped_stores, "  (", percentage(diagnostics.dropped_stores, diagnostics.stores), "% of stores)"));
 
     if (diagnostics.replacements > 0) {
         const double average_replaced_depth = static_cast<double>(diagnostics.replaced_depth_sum)
@@ -78,10 +98,9 @@ void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
             / static_cast<double>(diagnostics.replacements);
         const double average_replaced_age = static_cast<double>(diagnostics.replaced_age_sum)
             / static_cast<double>(diagnostics.replacements);
-        std::cout << prefix << "TT " << mode_name << " replacement avg old/new depth: "
-                  << average_replaced_depth << '/' << average_replacement_depth << '\n';
-        std::cout << prefix << "TT " << mode_name << " replacement average age: "
-                  << average_replaced_age << '\n';
+        print_diagnostic_row(prefix, "Replacement avg old -> new depth",
+            diagnostic_text(average_replaced_depth, " -> ", average_replacement_depth));
+        print_diagnostic_row(prefix, "Replacement average age", diagnostic_text(average_replaced_age));
     }
 }
 
@@ -149,67 +168,85 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     const double average_qply = d.qnodes > 0
         ? static_cast<double>(d.qply_sum) / static_cast<double>(d.qnodes)
         : 0.0;
-    std::cout << p << "nodes main/q/total " << d.main_nodes << '/' << d.qnodes << '/' << total_nodes
-              << " qpercent " << percentage(d.qnodes, total_nodes)
-              << " qply avg/max " << average_qply << '/' << d.max_qply << '\n';
-    std::cout << p << "qsearch termination standpat/softcap/hardstatic/harddraw/cycle/fifty/repetition/mate/notactical "
-              << value(SearchDiagCounter::QStandPatCutoffs) << '/'
-              << value(SearchDiagCounter::QSoftCapStaticReturns) << '/'
-              << value(SearchDiagCounter::QHardCapStaticReturns) << '/'
-              << value(SearchDiagCounter::QHardCapDrawReturns) << '/'
-              << d.cycle_cutoffs << '/'
-              << value(SearchDiagCounter::QFiftyMoveDraws) << '/'
-              << value(SearchDiagCounter::QRepetitionDraws) << '/'
-              << value(SearchDiagCounter::QCheckmates) << '/'
-              << value(SearchDiagCounter::QNoTacticalMoves) << '\n';
-    std::cout << p << "qsearch moves generated/searched/SEE-pruned "
-              << value(SearchDiagCounter::QMovesGenerated) << '/'
-              << value(SearchDiagCounter::QMovesSearched) << '/'
-              << value(SearchDiagCounter::QSeePrunes)
-              << " beta cutoffs capture/quiet-check/promotion/evasion "
-              << value(SearchDiagCounter::QCaptureBetaCutoffs) << '/'
-              << value(SearchDiagCounter::QQuietCheckBetaCutoffs) << '/'
-              << value(SearchDiagCounter::QPromotionBetaCutoffs) << '/'
-              << value(SearchDiagCounter::QEvasionBetaCutoffs) << '\n';
-    std::cout << p << "qsearch activity quiet-checks/in-check-nodes/cycle-cutoffs/hard-cap-hits "
-              << d.quiet_checks_searched << '/' << d.qnodes_in_check << '/'
-              << d.cycle_cutoffs << '/' << d.hard_cap_hits << '\n';
-    std::cout << p << "qply histogram 0/1/2/3-4/5-8/9-12/13+ "
-              << value(SearchDiagCounter::QPly0) << '/'
-              << value(SearchDiagCounter::QPly1) << '/'
-              << value(SearchDiagCounter::QPly2) << '/'
-              << value(SearchDiagCounter::QPly3To4) << '/'
-              << value(SearchDiagCounter::QPly5To8) << '/'
-              << value(SearchDiagCounter::QPly9To12) << '/'
-              << value(SearchDiagCounter::QPly13Plus) << '\n';
+    print_diagnostic_section(p, "SEARCH DIAGNOSTICS SUMMARY");
+    print_diagnostic_section(p, "NODES");
+    print_diagnostic_row(p, "Main-search nodes", diagnostic_text(d.main_nodes));
+    print_diagnostic_row(p, "Quiescence nodes", diagnostic_text(d.qnodes));
+    print_diagnostic_row(p, "Total nodes", diagnostic_text(total_nodes));
+    print_diagnostic_row(p, "Quiescence share", diagnostic_text(percentage(d.qnodes, total_nodes), "%"));
+    print_diagnostic_row(p, "Average q-ply", diagnostic_text(average_qply));
+    print_diagnostic_row(p, "Maximum q-ply", diagnostic_text(d.max_qply));
 
-    std::cout << p << "pruning RFP attempts/cutoffs/rate "
-              << value(SearchDiagCounter::RfpAttempts) << '/'
-              << value(SearchDiagCounter::RfpCutoffs) << '/'
-              << rate(SearchDiagCounter::RfpCutoffs, SearchDiagCounter::RfpAttempts)
-              << "% NMP candidates/searches/cutoffs/search-cutoff-rate "
-              << value(SearchDiagCounter::NmpCandidates) << '/'
-              << value(SearchDiagCounter::NmpSearches) << '/'
-              << value(SearchDiagCounter::NmpCutoffs) << '/'
-              << rate(SearchDiagCounter::NmpCutoffs, SearchDiagCounter::NmpSearches) << "%\n";
-    std::cout << p << "pruning futility checks/prunes/rate "
-              << value(SearchDiagCounter::FutilityChecks) << '/'
-              << value(SearchDiagCounter::FutilityPrunes) << '/'
-              << rate(SearchDiagCounter::FutilityPrunes, SearchDiagCounter::FutilityChecks)
-              << "% LMR reductions/researches/still-above-alpha "
-              << value(SearchDiagCounter::LmrReductions) << '/'
-              << value(SearchDiagCounter::LmrResearches) << '/'
-              << value(SearchDiagCounter::LmrResearchImproved) << '\n';
-    std::cout << p << "PVS zero-window/full-window-research/rate "
-              << value(SearchDiagCounter::PvsZeroWindowSearches) << '/'
-              << value(SearchDiagCounter::PvsFullWindowResearches) << '/'
-              << rate(SearchDiagCounter::PvsFullWindowResearches,
-                  SearchDiagCounter::PvsZeroWindowSearches)
-              << "% check extensions " << value(SearchDiagCounter::CheckExtensions) << '\n';
+    print_diagnostic_section(p, "QUIESCENCE SEARCH");
+    print_diagnostic_row(p, "Termination / stand-pat cutoff",
+        diagnostic_text(value(SearchDiagCounter::QStandPatCutoffs)));
+    print_diagnostic_row(p, "Termination / soft-cap static",
+        diagnostic_text(value(SearchDiagCounter::QSoftCapStaticReturns)));
+    print_diagnostic_row(p, "Termination / hard-cap static",
+        diagnostic_text(value(SearchDiagCounter::QHardCapStaticReturns)));
+    print_diagnostic_row(p, "Termination / hard-cap draw",
+        diagnostic_text(value(SearchDiagCounter::QHardCapDrawReturns)));
+    print_diagnostic_row(p, "Termination / cycle", diagnostic_text(d.cycle_cutoffs));
+    print_diagnostic_row(p, "Termination / fifty-move draw",
+        diagnostic_text(value(SearchDiagCounter::QFiftyMoveDraws)));
+    print_diagnostic_row(p, "Termination / repetition draw",
+        diagnostic_text(value(SearchDiagCounter::QRepetitionDraws)));
+    print_diagnostic_row(p, "Termination / checkmate",
+        diagnostic_text(value(SearchDiagCounter::QCheckmates)));
+    print_diagnostic_row(p, "Termination / no tactical move",
+        diagnostic_text(value(SearchDiagCounter::QNoTacticalMoves)));
+    print_diagnostic_row(p, "Moves generated", diagnostic_text(value(SearchDiagCounter::QMovesGenerated)));
+    print_diagnostic_row(p, "Moves searched", diagnostic_text(value(SearchDiagCounter::QMovesSearched)));
+    print_diagnostic_row(p, "Moves SEE-pruned", diagnostic_text(value(SearchDiagCounter::QSeePrunes)));
+    print_diagnostic_row(p, "Beta cutoffs / capture",
+        diagnostic_text(value(SearchDiagCounter::QCaptureBetaCutoffs)));
+    print_diagnostic_row(p, "Beta cutoffs / quiet check",
+        diagnostic_text(value(SearchDiagCounter::QQuietCheckBetaCutoffs)));
+    print_diagnostic_row(p, "Beta cutoffs / promotion",
+        diagnostic_text(value(SearchDiagCounter::QPromotionBetaCutoffs)));
+    print_diagnostic_row(p, "Beta cutoffs / evasion",
+        diagnostic_text(value(SearchDiagCounter::QEvasionBetaCutoffs)));
+    print_diagnostic_row(p, "Quiet checks searched", diagnostic_text(d.quiet_checks_searched));
+    print_diagnostic_row(p, "Nodes while in check", diagnostic_text(d.qnodes_in_check));
+    print_diagnostic_row(p, "Cycle cutoffs", diagnostic_text(d.cycle_cutoffs));
+    print_diagnostic_row(p, "Hard-cap hits", diagnostic_text(d.hard_cap_hits));
+    print_diagnostic_row(p, "Q-ply histogram buckets", "0 | 1 | 2 | 3-4 | 5-8 | 9-12 | 13+");
+    print_diagnostic_row(p, "Q-ply histogram counts",
+        diagnostic_text(value(SearchDiagCounter::QPly0), " | ",
+            value(SearchDiagCounter::QPly1), " | ", value(SearchDiagCounter::QPly2), " | ",
+            value(SearchDiagCounter::QPly3To4), " | ", value(SearchDiagCounter::QPly5To8), " | ",
+            value(SearchDiagCounter::QPly9To12), " | ", value(SearchDiagCounter::QPly13Plus)));
+
+    print_diagnostic_section(p, "PRUNING AND REDUCTIONS");
+    print_diagnostic_row(p, "RFP attempts", diagnostic_text(value(SearchDiagCounter::RfpAttempts)));
+    print_diagnostic_row(p, "RFP cutoffs",
+        diagnostic_text(value(SearchDiagCounter::RfpCutoffs), "  (",
+            rate(SearchDiagCounter::RfpCutoffs, SearchDiagCounter::RfpAttempts), "%)"));
+    print_diagnostic_row(p, "NMP candidates", diagnostic_text(value(SearchDiagCounter::NmpCandidates)));
+    print_diagnostic_row(p, "NMP searches", diagnostic_text(value(SearchDiagCounter::NmpSearches)));
+    print_diagnostic_row(p, "NMP cutoffs",
+        diagnostic_text(value(SearchDiagCounter::NmpCutoffs), "  (",
+            rate(SearchDiagCounter::NmpCutoffs, SearchDiagCounter::NmpSearches), "% of searches)"));
+    print_diagnostic_row(p, "Futility checks", diagnostic_text(value(SearchDiagCounter::FutilityChecks)));
+    print_diagnostic_row(p, "Futility prunes",
+        diagnostic_text(value(SearchDiagCounter::FutilityPrunes), "  (",
+            rate(SearchDiagCounter::FutilityPrunes, SearchDiagCounter::FutilityChecks), "%)"));
+    print_diagnostic_row(p, "LMR reductions", diagnostic_text(value(SearchDiagCounter::LmrReductions)));
+    print_diagnostic_row(p, "LMR re-searches", diagnostic_text(value(SearchDiagCounter::LmrResearches)));
+    print_diagnostic_row(p, "LMR still above alpha",
+        diagnostic_text(value(SearchDiagCounter::LmrResearchImproved)));
+    print_diagnostic_row(p, "PVS zero-window searches",
+        diagnostic_text(value(SearchDiagCounter::PvsZeroWindowSearches)));
+    print_diagnostic_row(p, "PVS full-window re-searches",
+        diagnostic_text(value(SearchDiagCounter::PvsFullWindowResearches), "  (",
+            rate(SearchDiagCounter::PvsFullWindowResearches,
+                SearchDiagCounter::PvsZeroWindowSearches), "%)"));
+    print_diagnostic_row(p, "Check extensions", diagnostic_text(value(SearchDiagCounter::CheckExtensions)));
 
     constexpr const char* source_names[MOVE_ORDER_SOURCE_COUNT] = {
         "TT", "win-cap", "promotion", "killer", "counter", "history", "lose-cap"
     };
+    print_diagnostic_section(p, "MOVE ORDERING");
     const auto print_sources = [&](bool cutoff) {
         const SearchDiagCounter base = cutoff
             ? SearchDiagCounter::CutoffSourceTT
@@ -219,140 +256,159 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
             source_total += d.detail[static_cast<std::size_t>(base) + i];
         }
         const uint64_t overall_total = cutoff ? d.beta_cutoffs : d.move_order_nodes;
-        std::cout << p << (cutoff ? "cutoff move sources attributed " : "best move sources attributed ")
-                  << source_total << '/' << overall_total << ' ';
+        print_diagnostic_row(p, cutoff ? "Cutoff sources attributed" : "Best-move sources attributed",
+            diagnostic_text(source_total, " of ", overall_total));
         for (std::size_t i = 0; i < MOVE_ORDER_SOURCE_COUNT; ++i) {
             const uint64_t count = d.detail[static_cast<std::size_t>(base) + i];
-            if (i > 0) std::cout << ' ';
-            std::cout << source_names[i] << ':' << count << '(' << percentage(count, source_total) << "%)";
+            print_diagnostic_row(p,
+                diagnostic_text(cutoff ? "Cutoff source / " : "Best-move source / ", source_names[i]),
+                diagnostic_text(count, "  (", percentage(count, source_total), "%)"));
         }
-        std::cout << '\n';
     };
     print_sources(false);
     print_sources(true);
 
-    const auto print_index_histogram = [&](bool cutoff) {
-        const SearchDiagCounter base = cutoff
-            ? SearchDiagCounter::CutoffIndex1
-            : SearchDiagCounter::BestIndex1;
-        constexpr const char* buckets[MOVE_INDEX_BUCKET_COUNT] = {
-            "1", "2", "3-4", "5-8", "9-16", "17-32", "33+"
-        };
-        std::cout << p << (cutoff ? "cutoff index histogram " : "best index histogram ");
-        for (std::size_t i = 0; i < MOVE_INDEX_BUCKET_COUNT; ++i) {
-            if (i > 0) std::cout << ' ';
-            std::cout << buckets[i] << ':' << d.detail[static_cast<std::size_t>(base) + i];
-        }
-        std::cout << '\n';
+    const auto index_histogram = [&](SearchDiagCounter base) {
+        return diagnostic_text(
+            d.detail[static_cast<std::size_t>(base)], " | ",
+            d.detail[static_cast<std::size_t>(base) + 1], " | ",
+            d.detail[static_cast<std::size_t>(base) + 2], " | ",
+            d.detail[static_cast<std::size_t>(base) + 3], " | ",
+            d.detail[static_cast<std::size_t>(base) + 4], " | ",
+            d.detail[static_cast<std::size_t>(base) + 5], " | ",
+            d.detail[static_cast<std::size_t>(base) + 6]);
     };
-    print_index_histogram(false);
-    print_index_histogram(true);
-    std::cout << p << "move order nodes/avg-searched/avg-best-index/best-first/max-best-index "
-              << d.move_order_nodes << '/'
-              << (d.move_order_nodes > 0
-                    ? static_cast<double>(d.moves_searched_sum) / d.move_order_nodes : 0.0) << '/'
-              << (d.move_order_nodes > 0
-                    ? static_cast<double>(d.best_move_index_sum) / d.move_order_nodes : 0.0) << '/'
-              << percentage(d.best_move_first, d.move_order_nodes) << "%/"
-              << d.max_best_move_index << '\n';
-    std::cout << p << "move order beta-cutoffs/avg-cutoff-index/first-move-cutoff-rate "
-              << d.beta_cutoffs << '/'
-              << (d.beta_cutoffs > 0
-                    ? static_cast<double>(d.beta_cutoff_index_sum) / d.beta_cutoffs : 0.0) << '/'
-              << percentage(d.first_move_beta_cutoffs, d.beta_cutoffs) << "%\n";
+    print_diagnostic_row(p, "Discovery-index buckets", "1 | 2 | 3-4 | 5-8 | 9-16 | 17-32 | 33+");
+    print_diagnostic_row(p, "Best-move index counts",
+        index_histogram(SearchDiagCounter::BestIndex1));
+    print_diagnostic_row(p, "Beta-cutoff index counts",
+        index_histogram(SearchDiagCounter::CutoffIndex1));
+    print_diagnostic_row(p, "Move-order nodes", diagnostic_text(d.move_order_nodes));
+    print_diagnostic_row(p, "Average moves searched",
+        diagnostic_text(d.move_order_nodes > 0
+            ? static_cast<double>(d.moves_searched_sum) / d.move_order_nodes : 0.0));
+    print_diagnostic_row(p, "Average best-move index",
+        diagnostic_text(d.move_order_nodes > 0
+            ? static_cast<double>(d.best_move_index_sum) / d.move_order_nodes : 0.0));
+    print_diagnostic_row(p, "Best move found first",
+        diagnostic_text(d.best_move_first, "  (", percentage(d.best_move_first, d.move_order_nodes), "%)"));
+    print_diagnostic_row(p, "Maximum best-move index", diagnostic_text(d.max_best_move_index));
+    print_diagnostic_row(p, "Beta cutoffs", diagnostic_text(d.beta_cutoffs));
+    print_diagnostic_row(p, "Average beta-cutoff index",
+        diagnostic_text(d.beta_cutoffs > 0
+            ? static_cast<double>(d.beta_cutoff_index_sum) / d.beta_cutoffs : 0.0));
+    print_diagnostic_row(p, "First-move beta cutoffs",
+        diagnostic_text(d.first_move_beta_cutoffs, "  (",
+            percentage(d.first_move_beta_cutoffs, d.beta_cutoffs), "%)"));
+    print_diagnostic_row(p, "Shallow TT move ordered first",
+        diagnostic_text(value(SearchDiagCounter::ShallowTTMoveFirst)));
+    print_diagnostic_row(p, "Shallow TT move became best",
+        diagnostic_text(value(SearchDiagCounter::ShallowTTMoveBest)));
+    print_diagnostic_row(p, "Shallow TT move caused cutoff",
+        diagnostic_text(value(SearchDiagCounter::ShallowTTMoveCutoff)));
+    print_diagnostic_row(p, "TT returns rejected by repetition",
+        diagnostic_text(value(SearchDiagCounter::TTRepetitionRejectedReturns)));
 
-    std::cout << p << "shallow TT moves first/best/cutoff "
-              << value(SearchDiagCounter::ShallowTTMoveFirst) << '/'
-              << value(SearchDiagCounter::ShallowTTMoveBest) << '/'
-              << value(SearchDiagCounter::ShallowTTMoveCutoff)
-              << " TT returns rejected by repetition "
-              << value(SearchDiagCounter::TTRepetitionRejectedReturns) << '\n';
-
-    const auto print_node_class = [&](const char* name, SearchDiagCounter nodes,
+    print_diagnostic_section(p, "BRANCHING");
+    const auto print_node_class = [&](const char* name, SearchDiagCounter node_counter,
         SearchDiagCounter generated, SearchDiagCounter searched) {
-        std::cout << ' ' << name << ':' << value(nodes)
-                  << " avggen " << average(generated, nodes)
-                  << " avgsearched " << average(searched, nodes);
+        print_diagnostic_row(p, name,
+            diagnostic_text("nodes ", value(node_counter), " | avg generated ",
+                average(generated, node_counter), " | avg searched ", average(searched, node_counter)));
     };
-    std::cout << p << "branching";
     print_node_class("PV", SearchDiagCounter::PvNodes,
         SearchDiagCounter::PvMovesGenerated, SearchDiagCounter::PvMovesSearched);
     print_node_class("nonPV", SearchDiagCounter::NonPvNodes,
         SearchDiagCounter::NonPvMovesGenerated, SearchDiagCounter::NonPvMovesSearched);
     print_node_class("incheck", SearchDiagCounter::InCheckNodes,
         SearchDiagCounter::InCheckMovesGenerated, SearchDiagCounter::InCheckMovesSearched);
-    std::cout << " main generated/searched " << value(SearchDiagCounter::MainMovesGenerated)
-              << '/' << value(SearchDiagCounter::MainMovesSearched) << '\n';
+    print_diagnostic_row(p, "Main moves generated / searched",
+        diagnostic_text(value(SearchDiagCounter::MainMovesGenerated), " / ",
+            value(SearchDiagCounter::MainMovesSearched)));
 
     const TTDiagnostics& negamax_tt = d.tt[static_cast<std::size_t>(TTMode::Negamax)];
     constexpr const char* category_names[TT_PROBE_CATEGORY_COUNT] = {
         "depth0", "depth>0", "PV", "nonPV", "incheck"
     };
+    print_diagnostic_section(p, "TT PROBE CATEGORIES");
     for (std::size_t i = 0; i < TT_PROBE_CATEGORY_COUNT; ++i) {
-        std::cout << p << "TT category " << category_names[i]
-                  << " probes/raw/usable/cutoffs "
-                  << negamax_tt.category_probes[i] << '/'
-                  << negamax_tt.category_key_hits[i] << '/'
-                  << negamax_tt.category_usable_hits[i] << '/'
-                  << negamax_tt.category_cutoffs[i]
-                  << " rates " << percentage(negamax_tt.category_key_hits[i], negamax_tt.category_probes[i])
-                  << '/' << percentage(negamax_tt.category_usable_hits[i], negamax_tt.category_probes[i])
-                  << '/' << percentage(negamax_tt.category_cutoffs[i], negamax_tt.category_probes[i])
-                  << "%\n";
+        print_diagnostic_row(p, diagnostic_text("Category / ", category_names[i]),
+            diagnostic_text("probes ", negamax_tt.category_probes[i],
+                " | raw ", negamax_tt.category_key_hits[i], " (",
+                percentage(negamax_tt.category_key_hits[i], negamax_tt.category_probes[i]), "%)",
+                " | usable ", negamax_tt.category_usable_hits[i], " (",
+                percentage(negamax_tt.category_usable_hits[i], negamax_tt.category_probes[i]), "%)",
+                " | cutoffs ", negamax_tt.category_cutoffs[i], " (",
+                percentage(negamax_tt.category_cutoffs[i], negamax_tt.category_probes[i]), "%)"));
     }
 
-    std::cout << p << "terminal main fifty/repetition/checkmate/stalemate "
-              << value(SearchDiagCounter::SearchFiftyMoveDraws) << '/'
-              << value(SearchDiagCounter::SearchRepetitionDraws) << '/'
-              << value(SearchDiagCounter::TerminalCheckmates) << '/'
-              << value(SearchDiagCounter::TerminalStalemates) << '\n';
-    std::cout << p << "aspiration attempts/fail-low/fail-high "
-              << value(SearchDiagCounter::AspirationAttempts) << '/'
-              << value(SearchDiagCounter::AspirationFailLows) << '/'
-              << value(SearchDiagCounter::AspirationFailHighs)
-              << " iterations/best-changes/sign-flips "
-              << value(SearchDiagCounter::IterationsCompleted) << '/'
-              << value(SearchDiagCounter::BestMoveChanges) << '/'
-              << value(SearchDiagCounter::ScoreSignFlips) << '\n';
-    std::cout << p << "time extensions instability/events-ms score/events-ms "
-              << value(SearchDiagCounter::InstabilityTimeExtensions) << '-'
-              << value(SearchDiagCounter::InstabilityTimeAddedMs) << ' '
-              << value(SearchDiagCounter::ScoreTimeExtensions) << '-'
-              << value(SearchDiagCounter::ScoreTimeAddedMs)
-              << " stop hard/predicted " << value(SearchDiagCounter::HardSafetyStops) << '/'
-              << value(SearchDiagCounter::PredictedIterationStops) << '\n';
-    std::cout << p << "iteration prediction samples avg-predicted/avg-actual/avg-abs-error "
-              << value(SearchDiagCounter::PredictionSamples) << ' '
-              << average(SearchDiagCounter::PredictedIterationMs, SearchDiagCounter::PredictionSamples) << '/'
-              << average(SearchDiagCounter::ActualIterationMs, SearchDiagCounter::PredictionSamples) << '/'
-              << average(SearchDiagCounter::AbsolutePredictionErrorMs, SearchDiagCounter::PredictionSamples)
-              << " ms\n";
-    std::cout << p << "iteration depth nodes/time/EBF";
+    print_diagnostic_section(p, "SEARCH CONTROL AND TERMINALS");
+    print_diagnostic_row(p, "Main-search fifty-move draws",
+        diagnostic_text(value(SearchDiagCounter::SearchFiftyMoveDraws)));
+    print_diagnostic_row(p, "Main-search repetition draws",
+        diagnostic_text(value(SearchDiagCounter::SearchRepetitionDraws)));
+    print_diagnostic_row(p, "Terminal checkmates",
+        diagnostic_text(value(SearchDiagCounter::TerminalCheckmates)));
+    print_diagnostic_row(p, "Terminal stalemates",
+        diagnostic_text(value(SearchDiagCounter::TerminalStalemates)));
+    print_diagnostic_row(p, "Aspiration attempts",
+        diagnostic_text(value(SearchDiagCounter::AspirationAttempts)));
+    print_diagnostic_row(p, "Aspiration fail-low / fail-high",
+        diagnostic_text(value(SearchDiagCounter::AspirationFailLows), " / ",
+            value(SearchDiagCounter::AspirationFailHighs)));
+    print_diagnostic_row(p, "Iterations completed",
+        diagnostic_text(value(SearchDiagCounter::IterationsCompleted)));
+    print_diagnostic_row(p, "Best-move changes / score sign flips",
+        diagnostic_text(value(SearchDiagCounter::BestMoveChanges), " / ",
+            value(SearchDiagCounter::ScoreSignFlips)));
+    print_diagnostic_row(p, "Instability time extensions",
+        diagnostic_text(value(SearchDiagCounter::InstabilityTimeExtensions), " events | ",
+            value(SearchDiagCounter::InstabilityTimeAddedMs), " ms"));
+    print_diagnostic_row(p, "Score time extensions",
+        diagnostic_text(value(SearchDiagCounter::ScoreTimeExtensions), " events | ",
+            value(SearchDiagCounter::ScoreTimeAddedMs), " ms"));
+    print_diagnostic_row(p, "Hard / predicted stops",
+        diagnostic_text(value(SearchDiagCounter::HardSafetyStops), " / ",
+            value(SearchDiagCounter::PredictedIterationStops)));
+    print_diagnostic_row(p, "Iteration prediction samples",
+        diagnostic_text(value(SearchDiagCounter::PredictionSamples)));
+    print_diagnostic_row(p, "Average predicted / actual time",
+        diagnostic_text(average(SearchDiagCounter::PredictedIterationMs,
+            SearchDiagCounter::PredictionSamples), " / ",
+            average(SearchDiagCounter::ActualIterationMs, SearchDiagCounter::PredictionSamples), " ms"));
+    print_diagnostic_row(p, "Average absolute prediction error",
+        diagnostic_text(average(SearchDiagCounter::AbsolutePredictionErrorMs,
+            SearchDiagCounter::PredictionSamples), " ms"));
+
+    print_diagnostic_section(p, "ITERATIONS BY DEPTH");
+    print_diagnostic_row(p, "Columns", "depth | nodes | time ms | EBF");
     uint64_t previous_nodes = 0;
     for (std::size_t depth = 0; depth < DIAGNOSTIC_ITERATION_DEPTH_COUNT; ++depth) {
         if (d.iteration_nodes[depth] == 0) continue;
         const double ebf = previous_nodes > 0
             ? static_cast<double>(d.iteration_nodes[depth]) / static_cast<double>(previous_nodes)
             : 0.0;
-        std::cout << ' ' << depth << ':' << d.iteration_nodes[depth] << '/'
-                  << d.iteration_time_ms[depth] << '/' << ebf;
+        print_diagnostic_row(p, diagnostic_text("Depth ", depth),
+            diagnostic_text(d.iteration_nodes[depth], " | ", d.iteration_time_ms[depth], " | ", ebf));
         previous_nodes = d.iteration_nodes[depth];
     }
-    std::cout << '\n';
 
-    std::cout << p << (tt_snapshot_is_final ? "TT final fill " : "TT fill ")
-              << "occupied/capacity/rate/current-generation-rate "
-              << d.tt_occupied_entries << '/' << d.tt_capacity_entries << '/'
-              << percentage(d.tt_occupied_entries, d.tt_capacity_entries) << "%/"
-              << percentage(d.tt_current_generation_entries, d.tt_capacity_entries) << "%\n";
-    std::cout << p << "TT cluster occupancy 0/1/2/3/4 ";
-    for (std::size_t i = 0; i < TT_CLUSTER_OCCUPANCY_BUCKET_COUNT; ++i) {
-        if (i > 0) std::cout << '/';
-        std::cout << d.tt_cluster_occupancy[i];
-    }
-    std::cout << '\n';
+    print_diagnostic_section(p, tt_snapshot_is_final ? "TT FINAL FILL" : "TT FILL");
+    print_diagnostic_row(p, "Occupied entries", diagnostic_text(d.tt_occupied_entries));
+    print_diagnostic_row(p, "Capacity entries", diagnostic_text(d.tt_capacity_entries));
+    print_diagnostic_row(p, "Fill rate",
+        diagnostic_text(percentage(d.tt_occupied_entries, d.tt_capacity_entries), "%"));
+    print_diagnostic_row(p, "Current-generation entries",
+        diagnostic_text(d.tt_current_generation_entries, "  (",
+            percentage(d.tt_current_generation_entries, d.tt_capacity_entries), "% of capacity)"));
+    print_diagnostic_row(p, "Cluster occupancy buckets", "0 | 1 | 2 | 3 | 4");
+    print_diagnostic_row(p, "Cluster occupancy counts",
+        diagnostic_text(d.tt_cluster_occupancy[0], " | ", d.tt_cluster_occupancy[1], " | ",
+            d.tt_cluster_occupancy[2], " | ", d.tt_cluster_occupancy[3], " | ",
+            d.tt_cluster_occupancy[4]));
     print_tt_diagnostics(p, "Negamax", negamax_tt);
     print_tt_diagnostics(p, "Quiescence", d.tt[static_cast<std::size_t>(TTMode::Quiescence)]);
+    std::cout << p << "========================================\n";
     std::cout.flags(old_flags);
     std::cout.precision(old_precision);
 }
