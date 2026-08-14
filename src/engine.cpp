@@ -2075,7 +2075,7 @@ uint64_t Engine::get_qnodes() {
 	return qnodes.load(std::memory_order_relaxed);
 }
 #if ENABLE_QSEARCH_DIAGNOSTICS
-SearchDiagnostics Engine::get_search_diagnostics() {
+SearchDiagnostics Engine::get_search_diagnostics(bool include_tt_occupancy) {
     flush_node_counters();
     SearchDiagnostics diagnostics{};
     diagnostics.main_nodes = nodes.load(std::memory_order_relaxed);
@@ -2102,21 +2102,23 @@ SearchDiagnostics Engine::get_search_diagnostics() {
     for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
         diagnostics.tt[i] = tt_diagnostics[i].snapshot();
     }
-    diagnostics.tt_capacity_entries = static_cast<uint64_t>(tt.size()) * 4ULL;
-    for (TTCluster& cluster : tt) {
-        std::size_t cluster_occupancy = 0;
-        for (TTEntry& slot : cluster.entries) {
-            TTEntry entry(tt_load(slot));
-            if (entry.empty()) {
-                continue;
+    if (include_tt_occupancy) {
+        diagnostics.tt_capacity_entries = static_cast<uint64_t>(tt.size()) * 4ULL;
+        for (TTCluster& cluster : tt) {
+            std::size_t cluster_occupancy = 0;
+            for (TTEntry& slot : cluster.entries) {
+                TTEntry entry(tt_load(slot));
+                if (entry.empty()) {
+                    continue;
+                }
+                diagnostics.tt_occupied_entries++;
+                cluster_occupancy++;
+                if (entry.generation() == generation) {
+                    diagnostics.tt_current_generation_entries++;
+                }
             }
-            diagnostics.tt_occupied_entries++;
-            cluster_occupancy++;
-            if (entry.generation() == generation) {
-                diagnostics.tt_current_generation_entries++;
-            }
+            diagnostics.tt_cluster_occupancy[cluster_occupancy]++;
         }
-        diagnostics.tt_cluster_occupancy[cluster_occupancy]++;
     }
     return diagnostics;
 }

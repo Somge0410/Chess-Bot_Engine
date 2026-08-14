@@ -8,10 +8,12 @@
 #if ENABLE_QSEARCH_DIAGNOSTICS
 struct SearchDiagnostics;
 void print_search_diagnostics_summary(const SearchDiagnostics& diagnostics,
-    const std::string& line_prefix = "");
+    const std::string& line_prefix = "",
+    bool tt_snapshot_is_final = false);
 #endif
 
 int run_benchmark(
     const std::vector<std::pair<std::string, std::string>>& positions,
+    bool tt_bench = false,
     int depth = 12,
     std::size_t tt_size_mb = 128);

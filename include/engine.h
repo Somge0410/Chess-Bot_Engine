@@ -451,7 +451,7 @@ class Engine {
         uint64_t get_total_nodes();
         uint64_t get_qnodes();
 #if ENABLE_QSEARCH_DIAGNOSTICS
-        SearchDiagnostics get_search_diagnostics();
+        SearchDiagnostics get_search_diagnostics(bool include_tt_occupancy = true);
 #endif
         int checks_count;
         int ep_count;

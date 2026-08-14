@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 
 #include "board.h"
 #include "engine.h"
@@ -84,7 +85,8 @@ void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
 }
 }
 
-void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::string& p) {
+void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::string& p,
+    bool tt_snapshot_is_final) {
     const std::ios::fmtflags old_flags = std::cout.flags();
     const std::streamsize old_precision = std::cout.precision();
     std::cout << std::fixed << std::setprecision(2);
@@ -293,7 +295,8 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     }
     std::cout << '\n';
 
-    std::cout << p << "TT fill occupied/capacity/rate/current-generation-rate "
+    std::cout << p << (tt_snapshot_is_final ? "TT final fill " : "TT fill ")
+              << "occupied/capacity/rate/current-generation-rate "
               << d.tt_occupied_entries << '/' << d.tt_capacity_entries << '/'
               << percentage(d.tt_occupied_entries, d.tt_capacity_entries) << "%/"
               << percentage(d.tt_current_generation_entries, d.tt_capacity_entries) << "%\n";
@@ -312,6 +315,7 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
 
 int run_benchmark(
     const std::vector<std::pair<std::string, std::string>>& positions,
+    bool tt_bench,
     int depth,
     std::size_t tt_size_mb) {
     SearchLimits limits;
@@ -325,25 +329,36 @@ int run_benchmark(
     uint64_t total_time_ms = 0;
 
     std::cout << "info string bench start positions " << positions.size()
-              << " depth " << depth << "\n";
+              << " depth " << depth
+              << " mode " << (tt_bench ? "tt-stateful" : "isolated") << "\n";
     std::cout.flush();
+
+    std::unique_ptr<Engine> persistent_engine;
+    if (tt_bench) {
+        persistent_engine = std::make_unique<Engine>(tt_size_mb);
+    }
 
     for (const auto& [name, fen] : positions) {
         Board board(fen);
-        Engine engine(tt_size_mb);
+        std::unique_ptr<Engine> isolated_engine;
+        Engine* engine = persistent_engine.get();
+        if (!engine) {
+            isolated_engine = std::make_unique<Engine>(tt_size_mb);
+            engine = isolated_engine.get();
+        }
 
         const auto start = std::chrono::steady_clock::now();
-        const Move best = engine.search(board, limits);
+        const Move best = engine->search(board, limits);
         const auto end = std::chrono::steady_clock::now();
 
         const uint64_t elapsed_ms = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
-        const uint64_t nodes = engine.get_total_nodes();
-        const uint64_t qnodes = engine.get_qnodes();
+        const uint64_t nodes = engine->get_total_nodes();
+        const uint64_t qnodes = engine->get_qnodes();
         total_nodes += nodes;
         total_qnodes += qnodes;
 #if ENABLE_QSEARCH_DIAGNOSTICS
-        const SearchDiagnostics diagnostics = engine.get_search_diagnostics();
+        const SearchDiagnostics diagnostics = engine->get_search_diagnostics(!tt_bench);
         total_diagnostics.main_nodes += diagnostics.main_nodes;
         total_diagnostics.qnodes += diagnostics.qnodes;
         total_diagnostics.qply_sum += diagnostics.qply_sum;
@@ -364,11 +379,13 @@ int run_benchmark(
         for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
             total_diagnostics.tt[i].add(diagnostics.tt[i]);
         }
-        total_diagnostics.tt_capacity_entries += diagnostics.tt_capacity_entries;
-        total_diagnostics.tt_occupied_entries += diagnostics.tt_occupied_entries;
-        total_diagnostics.tt_current_generation_entries += diagnostics.tt_current_generation_entries;
-        for (std::size_t i = 0; i < TT_CLUSTER_OCCUPANCY_BUCKET_COUNT; ++i) {
-            total_diagnostics.tt_cluster_occupancy[i] += diagnostics.tt_cluster_occupancy[i];
+        if (!tt_bench) {
+            total_diagnostics.tt_capacity_entries += diagnostics.tt_capacity_entries;
+            total_diagnostics.tt_occupied_entries += diagnostics.tt_occupied_entries;
+            total_diagnostics.tt_current_generation_entries += diagnostics.tt_current_generation_entries;
+            for (std::size_t i = 0; i < TT_CLUSTER_OCCUPANCY_BUCKET_COUNT; ++i) {
+                total_diagnostics.tt_cluster_occupancy[i] += diagnostics.tt_cluster_occupancy[i];
+            }
         }
         for (std::size_t i = 0; i < SEARCH_DIAG_COUNTER_COUNT; ++i) {
             total_diagnostics.detail[i] += diagnostics.detail[i];
@@ -427,17 +444,30 @@ int run_benchmark(
                       diagnostics.move_order_nodes)
                   << " maxbestmoveindex " << diagnostics.max_best_move_index
                   << " firstmovecutoffs " << percentage(diagnostics.first_move_beta_cutoffs,
-                      diagnostics.beta_cutoffs)
-                  << " ttfill " << percentage(diagnostics.tt_occupied_entries,
-                      diagnostics.tt_capacity_entries)
-                  << " ttcurrentfill " << percentage(diagnostics.tt_current_generation_entries,
-                      diagnostics.tt_capacity_entries);
+                      diagnostics.beta_cutoffs);
+        if (tt_bench) {
+            std::cout << " ttfill deferred";
+        }
+        else {
+            std::cout << " ttfill " << percentage(diagnostics.tt_occupied_entries,
+                            diagnostics.tt_capacity_entries)
+                      << " ttcurrentfill " << percentage(diagnostics.tt_current_generation_entries,
+                            diagnostics.tt_capacity_entries);
+        }
 #endif
         std::cout << "\n";
         std::cout.flush();
-
-        engine.shutdown();
     }
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (tt_bench && persistent_engine) {
+        const SearchDiagnostics final_snapshot = persistent_engine->get_search_diagnostics(true);
+        total_diagnostics.tt_capacity_entries = final_snapshot.tt_capacity_entries;
+        total_diagnostics.tt_occupied_entries = final_snapshot.tt_occupied_entries;
+        total_diagnostics.tt_current_generation_entries = final_snapshot.tt_current_generation_entries;
+        total_diagnostics.tt_cluster_occupancy = final_snapshot.tt_cluster_occupancy;
+    }
+#endif
 
     const uint64_t nps = total_time_ms > 0
         ? (total_nodes * 1000ULL) / total_time_ms
@@ -450,7 +480,7 @@ int run_benchmark(
     std::cout << "Nodes searched: " << total_nodes << "\n";
     std::cout << "Nodes/second: " << nps << '\n';
 #if ENABLE_QSEARCH_DIAGNOSTICS
-    print_search_diagnostics_summary(total_diagnostics);
+    print_search_diagnostics_summary(total_diagnostics, "", tt_bench);
 #endif
     std::cout.flush();
     return 0;
