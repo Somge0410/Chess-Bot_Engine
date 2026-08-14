@@ -400,11 +400,15 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         increment_diagnostic(tls, SearchDiagCounter::RfpAttempts);
 #endif
         int rfp_margin = REVERSE_FUTILITY_MARGIN * depth; // This margin can be tuned
-        if (static_eval - rfp_margin >= beta) {
+        if (static_eval - rfp_margin >= beta) {    
+            int full_eval = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+            if (full_eval - rfp_margin >= beta)
+            {   
 #if ENABLE_QSEARCH_DIAGNOSTICS
-            increment_diagnostic(tls, SearchDiagCounter::RfpCutoffs);
-#endif
-            return { static_eval,Move() };
+                increment_diagnostic(tls, SearchDiagCounter::RfpCutoffs);
+#endif  
+                return { full_eval,Move() };
+            }
         }
     }
    
@@ -452,14 +456,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
     //Futility Purning prerequisites here Here
     int current_eval=-MATE_SCORE;
-    if (depth<=2)
-	{
-        if (static_eval != -MATE_SCORE)
-            current_eval = static_eval;
-        else
-            current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
-    }
-    
+   
     // Late Move Reduction prerequisites here
     int moves_searched=0;
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -488,27 +485,37 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             increment_diagnostic(tls, SearchDiagCounter::ShallowTTMoveFirst);
         }
 #endif
+        //For Late Move Reduction
+        int reduction = 0;
+
         // Now do futility pruning. If positions evaluation is already way worse than alpha, cut it off since it is
         //unlikely to get that much better in just 1 or two moves
-        if(!first
+        if (!may_give_check(board, move) && !board.is_dangerous_passer_push(move)) {
+            if (depth <= 2)
+            {
+                if (static_eval != -MATE_SCORE)
+                    current_eval = static_eval;
+				else if (current_eval == -MATE_SCORE)
+                    current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+            }
+
+            if (!first
 #if ENABLE_QSEARCH_DIAGNOSTICS
-            && (increment_diagnostic(tls, SearchDiagCounter::FutilityChecks), true)
-#endif
-            && should_futility_prune(depth,current_eval,alpha,king_is_in_check,move))
-        {
+                && (increment_diagnostic(tls, SearchDiagCounter::FutilityChecks), true)
+#endif      
+                && should_futility_prune(depth, current_eval, alpha, king_is_in_check, move))
+            {
 #if ENABLE_QSEARCH_DIAGNOSTICS
-            increment_diagnostic(tls, SearchDiagCounter::FutilityPrunes);
+                increment_diagnostic(tls, SearchDiagCounter::FutilityPrunes);
 #endif
-            continue;
-		}
+                continue;
+            }
         // Late Move Reduction
-        int reduction = 0;
-        if (!board.is_dangerous_passer_push(move)) {
             reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
-        }
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (reduction > 0) increment_diagnostic(tls, SearchDiagCounter::LmrReductions);
 #endif
+        }
         moves_searched++;
         //Now make the move
         board.make_move(move);
@@ -2123,3 +2130,50 @@ SearchDiagnostics Engine::get_search_diagnostics(bool include_tt_occupancy) {
     return diagnostics;
 }
 #endif
+bool Engine::may_give_check(const Board& board, const Move& move) {
+	int king_square = board.get_king_square(flip_color(board.get_turn()));
+
+    uint64_t occ = board.get_all_pieces();
+
+    uint64_t king_attack_rays = get_queen_attacks(king_square,occ);
+    if (king_attack_rays & bit64(move.from_square)) {
+        return true;
+    }
+    if(move.is_castle|| move.is_en_passant|| move.promotion_piece != PieceType::NONE) {
+        return true;
+	}
+    if (move.piece_moved == PieceType::PAWN) {
+        if(get_pawn_attacks(bit64(move.to_square),board.get_turn()) & bit64(king_square)) {
+            return true;
+        }
+        return false;
+    }
+    if(move.piece_moved == PieceType::KNIGHT) {
+        if(get_knight_attacks(move.to_square) & bit64(king_square)) {
+            return true;
+        }
+        return false;
+	}
+	occ |= bit64(move.to_square);
+	occ &= ~bit64(move.from_square);
+    if(move.piece_moved == PieceType::BISHOP) {
+        if(get_bishop_attacks(move.to_square,occ) & bit64(king_square)) {
+            return true;
+        }
+        return false;
+    }
+    if(move.piece_moved == PieceType::ROOK) {
+        if(get_rook_attacks(move.to_square,occ) & bit64(king_square)) {
+            return true;
+        }
+        return false;
+    }
+    if(move.piece_moved == PieceType::QUEEN) {
+        if(get_queen_attacks(move.to_square,occ) & bit64(king_square)) {
+            return true;
+        }
+        return false;
+    }
+
+	return false;
+}

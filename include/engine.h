@@ -564,6 +564,7 @@ class Engine {
 		void add_history(ThreadLocalData* tls, const Move& move, int bonus);
         std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> quiet_lmr{};
         std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> tactical_lmr{};
+		bool may_give_check(const Board& board, const Move& move);
 };
 constexpr uint8_t generation_age(uint8_t entry_generation, uint8_t current_generation) {
     return static_cast<uint8_t>((current_generation - entry_generation) & 63);
@@ -572,3 +573,4 @@ static_assert(generation_age(63, 0) == 1);
 static_assert(generation_age(0, 1) == 1);
 static_assert(generation_age(32, 1) == 33);
 static_assert(generation_age(0, 63) == 63);
+
