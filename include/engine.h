@@ -14,6 +14,7 @@
 #include <cstring>
 #include <condition_variable>
 #include <limits>
+#include <array>
 
 #ifndef ENABLE_QSEARCH_DIAGNOSTICS
 #define ENABLE_QSEARCH_DIAGNOSTICS 0
@@ -129,13 +130,213 @@ struct TimeControlDecision {
     int max_depth;
     int max_time_ms;
 };
-enum class TTMode {Negamax, Quiescence};
+enum class TTMode {Negamax, Quiescence, PrincipalVariation};
 struct SearchResult {
     int score;
     Move best_move;
     bool is_tempered=false;
 };
 #if ENABLE_QSEARCH_DIAGNOSTICS
+constexpr std::size_t TT_DIAGNOSTIC_MODE_COUNT = 2;
+constexpr std::size_t TT_PROBE_CATEGORY_COUNT = 5;
+constexpr std::size_t MOVE_ORDER_SOURCE_COUNT = 7;
+constexpr std::size_t MOVE_INDEX_BUCKET_COUNT = 7;
+constexpr std::size_t QPLY_BUCKET_COUNT = 7;
+constexpr std::size_t TT_CLUSTER_OCCUPANCY_BUCKET_COUNT = 5;
+constexpr std::size_t DIAGNOSTIC_ITERATION_DEPTH_COUNT = 64;
+
+enum class MoveOrderSource : std::size_t {
+    TT,
+    WinningCapture,
+    Promotion,
+    Killer,
+    Countermove,
+    History,
+    LosingCapture,
+    Unknown
+};
+
+enum class SearchDiagCounter : std::size_t {
+    RfpAttempts,
+    RfpCutoffs,
+    NmpCandidates,
+    NmpSearches,
+    NmpCutoffs,
+    FutilityChecks,
+    FutilityPrunes,
+    LmrReductions,
+    LmrResearches,
+    LmrResearchImproved,
+    PvsZeroWindowSearches,
+    PvsFullWindowResearches,
+    CheckExtensions,
+
+    BestSourceTT,
+    BestSourceWinningCapture,
+    BestSourcePromotion,
+    BestSourceKiller,
+    BestSourceCountermove,
+    BestSourceHistory,
+    BestSourceLosingCapture,
+    CutoffSourceTT,
+    CutoffSourceWinningCapture,
+    CutoffSourcePromotion,
+    CutoffSourceKiller,
+    CutoffSourceCountermove,
+    CutoffSourceHistory,
+    CutoffSourceLosingCapture,
+
+    BestIndex1,
+    BestIndex2,
+    BestIndex3To4,
+    BestIndex5To8,
+    BestIndex9To16,
+    BestIndex17To32,
+    BestIndex33Plus,
+    CutoffIndex1,
+    CutoffIndex2,
+    CutoffIndex3To4,
+    CutoffIndex5To8,
+    CutoffIndex9To16,
+    CutoffIndex17To32,
+    CutoffIndex33Plus,
+
+    QPly0,
+    QPly1,
+    QPly2,
+    QPly3To4,
+    QPly5To8,
+    QPly9To12,
+    QPly13Plus,
+    QStandPatCutoffs,
+    QSoftCapStaticReturns,
+    QHardCapStaticReturns,
+    QHardCapDrawReturns,
+    QFiftyMoveDraws,
+    QRepetitionDraws,
+    QCheckmates,
+    QNoTacticalMoves,
+    QSeePrunes,
+    QCaptureBetaCutoffs,
+    QQuietCheckBetaCutoffs,
+    QPromotionBetaCutoffs,
+    QEvasionBetaCutoffs,
+    QMovesGenerated,
+    QMovesSearched,
+
+    TTRepetitionRejectedReturns,
+    ShallowTTMoveFirst,
+    ShallowTTMoveBest,
+    ShallowTTMoveCutoff,
+
+    MainMovesGenerated,
+    MainMovesSearched,
+    PvNodes,
+    PvMovesGenerated,
+    PvMovesSearched,
+    NonPvNodes,
+    NonPvMovesGenerated,
+    NonPvMovesSearched,
+    InCheckNodes,
+    InCheckMovesGenerated,
+    InCheckMovesSearched,
+    SearchFiftyMoveDraws,
+    SearchRepetitionDraws,
+    TerminalCheckmates,
+    TerminalStalemates,
+
+    AspirationAttempts,
+    AspirationFailLows,
+    AspirationFailHighs,
+    IterationsCompleted,
+    BestMoveChanges,
+    ScoreSignFlips,
+    InstabilityTimeExtensions,
+    ScoreTimeExtensions,
+    InstabilityTimeAddedMs,
+    ScoreTimeAddedMs,
+    PredictionSamples,
+    PredictedIterationMs,
+    ActualIterationMs,
+    AbsolutePredictionErrorMs,
+    HardSafetyStops,
+    PredictedIterationStops,
+    Count
+};
+
+constexpr std::size_t SEARCH_DIAG_COUNTER_COUNT =
+    static_cast<std::size_t>(SearchDiagCounter::Count);
+
+struct TTDiagnostics {
+    uint64_t probes = 0;
+    uint64_t slots_examined = 0;
+    uint64_t empty_terminations = 0;
+    uint64_t key_hits = 0;
+    uint64_t shallow_hits = 0;
+    uint64_t tempered_rejections = 0;
+    uint64_t invalid_move_rejections = 0;
+    uint64_t exact_hits = 0;
+    uint64_t bound_hits = 0;
+    uint64_t bound_cutoffs = 0;
+
+    uint64_t stores = 0;
+    uint64_t exact_stores = 0;
+    uint64_t lowerbound_stores = 0;
+    uint64_t upperbound_stores = 0;
+    uint64_t tempered_stores = 0;
+    uint64_t same_key_updates = 0;
+    uint64_t deeper_entries_kept = 0;
+    uint64_t empty_inserts = 0;
+    uint64_t replacements = 0;
+    uint64_t dropped_stores = 0;
+    uint64_t replaced_depth_sum = 0;
+    uint64_t replacement_depth_sum = 0;
+    uint64_t replaced_age_sum = 0;
+
+    std::array<uint64_t, TT_PROBE_CATEGORY_COUNT> category_probes{};
+    std::array<uint64_t, TT_PROBE_CATEGORY_COUNT> category_key_hits{};
+    std::array<uint64_t, TT_PROBE_CATEGORY_COUNT> category_usable_hits{};
+    std::array<uint64_t, TT_PROBE_CATEGORY_COUNT> category_cutoffs{};
+
+    void add(const TTDiagnostics& other);
+};
+
+struct AtomicTTDiagnostics {
+    std::atomic<uint64_t> probes{ 0 };
+    std::atomic<uint64_t> slots_examined{ 0 };
+    std::atomic<uint64_t> empty_terminations{ 0 };
+    std::atomic<uint64_t> key_hits{ 0 };
+    std::atomic<uint64_t> shallow_hits{ 0 };
+    std::atomic<uint64_t> tempered_rejections{ 0 };
+    std::atomic<uint64_t> invalid_move_rejections{ 0 };
+    std::atomic<uint64_t> exact_hits{ 0 };
+    std::atomic<uint64_t> bound_hits{ 0 };
+    std::atomic<uint64_t> bound_cutoffs{ 0 };
+
+    std::atomic<uint64_t> stores{ 0 };
+    std::atomic<uint64_t> exact_stores{ 0 };
+    std::atomic<uint64_t> lowerbound_stores{ 0 };
+    std::atomic<uint64_t> upperbound_stores{ 0 };
+    std::atomic<uint64_t> tempered_stores{ 0 };
+    std::atomic<uint64_t> same_key_updates{ 0 };
+    std::atomic<uint64_t> deeper_entries_kept{ 0 };
+    std::atomic<uint64_t> empty_inserts{ 0 };
+    std::atomic<uint64_t> replacements{ 0 };
+    std::atomic<uint64_t> dropped_stores{ 0 };
+    std::atomic<uint64_t> replaced_depth_sum{ 0 };
+    std::atomic<uint64_t> replacement_depth_sum{ 0 };
+    std::atomic<uint64_t> replaced_age_sum{ 0 };
+
+    std::array<std::atomic<uint64_t>, TT_PROBE_CATEGORY_COUNT> category_probes{};
+    std::array<std::atomic<uint64_t>, TT_PROBE_CATEGORY_COUNT> category_key_hits{};
+    std::array<std::atomic<uint64_t>, TT_PROBE_CATEGORY_COUNT> category_usable_hits{};
+    std::array<std::atomic<uint64_t>, TT_PROBE_CATEGORY_COUNT> category_cutoffs{};
+
+    void add(const TTDiagnostics& diagnostics);
+    void reset();
+    TTDiagnostics snapshot() const;
+};
+
 struct SearchDiagnostics {
     uint64_t main_nodes = 0;
     uint64_t qnodes = 0;
@@ -145,6 +346,22 @@ struct SearchDiagnostics {
     uint64_t cycle_cutoffs = 0;
     uint64_t hard_cap_hits = 0;
     uint32_t max_qply = 0;
+    uint64_t move_order_nodes = 0;
+    uint64_t moves_searched_sum = 0;
+    uint64_t best_move_index_sum = 0;
+    uint64_t best_move_first = 0;
+    uint64_t beta_cutoffs = 0;
+    uint64_t beta_cutoff_index_sum = 0;
+    uint64_t first_move_beta_cutoffs = 0;
+    uint32_t max_best_move_index = 0;
+    std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt{};
+    uint64_t tt_capacity_entries = 0;
+    uint64_t tt_occupied_entries = 0;
+    uint64_t tt_current_generation_entries = 0;
+    std::array<uint64_t, TT_CLUSTER_OCCUPANCY_BUCKET_COUNT> tt_cluster_occupancy{};
+    std::array<uint64_t, SEARCH_DIAG_COUNTER_COUNT> detail{};
+    std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> iteration_nodes{};
+    std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> iteration_time_ms{};
 };
 #endif
 class Engine;
@@ -162,6 +379,18 @@ struct ThreadLocalData {
         cycle_cutoffs = 0;
         hard_cap_hits = 0;
         max_qply = 0;
+        move_order_nodes = 0;
+        moves_searched_sum = 0;
+        best_move_index_sum = 0;
+        best_move_first = 0;
+        beta_cutoffs = 0;
+        beta_cutoff_index_sum = 0;
+        first_move_beta_cutoffs = 0;
+        max_best_move_index = 0;
+        detail_diagnostics.fill(0);
+        for (TTDiagnostics& diagnostics : tt_diagnostics) {
+            diagnostics = {};
+        }
 #endif
         nodes_until_time_check = TIME_CHECK_INTERVAL;
     }
@@ -195,6 +424,18 @@ struct ThreadLocalData {
     uint64_t cycle_cutoffs{ 0 };
     uint64_t hard_cap_hits{ 0 };
     uint32_t max_qply{ 0 };
+    uint64_t move_order_nodes{ 0 };
+    uint64_t moves_searched_sum{ 0 };
+    uint64_t best_move_index_sum{ 0 };
+    uint64_t best_move_first{ 0 };
+    uint64_t beta_cutoffs{ 0 };
+    uint64_t beta_cutoff_index_sum{ 0 };
+    uint64_t first_move_beta_cutoffs{ 0 };
+    uint32_t max_best_move_index{ 0 };
+    std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
+    std::array<uint64_t, SEARCH_DIAG_COUNTER_COUNT> detail_diagnostics{};
+    bool last_tt_probe_was_shallow{ false };
+    bool current_tt_probe_in_check{ false };
 #endif
     uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
     void flush_counters(Engine* engine,bool force=false);
@@ -210,7 +451,7 @@ class Engine {
         uint64_t get_total_nodes();
         uint64_t get_qnodes();
 #if ENABLE_QSEARCH_DIAGNOSTICS
-        SearchDiagnostics get_search_diagnostics();
+        SearchDiagnostics get_search_diagnostics(bool include_tt_occupancy = true);
 #endif
         int checks_count;
         int ep_count;
@@ -226,6 +467,18 @@ class Engine {
         std::atomic<uint64_t> cycle_cutoffs{ 0 };
         std::atomic<uint64_t> hard_cap_hits{ 0 };
         std::atomic<uint32_t> max_qply{ 0 };
+        std::atomic<uint64_t> move_order_nodes{ 0 };
+        std::atomic<uint64_t> moves_searched_sum{ 0 };
+        std::atomic<uint64_t> best_move_index_sum{ 0 };
+        std::atomic<uint64_t> best_move_first{ 0 };
+        std::atomic<uint64_t> beta_cutoffs{ 0 };
+        std::atomic<uint64_t> beta_cutoff_index_sum{ 0 };
+        std::atomic<uint64_t> first_move_beta_cutoffs{ 0 };
+        std::atomic<uint32_t> max_best_move_index{ 0 };
+        std::array<AtomicTTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
+        std::array<std::atomic<uint64_t>, SEARCH_DIAG_COUNTER_COUNT> detail_diagnostics{};
+        std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> diagnostic_iteration_nodes{};
+        std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> diagnostic_iteration_time_ms{};
 #endif
         uint8_t generation=0;
 

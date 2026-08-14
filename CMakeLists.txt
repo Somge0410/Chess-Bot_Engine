@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 1. Hardware Optimization Toggle
 option(USE_NATIVE_ARCH "Optimize for current CPU" ON)
-option(ENABLE_QSEARCH_DIAGNOSTICS "Collect detailed qsearch benchmark diagnostics" OFF)
+option(ENABLE_QSEARCH_DIAGNOSTICS "Collect detailed search benchmark diagnostics" OFF)
 
 # 2. Conservative default TT size (in MB).
 # GUIs can still select a larger Hash value for long searches.
