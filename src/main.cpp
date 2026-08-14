@@ -53,6 +53,9 @@ int main(int argc, char* argv[]) {
     if (argc >= 2 && std::string(argv[1]) == "bench_tt") {
         return run_benchmark(get_full_bench_positions(), true);
     }
+    if (argc >= 2 && std::string(argv[1]) == "bench_game") {
+        return run_benchmark_game();
+    }
 
     Board board("k7/8/4P3/8/8/8/8/K3b3 w - - 0 1");
     std::cout << "Evaluating board: " << evaluate(board) << std::endl;

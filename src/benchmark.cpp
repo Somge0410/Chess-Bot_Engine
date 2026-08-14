@@ -9,6 +9,7 @@
 
 #include "board.h"
 #include "engine.h"
+#include "MoveGenerator.h"
 #include "uci_helpers.h"
 
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -81,6 +82,50 @@ void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
                   << average_replaced_depth << '/' << average_replacement_depth << '\n';
         std::cout << prefix << "TT " << mode_name << " replacement average age: "
                   << average_replaced_age << '\n';
+    }
+}
+
+void accumulate_tt_snapshot(SearchDiagnostics& total, const SearchDiagnostics& snapshot) {
+    total.tt_capacity_entries += snapshot.tt_capacity_entries;
+    total.tt_occupied_entries += snapshot.tt_occupied_entries;
+    total.tt_current_generation_entries += snapshot.tt_current_generation_entries;
+    for (std::size_t i = 0; i < TT_CLUSTER_OCCUPANCY_BUCKET_COUNT; ++i) {
+        total.tt_cluster_occupancy[i] += snapshot.tt_cluster_occupancy[i];
+    }
+}
+
+void accumulate_search_diagnostics(SearchDiagnostics& total, const SearchDiagnostics& diagnostics,
+    bool include_tt_snapshot) {
+    total.main_nodes += diagnostics.main_nodes;
+    total.qnodes += diagnostics.qnodes;
+    total.qply_sum += diagnostics.qply_sum;
+    total.quiet_checks_searched += diagnostics.quiet_checks_searched;
+    total.qnodes_in_check += diagnostics.qnodes_in_check;
+    total.cycle_cutoffs += diagnostics.cycle_cutoffs;
+    total.hard_cap_hits += diagnostics.hard_cap_hits;
+    total.max_qply = std::max(total.max_qply, diagnostics.max_qply);
+    total.move_order_nodes += diagnostics.move_order_nodes;
+    total.moves_searched_sum += diagnostics.moves_searched_sum;
+    total.best_move_index_sum += diagnostics.best_move_index_sum;
+    total.best_move_first += diagnostics.best_move_first;
+    total.beta_cutoffs += diagnostics.beta_cutoffs;
+    total.beta_cutoff_index_sum += diagnostics.beta_cutoff_index_sum;
+    total.first_move_beta_cutoffs += diagnostics.first_move_beta_cutoffs;
+    total.max_best_move_index = std::max(
+        total.max_best_move_index, diagnostics.max_best_move_index);
+
+    for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
+        total.tt[i].add(diagnostics.tt[i]);
+    }
+    if (include_tt_snapshot) {
+        accumulate_tt_snapshot(total, diagnostics);
+    }
+    for (std::size_t i = 0; i < SEARCH_DIAG_COUNTER_COUNT; ++i) {
+        total.detail[i] += diagnostics.detail[i];
+    }
+    for (std::size_t i = 0; i < DIAGNOSTIC_ITERATION_DEPTH_COUNT; ++i) {
+        total.iteration_nodes[i] += diagnostics.iteration_nodes[i];
+        total.iteration_time_ms[i] += diagnostics.iteration_time_ms[i];
     }
 }
 }
@@ -359,41 +404,7 @@ int run_benchmark(
         total_qnodes += qnodes;
 #if ENABLE_QSEARCH_DIAGNOSTICS
         const SearchDiagnostics diagnostics = engine->get_search_diagnostics(!tt_bench);
-        total_diagnostics.main_nodes += diagnostics.main_nodes;
-        total_diagnostics.qnodes += diagnostics.qnodes;
-        total_diagnostics.qply_sum += diagnostics.qply_sum;
-        total_diagnostics.quiet_checks_searched += diagnostics.quiet_checks_searched;
-        total_diagnostics.qnodes_in_check += diagnostics.qnodes_in_check;
-        total_diagnostics.cycle_cutoffs += diagnostics.cycle_cutoffs;
-        total_diagnostics.hard_cap_hits += diagnostics.hard_cap_hits;
-        total_diagnostics.max_qply = std::max(total_diagnostics.max_qply, diagnostics.max_qply);
-        total_diagnostics.move_order_nodes += diagnostics.move_order_nodes;
-        total_diagnostics.moves_searched_sum += diagnostics.moves_searched_sum;
-        total_diagnostics.best_move_index_sum += diagnostics.best_move_index_sum;
-        total_diagnostics.best_move_first += diagnostics.best_move_first;
-        total_diagnostics.beta_cutoffs += diagnostics.beta_cutoffs;
-        total_diagnostics.beta_cutoff_index_sum += diagnostics.beta_cutoff_index_sum;
-        total_diagnostics.first_move_beta_cutoffs += diagnostics.first_move_beta_cutoffs;
-        total_diagnostics.max_best_move_index = std::max(
-            total_diagnostics.max_best_move_index, diagnostics.max_best_move_index);
-        for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {
-            total_diagnostics.tt[i].add(diagnostics.tt[i]);
-        }
-        if (!tt_bench) {
-            total_diagnostics.tt_capacity_entries += diagnostics.tt_capacity_entries;
-            total_diagnostics.tt_occupied_entries += diagnostics.tt_occupied_entries;
-            total_diagnostics.tt_current_generation_entries += diagnostics.tt_current_generation_entries;
-            for (std::size_t i = 0; i < TT_CLUSTER_OCCUPANCY_BUCKET_COUNT; ++i) {
-                total_diagnostics.tt_cluster_occupancy[i] += diagnostics.tt_cluster_occupancy[i];
-            }
-        }
-        for (std::size_t i = 0; i < SEARCH_DIAG_COUNTER_COUNT; ++i) {
-            total_diagnostics.detail[i] += diagnostics.detail[i];
-        }
-        for (std::size_t i = 0; i < DIAGNOSTIC_ITERATION_DEPTH_COUNT; ++i) {
-            total_diagnostics.iteration_nodes[i] += diagnostics.iteration_nodes[i];
-            total_diagnostics.iteration_time_ms[i] += diagnostics.iteration_time_ms[i];
-        }
+        accumulate_search_diagnostics(total_diagnostics, diagnostics, !tt_bench);
 #endif
         total_time_ms += elapsed_ms;
 
@@ -481,6 +492,144 @@ int run_benchmark(
     std::cout << "Nodes/second: " << nps << '\n';
 #if ENABLE_QSEARCH_DIAGNOSTICS
     print_search_diagnostics_summary(total_diagnostics, "", tt_bench);
+#endif
+    std::cout.flush();
+    return 0;
+}
+int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
+    SearchLimits limits;
+    limits.movetime = std::max(1, movetime_ms);
+
+    Board board;
+    Engine white(tt_size_mb);
+    Engine black(tt_size_mb);
+    uint64_t total_nodes = 0;
+    uint64_t total_time_ms = 0;
+    int plies_played = 0;
+    std::string termination = "move-limit";
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    SearchDiagnostics total_diagnostics{};
+#endif
+
+    std::cout << "info string bench game start movetime " << limits.movetime
+              << " maxmoves " << max_moves
+              << " hash-per-side " << tt_size_mb << "MB\n";
+    std::cout.flush();
+
+    for (int ply = 1; ply <= 2 * max_moves; ++ply) {
+        if (board.is_fifty_move_rule_draw()) {
+            termination = "fifty-move";
+            break;
+        }
+        if (board.is_repetition_draw(3)) {
+            termination = "repetition";
+            break;
+        }
+
+        MoveList legal_moves;
+        MoveGenerator::generate_moves(board, legal_moves);
+        if (legal_moves.empty()) {
+            termination = board.get_checkers() != 0 ? "checkmate" : "stalemate";
+            break;
+        }
+
+        const bool white_to_move = board.is_white_to_move();
+        Engine& engine = white_to_move ? white : black;
+        const auto start = std::chrono::steady_clock::now();
+        const Move best = engine.search(board, limits);
+        const auto end = std::chrono::steady_clock::now();
+        const uint64_t elapsed_ms = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+        const uint64_t nodes = engine.get_total_nodes();
+
+        if (best.from_square == NO_SQUARE || best.to_square == NO_SQUARE) {
+            termination = "no-bestmove";
+            break;
+        }
+
+        total_nodes += nodes;
+        total_time_ms += elapsed_ms;
+        plies_played = ply;
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        // Scanning the complete TT after every ply would dominate short searches.
+        // Event counters are collected here; both TT fill snapshots are taken once at the end.
+        const SearchDiagnostics diagnostics = engine.get_search_diagnostics(false);
+        accumulate_search_diagnostics(total_diagnostics, diagnostics, false);
+
+        const TTDiagnostics& tt = diagnostics.tt[static_cast<std::size_t>(TTMode::Negamax)];
+        const uint64_t usable_hits = tt.exact_hits + tt.bound_cutoffs;
+        const double average_qply = diagnostics.qnodes > 0
+            ? static_cast<double>(diagnostics.qply_sum) / diagnostics.qnodes
+            : 0.0;
+        const double average_moves_searched = diagnostics.move_order_nodes > 0
+            ? static_cast<double>(diagnostics.moves_searched_sum) / diagnostics.move_order_nodes
+            : 0.0;
+        const double average_best_move_index = diagnostics.move_order_nodes > 0
+            ? static_cast<double>(diagnostics.best_move_index_sum) / diagnostics.move_order_nodes
+            : 0.0;
+        const double average_slots_examined = tt.probes > 0
+            ? static_cast<double>(tt.slots_examined) / tt.probes
+            : 0.0;
+#endif
+
+        std::cout << "info string bench game ply " << ply
+                  << " side " << (white_to_move ? "white" : "black")
+                  << " bestmove " << move_to_uci(best)
+                  << " time " << elapsed_ms
+                  << " nodes " << nodes;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        std::cout << " mainnodes " << diagnostics.main_nodes
+                  << " qnodes " << diagnostics.qnodes
+                  << " qpercent " << std::fixed << std::setprecision(2)
+                  << percentage(diagnostics.qnodes, diagnostics.main_nodes + diagnostics.qnodes)
+                  << " avgqply " << average_qply
+                  << " maxqply " << diagnostics.max_qply
+                  << " quietchecks " << diagnostics.quiet_checks_searched
+                  << " inchecknodes " << diagnostics.qnodes_in_check
+                  << " cyclecutoffs " << diagnostics.cycle_cutoffs
+                  << " hardcaphits " << diagnostics.hard_cap_hits
+                  << " ttprobes " << tt.probes
+                  << " ttrawhits " << tt.key_hits
+                  << " ttusablehits " << usable_hits
+                  << " ttcutoffs " << tt.bound_cutoffs
+                  << " ttstores " << tt.stores
+                  << " ttsamekey " << tt.same_key_updates
+                  << " ttreplacements " << tt.replacements
+                  << " ttdrops " << tt.dropped_stores
+                  << " avgttslots " << average_slots_examined
+                  << " avgmovessearched " << average_moves_searched
+                  << " avgbestmoveindex " << average_best_move_index
+                  << " bestmovefirst " << percentage(
+                      diagnostics.best_move_first, diagnostics.move_order_nodes)
+                  << " maxbestmoveindex " << diagnostics.max_best_move_index
+                  << " firstmovecutoffs " << percentage(
+                      diagnostics.first_move_beta_cutoffs, diagnostics.beta_cutoffs)
+                  << " ttfill deferred";
+#endif
+        std::cout << '\n';
+        std::cout.flush();
+
+        board.make_move(best);
+    }
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    accumulate_tt_snapshot(total_diagnostics, white.get_search_diagnostics(true));
+    accumulate_tt_snapshot(total_diagnostics, black.get_search_diagnostics(true));
+#endif
+
+    const uint64_t nps = total_time_ms > 0
+        ? total_nodes * 1000ULL / total_time_ms
+        : 0;
+    std::cout << "info string bench game total plies " << plies_played
+              << " termination " << termination
+              << " time " << total_time_ms
+              << " nodes " << total_nodes
+              << " nps " << nps << '\n';
+    std::cout << "Nodes searched: " << total_nodes << '\n';
+    std::cout << "Nodes/second: " << nps << '\n';
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    print_search_diagnostics_summary(total_diagnostics, "", true);
 #endif
     std::cout.flush();
     return 0;

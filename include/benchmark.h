@@ -17,3 +17,7 @@ int run_benchmark(
     bool tt_bench = false,
     int depth = 12,
     std::size_t tt_size_mb = 128);
+int run_benchmark_game(
+    int movetime_ms = 200,
+    std::size_t tt_size_mb = 16,
+    int max_moves = 30);
