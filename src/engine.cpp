@@ -808,8 +808,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (!in_check) {
             if (scores[i] == std::numeric_limits<int>::min()) break;
             const bool quiet_check = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
+			const bool normal_score_window = std::abs(alpha) < MATE_THRESHOLD && std::abs(beta) < MATE_THRESHOLD;
 
-            if (quiet_check && qply > 0 && !see_move_ge(board, move, 0)) {
+            if (quiet_check && qply > 0 &&normal_score_window && !see_move_ge(board, move, 0)) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 increment_diagnostic(tls, SearchDiagCounter::QQuietCheckSeePrunes);
 #endif
