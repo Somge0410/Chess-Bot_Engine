@@ -217,6 +217,7 @@ enum class SearchDiagCounter : std::size_t {
     QCheckmates,
     QNoTacticalMoves,
     QSeePrunes,
+    QDeltaPrunes,
     QCaptureBetaCutoffs,
     QQuietCheckBetaCutoffs,
     QPromotionBetaCutoffs,
