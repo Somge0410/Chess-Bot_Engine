@@ -339,9 +339,9 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
 
     const TTDiagnostics& negamax_tt = d.tt[static_cast<std::size_t>(TTMode::Negamax)];
     constexpr const char* category_names[TT_PROBE_CATEGORY_COUNT] = {
-        "depth0", "depth>0", "PV", "nonPV", "incheck"
+        "depth>0", "PV", "nonPV", "incheck"
     };
-    print_diagnostic_section(p, "TT PROBE CATEGORIES");
+    print_diagnostic_section(p, "NEGAMAX TT PROBE CATEGORIES");
     for (std::size_t i = 0; i < TT_PROBE_CATEGORY_COUNT; ++i) {
         print_diagnostic_row(p, diagnostic_text("Category / ", category_names[i]),
             diagnostic_text("probes ", negamax_tt.category_probes[i],

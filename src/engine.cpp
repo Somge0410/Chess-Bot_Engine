@@ -230,7 +230,6 @@ void record_tt_probe_categories(TTDiagnostics* diagnostics, int depth, int alpha
         return;
     }
     std::array<bool, TT_PROBE_CATEGORY_COUNT> categories{
-        depth == 0,
         depth > 0,
         beta - alpha > 1,
         beta - alpha <= 1,

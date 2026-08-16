@@ -138,7 +138,7 @@ struct SearchResult {
 };
 #if ENABLE_QSEARCH_DIAGNOSTICS
 constexpr std::size_t TT_DIAGNOSTIC_MODE_COUNT = 2;
-constexpr std::size_t TT_PROBE_CATEGORY_COUNT = 5;
+constexpr std::size_t TT_PROBE_CATEGORY_COUNT = 4;
 constexpr std::size_t MOVE_ORDER_SOURCE_COUNT = 7;
 constexpr std::size_t MOVE_INDEX_BUCKET_COUNT = 7;
 constexpr std::size_t QPLY_BUCKET_COUNT = 7;
