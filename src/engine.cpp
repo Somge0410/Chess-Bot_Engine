@@ -695,6 +695,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         return 0;
     }
 #endif
+    int probe_score = -MATE_SCORE;
+    Move probe_move;
+    if (probe_tt(board.get_hash(), 0, alpha, beta, probe_score, probe_move, 0, TTMode::Quiescence)) {
+        return probe_score;
+    }
     if (checkers == CHECKERS_UNKNOWN) {
         checkers = board.get_checkers();
     }
@@ -708,31 +713,31 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
     const int qmove_list_index = std::min(qply, max_qply_index);
     MoveList& moves = tls->qmove_lists[qmove_list_index];
     moves.clear();
-	const uint64_t hash = board.get_hash();
+    const uint64_t hash = board.get_hash();
 
-    for(int previous =qply-2;previous >=0; previous -= 2) {
-        if (tls->qsearch_hashes[previous]== hash) {
+    for (int previous = qply - 2; previous >= 0; previous -= 2) {
+        if (tls->qsearch_hashes[previous] == hash) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
             tls->cycle_cutoffs++;
 #endif
             return 0;
         }
-	}
-	tls->qsearch_hashes[qply] = hash;
+    }
+    tls->qsearch_hashes[qply] = hash;
 
-    if(qply >= MAX_QUIET_PLY && !in_check) {
+    if (qply >= MAX_QUIET_PLY && !in_check) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(tls, SearchDiagCounter::QSoftCapStaticReturns);
 #endif
         return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
-	}
-    if (qply >=max_qply_index) {
+    }
+    if (qply >= max_qply_index) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (tls) {
             tls->hard_cap_hits++;
         }
 #endif
-        if(!in_check) {
+        if (!in_check) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QHardCapStaticReturns);
 #endif
@@ -765,11 +770,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             return stand_pat;
         }
         if (stand_pat > alpha) alpha = stand_pat;
-		const bool include_quiet_checks = qply == 0 || after_check_invasions;
-        if(include_quiet_checks)
+        const bool include_quiet_checks = qply == 0 || after_check_invasions;
+        if (include_quiet_checks)
             MoveGenerator::generate_captures_with_checks(board, moves, checkers);
         else
-			MoveGenerator::generate_captures(board, moves, checkers);
+            MoveGenerator::generate_captures(board, moves, checkers);
     }
 #if ENABLE_QSEARCH_DIAGNOSTICS
     increment_diagnostic(tls, SearchDiagCounter::QMovesGenerated, moves.size());
@@ -808,9 +813,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (!in_check) {
             if (scores[i] == std::numeric_limits<int>::min()) break;
             const bool quiet_check = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
-			const bool normal_score_window = std::abs(alpha) < MATE_THRESHOLD && std::abs(beta) < MATE_THRESHOLD;
+            const bool normal_score_window = std::abs(alpha) < MATE_THRESHOLD && std::abs(beta) < MATE_THRESHOLD;
 
-            if (quiet_check && qply > 0 &&normal_score_window && !see_move_ge(board, move, 0)) {
+            if (quiet_check && qply > 0 && normal_score_window && !see_move_ge(board, move, 0)) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 increment_diagnostic(tls, SearchDiagCounter::QQuietCheckSeePrunes);
 #endif
@@ -836,9 +841,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             tls->quiet_checks_searched++;
         }
 #endif
-        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check);
+        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers, in_check);
         board.undo_move(move);
-		++i;
+        ++i;
 #if ENABLE_QSEARCH_DIAGNOSTICS
         qmoves_searched++;
         increment_diagnostic(tls, SearchDiagCounter::QMovesSearched);
@@ -870,6 +875,10 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         increment_diagnostic(tls, SearchDiagCounter::QNoTacticalMoves);
     }
 #endif
+    if (qply == 0) {
+    Move empty;
+    store_tt(board.get_hash(), 0, alpha, beta, best_score, empty, 0, false, false, TTMode::Quiescence);
+    }
 
     return best_score;
 }
@@ -937,7 +946,7 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
     return tc;
 }
 bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score,
-    Move& out_move, int ply, bool depth_0, TTMode mode) {
+    Move& out_move, int ply, TTMode mode) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
     TTDiagnostics* diagnostics = active_tt_diagnostics(mode);
     const int diagnostic_alpha = alpha;
@@ -977,9 +986,10 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
             record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
                 tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::KeyHit);
         }
-#endif
-		tt_refresh_generation(slot, w, generation);
-
+#endif  
+        if (mode != TTMode::Quiescence) {
+            tt_refresh_generation(slot, w, generation);
+        }
         out_move = entry.move();
         const int score = score_from_tt(entry.score(), ply);
         out_score = score;
@@ -1009,7 +1019,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
                     diagnostics->invalid_move_rejections++;
                 }
 #endif
-                return false;
+                return entry.depth() < 1;
             }
 #if ENABLE_QSEARCH_DIAGNOSTICS
             if (diagnostics) {
@@ -1099,9 +1109,9 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
             flag_to_store = EXACT;
         }
     }
-
+	if (mode == TTMode::Quiescence) flag_to_store = EXACT;
 #if ENABLE_QSEARCH_DIAGNOSTICS
-    if (diagnostics) {
+    if (diagnostics&& mode!=TTMode::Quiescence) {
         switch (flag_to_store) {
         case EXACT:
             diagnostics->exact_stores++;

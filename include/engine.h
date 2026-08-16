@@ -533,7 +533,7 @@ class Engine {
         void sort_moves(MoveList& moves, const Board& board, int ply,const Move& tt_move, bool tt_depth_0 = false,ThreadLocalData* tls={}, const Move& previous_move=Move());
         int score_move(const Move& move, int ply,const Move& tt_move, bool depth_0,const Board& board,ThreadLocalData* tls, const Move& previous_move);
         TimeControlDecision decide_time_control(const Board& position, const SearchLimits& limits);
-        bool probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move, int ply, bool is_depth_0 = false, TTMode mode = TTMode::Negamax);
+        bool probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move, int ply, TTMode mode = TTMode::Negamax);
         bool store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score, Move& best_move, int ply, bool is_best_tempered, bool is_any_tempered = false, TTMode mode = TTMode::Negamax);
 		bool should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move);
 		int late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls,const Move& previous_move);
