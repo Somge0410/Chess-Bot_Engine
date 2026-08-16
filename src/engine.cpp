@@ -30,6 +30,8 @@
     X(exact_hits) \
     X(bound_hits) \
     X(bound_cutoffs) \
+    X(qentry_key_hits) \
+    X(qentry_usable_hits) \
     X(stores) \
     X(exact_stores) \
     X(lowerbound_stores) \
@@ -355,7 +357,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     tls->current_tt_probe_in_check = checkers != 0;
     tls->last_tt_probe_was_shallow = false;
 #endif
-    if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move, ply, is_from_depth_0)) {
+    if (depth > 0 && probe_tt(hash, depth, alpha, beta, tt_score, tt_move, ply,
+        TTMode::Negamax)) {
         bool is_draw = move_could_result_in_repetition(board, tt_move);
         //is_draw = false;
         if (!is_draw) {
@@ -695,6 +698,16 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         return 0;
     }
 #endif
+    const uint64_t hash = board.get_hash();
+    const int original_alpha = alpha;
+    if (qply == 0) {
+        int probe_score = -MATE_SCORE;
+        Move probe_move;
+        if (probe_tt(hash, 0, alpha, beta, probe_score, probe_move, search_ply,
+            TTMode::Quiescence)) {
+            return probe_score;
+        }
+    }
     if (checkers == CHECKERS_UNKNOWN) {
         checkers = board.get_checkers();
     }
@@ -708,7 +721,6 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
     const int qmove_list_index = std::min(qply, max_qply_index);
     MoveList& moves = tls->qmove_lists[qmove_list_index];
     moves.clear();
-	const uint64_t hash = board.get_hash();
 
     for(int previous =qply-2;previous >=0; previous -= 2) {
         if (tls->qsearch_hashes[previous]== hash) {
@@ -753,7 +765,13 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QCheckmates);
 #endif
-            return -MATE_SCORE + search_ply;
+            const int checkmate_score = -MATE_SCORE + search_ply;
+            if (qply == 0) {
+                Move no_move;
+                store_tt(hash, 0, original_alpha, beta, checkmate_score, no_move,
+                    search_ply, false, false, TTMode::Quiescence);
+            }
+            return checkmate_score;
         }
     }
     else {
@@ -762,6 +780,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QStandPatCutoffs);
 #endif
+            if (qply == 0) {
+                Move no_move;
+                store_tt(hash, 0, original_alpha, beta, stand_pat, no_move,
+                    search_ply, false, false, TTMode::Quiescence);
+            }
             return stand_pat;
         }
         if (stand_pat > alpha) alpha = stand_pat;
@@ -776,6 +799,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 #endif
 
     int best_score = in_check ? -MATE_SCORE : alpha;
+    Move best_move;
     int scores[256];
     score_qsearch_moves(moves, scores);
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -818,7 +842,10 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         increment_diagnostic(tls, SearchDiagCounter::QMovesSearched);
 #endif
 
-        if (score > best_score) best_score = score;
+        if (score > best_score) {
+            best_score = score;
+            best_move = move;
+        }
         if (score > alpha) alpha = score;
         if (alpha >= beta) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -844,7 +871,10 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         increment_diagnostic(tls, SearchDiagCounter::QNoTacticalMoves);
     }
 #endif
-
+    if (qply == 0 && !stop_search.load(std::memory_order_relaxed)) {
+        store_tt(hash, 0, original_alpha, beta, best_score, best_move, search_ply,
+            false, false, TTMode::Quiescence);
+    }
     return best_score;
 }
 double interpolate_phase(double phase, double endgame_value, double midgame_value, double opening_value) {
@@ -911,7 +941,7 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
     return tc;
 }
 bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score,
-    Move& out_move, int ply, bool depth_0, TTMode mode) {
+    Move& out_move, int ply, TTMode mode) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
     TTDiagnostics* diagnostics = active_tt_diagnostics(mode);
     const int diagnostic_alpha = alpha;
@@ -948,11 +978,14 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (diagnostics) {
             diagnostics->key_hits++;
+            if (entry.depth() == 0) {
+                diagnostics->qentry_key_hits++;
+            }
             record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
                 tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::KeyHit);
         }
 #endif
-		tt_refresh_generation(slot, w, generation);
+        tt_refresh_generation(slot, w, generation);
 
         out_move = entry.move();
         const int score = score_from_tt(entry.score(), ply);
@@ -977,7 +1010,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
         }
         int a = alpha, b = beta;
         if (entry.flag() == EXACT) {
-            if (out_move.from_square == NO_SQUARE) {
+            if (out_move.from_square == NO_SQUARE && mode != TTMode::Quiescence) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 if (diagnostics) {
                     diagnostics->invalid_move_rejections++;
@@ -988,6 +1021,9 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 #if ENABLE_QSEARCH_DIAGNOSTICS
             if (diagnostics) {
                 diagnostics->exact_hits++;
+                if (entry.depth() == 0) {
+                    diagnostics->qentry_usable_hits++;
+                }
                 record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
                     tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::UsableHit);
             }
@@ -1008,7 +1044,7 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
             hits = true;
         }
         if (a >= b) {
-            if (out_move.from_square == NO_SQUARE) {
+            if (out_move.from_square == NO_SQUARE && mode != TTMode::Quiescence) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 if (diagnostics) {
                     diagnostics->invalid_move_rejections++;
@@ -1019,6 +1055,9 @@ bool Engine::probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_sc
 #if ENABLE_QSEARCH_DIAGNOSTICS
             if (diagnostics) {
                 diagnostics->bound_cutoffs++;
+                if (entry.depth() == 0) {
+                    diagnostics->qentry_usable_hits++;
+                }
                 record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
                     tls_data.current_tt_probe_in_check, TTProbeDiagnosticEvent::UsableHit);
                 record_tt_probe_categories(diagnostics, depth, diagnostic_alpha, diagnostic_beta,
@@ -1073,7 +1112,6 @@ bool Engine::store_tt(uint64_t hash, int depth, int original_alpha, int beta, in
             flag_to_store = EXACT;
         }
     }
-
 #if ENABLE_QSEARCH_DIAGNOSTICS
     if (diagnostics) {
         switch (flag_to_store) {
@@ -2023,10 +2061,8 @@ std::string Engine::create_pv_string(const Board& board, const Move& best_move, 
         uint64_t hash = b.get_hash();
         Move tt_move;
         int tt_score;
-        bool depth_0 = false;
-
         // depth=0 akzeptiert jeden TT-Eintrag mit depth>=0
-        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, i, depth_0,
+        if (!probe_tt(hash, 0, -MATE_SCORE, MATE_SCORE, tt_score, tt_move, i,
             TTMode::PrincipalVariation))
             break;
         if (tt_move.from_square == NO_SQUARE || tt_move.to_square == NO_SQUARE)

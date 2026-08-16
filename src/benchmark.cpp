@@ -63,6 +63,12 @@ void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
         diagnostic_text(diagnostics.bound_hits, "  (", percentage(diagnostics.bound_hits, diagnostics.probes), "% of probes)"));
     print_diagnostic_row(prefix, "Bound cutoffs",
         diagnostic_text(diagnostics.bound_cutoffs, "  (", percentage(diagnostics.bound_cutoffs, diagnostics.probes), "% of probes)"));
+    print_diagnostic_row(prefix, "Q-entry key hits",
+        diagnostic_text(diagnostics.qentry_key_hits, "  (",
+            percentage(diagnostics.qentry_key_hits, diagnostics.key_hits), "% of key hits)"));
+    print_diagnostic_row(prefix, "Q-entry usable hits",
+        diagnostic_text(diagnostics.qentry_usable_hits, "  (",
+            percentage(diagnostics.qentry_usable_hits, usable_hits), "% of usable hits)"));
     print_diagnostic_row(prefix, "Shallow score rejections",
         diagnostic_text(diagnostics.shallow_hits, "  (", percentage(diagnostics.shallow_hits, diagnostics.key_hits), "% of key hits)"));
     print_diagnostic_row(prefix, "Tempered rejections",
@@ -76,6 +82,11 @@ void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
         : 0.0;
     print_diagnostic_row(prefix, "Average slots examined", diagnostic_text(average_slots));
     print_diagnostic_row(prefix, "Stores", diagnostic_text(diagnostics.stores));
+    const uint64_t successful_stores = diagnostics.same_key_updates
+        + diagnostics.empty_inserts + diagnostics.replacements;
+    print_diagnostic_row(prefix, "Successful stores",
+        diagnostic_text(successful_stores, "  (",
+            percentage(successful_stores, diagnostics.stores), "% of attempts)"));
     print_diagnostic_row(prefix, "Store flag / exact", diagnostic_text(diagnostics.exact_stores));
     print_diagnostic_row(prefix, "Store flag / lower bound", diagnostic_text(diagnostics.lowerbound_stores));
     print_diagnostic_row(prefix, "Store flag / upper bound", diagnostic_text(diagnostics.upperbound_stores));
