@@ -746,7 +746,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
     }
 
-    int stand_pat = MATE_SCORE;
+    int stand_pat = -MATE_SCORE;
     if (in_check) {
         MoveGenerator::generate_moves(board, moves, checkers);
         if (moves.empty()) {
@@ -800,15 +800,20 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
                 continue;
             }
         }
-        bool delta_candidate=move.piece_captured !=PieceType::NONE && 
-			move.promotion_piece == PieceType::NONE &&
-			std::abs(alpha) < MATE_THRESHOLD && 
-			stand_pat + PIECE_VALUES_MG[to_int(move.piece_captured)] + DELTA_MARGIN < alpha;
+        const bool delta_candidate = !in_check &&
+            move.piece_captured != PieceType::NONE &&
+            move.promotion_piece == PieceType::NONE &&
+            std::abs(alpha) < MATE_THRESHOLD &&
+            stand_pat + PIECE_VALUES_MG[to_int(move.piece_captured)] + DELTA_MARGIN < alpha;
 
         board.make_move(move);
         const uint64_t child_checkers = board.get_checkers();
         if (delta_candidate && child_checkers == 0) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::QDeltaPrunes);
+#endif
             board.undo_move(move);
+            ++i;
             continue;
         }
 #if ENABLE_QSEARCH_DIAGNOSTICS
