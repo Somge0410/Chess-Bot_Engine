@@ -199,6 +199,8 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     print_diagnostic_row(p, "Moves searched", diagnostic_text(value(SearchDiagCounter::QMovesSearched)));
     print_diagnostic_row(p, "Moves SEE-pruned", diagnostic_text(value(SearchDiagCounter::QSeePrunes)));
     print_diagnostic_row(p, "Moves delta-pruned", diagnostic_text(value(SearchDiagCounter::QDeltaPrunes)));
+    print_diagnostic_row(p, "Quiet checks SEE-pruned",
+        diagnostic_text(value(SearchDiagCounter::QQuietCheckSeePrunes)));
     print_diagnostic_row(p, "Beta cutoffs / capture",
         diagnostic_text(value(SearchDiagCounter::QCaptureBetaCutoffs)));
     print_diagnostic_row(p, "Beta cutoffs / quiet check",

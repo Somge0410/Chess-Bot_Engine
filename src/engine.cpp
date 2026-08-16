@@ -805,7 +805,19 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             move.promotion_piece == PieceType::NONE &&
             std::abs(alpha) < MATE_THRESHOLD &&
             stand_pat + PIECE_VALUES_MG[to_int(move.piece_captured)] + DELTA_MARGIN < alpha;
+        if (!in_check) {
+            if (scores[i] == std::numeric_limits<int>::min()) break;
+            const bool quiet_check = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
 
+            if (quiet_check && qply > 0 && !see_move_ge(board, move, 0)) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::QQuietCheckSeePrunes);
+#endif
+                ++i;
+                continue;
+            }
+
+        }
         board.make_move(move);
         const uint64_t child_checkers = board.get_checkers();
         if (delta_candidate && child_checkers == 0) {
@@ -1367,7 +1379,10 @@ void Engine::score_qsearch_moves(const MoveList& moves, int* scores) {
 		const Move& m = moves[i];
         int victim = PIECE_VALUES_MG[to_int(m.piece_captured)]/100;
         int attacker = PIECE_VALUES_MG[to_int(m.piece_moved)]/100;
-        scores[i] += victim - attacker;
+        scores[i] += victim*16 - attacker;
+        if(m.promotion_piece != PieceType::NONE) {
+            scores[i] += PIECE_VALUES_MG[to_int(m.promotion_piece)];
+		}
     }
 }
 int Engine::relevant_pawn_push(const Board& board, const Move& move) {

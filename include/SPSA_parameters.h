@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // For Pruning and search
 inline int FUTILITY_MARGIN_D1 = 244;
