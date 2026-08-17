@@ -808,10 +808,12 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (tls && !in_check &&
             move.piece_captured == PieceType::NONE &&
             move.promotion_piece == PieceType::NONE && child_checkers != 0) {
-			quiet_check_count++;
             tls->quiet_checks_searched++;
         }
-#endif
+#endif  
+        if(!in_check && move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE) {
+            ++quiet_check_count;
+		}
         int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check,quiet_check_count);
         board.undo_move(move);
 		++i;
