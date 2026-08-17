@@ -664,7 +664,7 @@ void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& 
     for (size_t i = 0; i < moves.size(); ++i) moves[i]=scored[i].second;
 }
 int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply,
-    ThreadLocalData* tls, uint64_t checkers, bool after_check_invasions) {
+    ThreadLocalData* tls, uint64_t checkers, bool after_check_invasions, int quiet_check_count) {
     if (stop_search.load(std::memory_order_relaxed)) {
         return 0;
     }
@@ -719,13 +719,18 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
 	}
 	tls->qsearch_hashes[qply] = hash;
-
-    if(qply >= MAX_QUIET_PLY && !in_check) {
+	int effective_qply = MAX_QUIET_PLY + std::min(quiet_check_count, MAX_QUIET_CHECKS);
+    if (qply >= effective_qply && !in_check) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(tls, SearchDiagCounter::QSoftCapStaticReturns);
-#endif
-        return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
-	}
+#endif  
+        if (quiet_check_count > MAX_QUIET_CHECKS) {
+            return 0;
+        }
+        else {
+            return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+        }
+    }
     if (qply >=max_qply_index) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (tls) {
@@ -807,10 +812,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (tls && !in_check &&
             move.piece_captured == PieceType::NONE &&
             move.promotion_piece == PieceType::NONE && child_checkers != 0) {
+			quiet_check_count++;
             tls->quiet_checks_searched++;
         }
 #endif
-        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check);
+        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check,quiet_check_count);
         board.undo_move(move);
 		++i;
 #if ENABLE_QSEARCH_DIAGNOSTICS

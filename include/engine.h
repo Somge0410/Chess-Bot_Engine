@@ -515,7 +515,8 @@ class Engine {
         SearchResult negamax(Board & board, int depth, int alpha, int beta, int ply,ThreadLocalData* tls,
             const Move& previous_move=Move(), uint64_t checkers=CHECKERS_UNKNOWN, bool null_move_allowed=true);
         int quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply,
-            ThreadLocalData* tls, uint64_t checkers=CHECKERS_UNKNOWN, bool after_check_invasion=false);
+            ThreadLocalData* tls, uint64_t checkers=CHECKERS_UNKNOWN, bool after_check_invasion=false,
+            int quiet_check_count=0);
         Move best_move_this_iteration;
         std::vector<TTCluster> tt;/*
         Move killer_moves[128][2];
