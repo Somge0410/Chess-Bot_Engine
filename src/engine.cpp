@@ -719,16 +719,12 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
 	}
 	tls->qsearch_hashes[qply] = hash;
-	int effective_qply = MAX_QUIET_PLY + std::min(quiet_check_count, MAX_QUIET_CHECKS);
-    if (qply >= effective_qply && !in_check) {
+    if (!in_check) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(tls, SearchDiagCounter::QSoftCapStaticReturns);
 #endif  
         if (quiet_check_count > MAX_QUIET_CHECKS) {
             return 0;
-        }
-        else {
-            return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
         }
     }
     if (qply >=max_qply_index) {
