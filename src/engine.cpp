@@ -242,6 +242,28 @@ void record_ordinary_quiet_cutoff(ThreadLocalData* tls, uint32_t moves_searched,
     }
 }
 
+static_assert(diagnostic_index(SearchDiagCounter::ShadowLmpDepth2Candidates) ==
+    diagnostic_index(SearchDiagCounter::ShadowLmpDepth1Candidates) + 5);
+
+void record_shadow_lmp_result(ThreadLocalData* tls, int depth, bool became_best,
+    bool raised_alpha, bool beta_cutoff, uint64_t subtree_nodes) {
+    const SearchDiagCounter base = depth == 1
+        ? SearchDiagCounter::ShadowLmpDepth1Candidates
+        : SearchDiagCounter::ShadowLmpDepth2Candidates;
+    increment_diagnostic(tls, base);
+    if (became_best) {
+        increment_diagnostic(tls, static_cast<SearchDiagCounter>(diagnostic_index(base) + 1));
+    }
+    if (raised_alpha) {
+        increment_diagnostic(tls, static_cast<SearchDiagCounter>(diagnostic_index(base) + 2));
+    }
+    if (beta_cutoff) {
+        increment_diagnostic(tls, static_cast<SearchDiagCounter>(diagnostic_index(base) + 3));
+    }
+    increment_diagnostic(tls, static_cast<SearchDiagCounter>(diagnostic_index(base) + 4),
+        subtree_nodes);
+}
+
 SearchDiagCounter qply_bucket(int qply) {
     std::size_t offset = 0;
     if (qply <= 0) offset = 0;
@@ -373,6 +395,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     }
     if (tls && depth > 0) {
         tls->nodes++;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        tls->diagnostic_nodes_visited++;
+#endif
         tls->flush_counters(this);
         if (tls->should_check_time() && is_time_up()) {
             stop_search.store(true, std::memory_order_relaxed);
@@ -561,6 +586,14 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         }
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (reduction > 0) increment_diagnostic(tls, SearchDiagCounter::LmrReductions);
+        const int shadow_lmp_moves_to_keep = depth == 1
+            ? SHADOW_LMP_DEPTH1_MOVES_TO_KEEP
+            : SHADOW_LMP_DEPTH2_MOVES_TO_KEEP;
+        const bool shadow_lmp_precheck = (depth == 1 || depth == 2) &&
+            !is_pv_node && !king_is_in_check &&
+            moves_searched >= shadow_lmp_moves_to_keep && move.is_quiet() &&
+            current_move_source == MoveOrderSource::History && !dangerous_passer_push &&
+            std::abs(alpha) < MATE_THRESHOLD && std::abs(beta) < MATE_THRESHOLD;
 #endif
         moves_searched++;
         //Now make the move
@@ -576,6 +609,14 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             increment_diagnostic(tls, SearchDiagCounter::CheckExtensions);
 #endif
 		}
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        const bool shadow_lmp_candidate = shadow_lmp_precheck && child_checkers == 0 &&
+            tls->shadow_lmp_nesting == 0;
+        const int shadow_lmp_alpha_before = alpha;
+        const int shadow_lmp_best_before = best_score;
+        const uint64_t shadow_lmp_nodes_before = tls->diagnostic_nodes_visited;
+        if (shadow_lmp_candidate) tls->shadow_lmp_nesting++;
+#endif
         int evaluation;
         if (first) { 
 			SearchResult first_result = negamax(board, depth - 1 + extension, -beta, -alpha, ply + 1,tls,move,child_checkers);
@@ -618,6 +659,19 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         is_any_tempered |= current_move_tempered;
         board.undo_move(move);
 		bool quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        if (shadow_lmp_candidate) {
+            tls->shadow_lmp_nesting--;
+            if (!stop_search.load(std::memory_order_relaxed)) {
+                record_shadow_lmp_result(tls, depth,
+                    evaluation > shadow_lmp_best_before,
+                    evaluation > shadow_lmp_alpha_before,
+                    evaluation >= beta,
+                    tls->diagnostic_nodes_visited - shadow_lmp_nodes_before);
+            }
+        }
+#endif
 
         if (quiet) {
 			searched_quiets.push_back(move);
@@ -727,6 +781,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
     if (tls) {
         tls->qnodes++;
 #if ENABLE_QSEARCH_DIAGNOSTICS
+        tls->diagnostic_nodes_visited++;
         tls->qply_sum += static_cast<uint64_t>(qply);
         tls->max_qply = std::max(tls->max_qply, static_cast<uint32_t>(qply));
         increment_diagnostic(tls, qply_bucket(qply));
