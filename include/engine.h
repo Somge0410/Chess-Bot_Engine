@@ -137,9 +137,6 @@ struct SearchResult {
     bool is_tempered=false;
 };
 
-constexpr int LMP_DEPTH1_MOVES_TO_KEEP = 8;
-constexpr int LMP_DEPTH2_MOVES_TO_KEEP = 16;
-
 #if ENABLE_QSEARCH_DIAGNOSTICS
 constexpr std::size_t TT_DIAGNOSTIC_MODE_COUNT = 2;
 constexpr std::size_t TT_PROBE_CATEGORY_COUNT = 5;
