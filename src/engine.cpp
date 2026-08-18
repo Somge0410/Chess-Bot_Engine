@@ -387,6 +387,28 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     increment_diagnostic(tls, is_pv_node ? SearchDiagCounter::PvNodes : SearchDiagCounter::NonPvNodes);
     if (king_is_in_check) increment_diagnostic(tls, SearchDiagCounter::InCheckNodes);
 #endif
+
+    // Internal iterative reduction: without a TT move, search one ply less.
+    // Include PV and non-PV nodes, but preserve full depth while in check.
+    const bool iir_candidate = depth >= 4 && tt_move.from_square == NO_SQUARE;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    if (iir_candidate) increment_diagnostic(tls, SearchDiagCounter::IirCandidates);
+#endif
+    if (iir_candidate && king_is_in_check) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::IirInCheckSkips);
+#endif
+    }
+    else if (iir_candidate) {
+        --depth;
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::IirReductions);
+        increment_diagnostic(tls, is_pv_node
+            ? SearchDiagCounter::IirPvReductions
+            : SearchDiagCounter::IirNonPvReductions);
+#endif
+    }
+
     const bool nmp_candidate = null_move_allowed && !is_pv_node && depth >= NMP_MIN_DEPTH && !king_is_in_check &&
         std::abs(beta) < MATE_THRESHOLD && board.has_enough_material_for_nmp();
 #if ENABLE_QSEARCH_DIAGNOSTICS

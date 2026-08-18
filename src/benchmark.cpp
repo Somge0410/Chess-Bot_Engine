@@ -227,6 +227,21 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     print_diagnostic_row(p, "NMP cutoffs",
         diagnostic_text(value(SearchDiagCounter::NmpCutoffs), "  (",
             rate(SearchDiagCounter::NmpCutoffs, SearchDiagCounter::NmpSearches), "% of searches)"));
+    print_diagnostic_row(p, "IIR candidates / no TT move",
+        diagnostic_text(value(SearchDiagCounter::IirCandidates), "  (",
+            percentage(value(SearchDiagCounter::IirCandidates), d.main_nodes), "% of main nodes)"));
+    print_diagnostic_row(p, "IIR reductions",
+        diagnostic_text(value(SearchDiagCounter::IirReductions), "  (",
+            rate(SearchDiagCounter::IirReductions, SearchDiagCounter::IirCandidates), "% of candidates)"));
+    print_diagnostic_row(p, "IIR reductions / PV",
+        diagnostic_text(value(SearchDiagCounter::IirPvReductions), "  (",
+            rate(SearchDiagCounter::IirPvReductions, SearchDiagCounter::IirReductions), "% of reductions)"));
+    print_diagnostic_row(p, "IIR reductions / non-PV",
+        diagnostic_text(value(SearchDiagCounter::IirNonPvReductions), "  (",
+            rate(SearchDiagCounter::IirNonPvReductions, SearchDiagCounter::IirReductions), "% of reductions)"));
+    print_diagnostic_row(p, "IIR skipped / in check",
+        diagnostic_text(value(SearchDiagCounter::IirInCheckSkips), "  (",
+            rate(SearchDiagCounter::IirInCheckSkips, SearchDiagCounter::IirCandidates), "% of candidates)"));
     print_diagnostic_row(p, "Futility checks", diagnostic_text(value(SearchDiagCounter::FutilityChecks)));
     print_diagnostic_row(p, "Futility prunes",
         diagnostic_text(value(SearchDiagCounter::FutilityPrunes), "  (",
