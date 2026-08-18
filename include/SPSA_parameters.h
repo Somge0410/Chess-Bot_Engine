@@ -15,7 +15,7 @@ inline int LMR_REDUCTION_AMOUNT = 2;
 // 
 
 
-inline int LMP_DEPTH1_MOVES_TO_KEEP = 16;
+inline int LMP_DEPTH1_MOVES_TO_KEEP = 150;
 inline int LMP_DEPTH2_MOVES_TO_KEEP = 16;
 // --- NEU: Null Move Pruning (NMP) ---
 inline int NMP_MIN_DEPTH = 5;

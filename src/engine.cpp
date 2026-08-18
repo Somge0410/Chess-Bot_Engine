@@ -560,7 +560,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         const int lmp_moves_to_keep = depth == 1
             ? LMP_DEPTH1_MOVES_TO_KEEP
             : LMP_DEPTH2_MOVES_TO_KEEP;
-        bool lmp_precheck = (depth == 2) &&
+        bool lmp_precheck = (depth == 1 || depth == 2) &&
             !is_pv_node && !king_is_in_check &&
             moves_searched >= lmp_moves_to_keep && move.is_quiet() &&
             !dangerous_passer_push &&
