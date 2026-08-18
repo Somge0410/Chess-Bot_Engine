@@ -358,34 +358,22 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     print_diagnostic_row(p, "TT returns rejected by repetition",
         diagnostic_text(value(SearchDiagCounter::TTRepetitionRejectedReturns)));
 
-    print_diagnostic_section(p, "SHADOW LATE-MOVE PRUNING");
-    print_diagnostic_row(p, "Status", "observe-only; no moves are pruned");
-    print_diagnostic_row(p, "Candidate thresholds",
-        diagnostic_text("depth 1 move ", SHADOW_LMP_DEPTH1_MOVES_TO_KEEP + 1,
-            "+ | depth 2 move ", SHADOW_LMP_DEPTH2_MOVES_TO_KEEP + 1, '+'));
+    print_diagnostic_section(p, "LATE-MOVE PRUNING");
+    print_diagnostic_row(p, "Status", "enabled; eligible moves are pruned");
+    print_diagnostic_row(p, "Thresholds",
+        diagnostic_text("depth 1 move ", LMP_DEPTH1_MOVES_TO_KEEP + 1,
+            "+ | depth 2 move ", LMP_DEPTH2_MOVES_TO_KEEP + 1, '+'));
     print_diagnostic_row(p, "Eligibility",
         "nonPV, not in check, ordinary quiet, no check/passer/mate window, survived futility");
-    print_diagnostic_row(p, "Node accounting",
-        "outermost candidate subtrees only; nested candidates suppressed");
-    const auto print_shadow_lmp_depth = [&](int depth, SearchDiagCounter base) {
-        const std::size_t base_index = static_cast<std::size_t>(base);
-        const uint64_t candidates = d.detail[base_index];
-        const uint64_t became_best = d.detail[base_index + 1];
-        const uint64_t alpha_raises = d.detail[base_index + 2];
-        const uint64_t beta_cutoffs = d.detail[base_index + 3];
-        const uint64_t subtree_nodes = d.detail[base_index + 4];
-        print_diagnostic_row(p, diagnostic_text("Depth ", depth, " outcomes"),
-            diagnostic_text("candidates ", candidates,
-                " | best ", became_best, " (", percentage(became_best, candidates), "%)",
-                " | alpha ", alpha_raises, " (", percentage(alpha_raises, candidates), "%)",
-                " | beta ", beta_cutoffs, " (", percentage(beta_cutoffs, candidates), "%)"));
-        print_diagnostic_row(p, diagnostic_text("Depth ", depth, " candidate nodes"),
-            diagnostic_text("total ", subtree_nodes, " (",
-                percentage(subtree_nodes, total_nodes), "% of search) | average ",
-                candidates > 0 ? static_cast<double>(subtree_nodes) / candidates : 0.0));
-    };
-    print_shadow_lmp_depth(1, SearchDiagCounter::ShadowLmpDepth1Candidates);
-    print_shadow_lmp_depth(2, SearchDiagCounter::ShadowLmpDepth2Candidates);
+    print_diagnostic_row(p, "Move-count basis",
+        "previously searched moves; pruned moves do not increment the count");
+    print_diagnostic_row(p, "Depth 1 prunes",
+        diagnostic_text(value(SearchDiagCounter::LmpDepth1Prunes)));
+    print_diagnostic_row(p, "Depth 2 prunes",
+        diagnostic_text(value(SearchDiagCounter::LmpDepth2Prunes)));
+    print_diagnostic_row(p, "Total LMP prunes",
+        diagnostic_text(value(SearchDiagCounter::LmpDepth1Prunes) +
+            value(SearchDiagCounter::LmpDepth2Prunes)));
 
     print_diagnostic_section(p, "BRANCHING");
     const auto print_node_class = [&](const char* name, SearchDiagCounter node_counter,

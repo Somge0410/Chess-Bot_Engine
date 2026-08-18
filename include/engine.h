@@ -136,6 +136,10 @@ struct SearchResult {
     Move best_move;
     bool is_tempered=false;
 };
+
+constexpr int LMP_DEPTH1_MOVES_TO_KEEP = 8;
+constexpr int LMP_DEPTH2_MOVES_TO_KEEP = 16;
+
 #if ENABLE_QSEARCH_DIAGNOSTICS
 constexpr std::size_t TT_DIAGNOSTIC_MODE_COUNT = 2;
 constexpr std::size_t TT_PROBE_CATEGORY_COUNT = 5;
@@ -143,8 +147,6 @@ constexpr std::size_t MOVE_ORDER_SOURCE_COUNT = 7;
 constexpr std::size_t MOVE_INDEX_BUCKET_COUNT = 7;
 constexpr std::size_t ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT = 10;
 constexpr std::size_t ORDINARY_QUIET_CUTOFF_LOW_DEPTH_COUNT = 3;
-constexpr int SHADOW_LMP_DEPTH1_MOVES_TO_KEEP = 8;
-constexpr int SHADOW_LMP_DEPTH2_MOVES_TO_KEEP = 16;
 constexpr std::size_t QPLY_BUCKET_COUNT = 7;
 constexpr std::size_t TT_CLUSTER_OCCUPANCY_BUCKET_COUNT = 5;
 constexpr std::size_t DIAGNOSTIC_ITERATION_DEPTH_COUNT = 64;
@@ -175,16 +177,8 @@ enum class SearchDiagCounter : std::size_t {
     PvsFullWindowResearches,
     CheckExtensions,
 
-    ShadowLmpDepth1Candidates,
-    ShadowLmpDepth1BecameBest,
-    ShadowLmpDepth1AlphaRaises,
-    ShadowLmpDepth1BetaCutoffs,
-    ShadowLmpDepth1SubtreeNodes,
-    ShadowLmpDepth2Candidates,
-    ShadowLmpDepth2BecameBest,
-    ShadowLmpDepth2AlphaRaises,
-    ShadowLmpDepth2BetaCutoffs,
-    ShadowLmpDepth2SubtreeNodes,
+    LmpDepth1Prunes,
+    LmpDepth2Prunes,
 
     BestSourceTT,
     BestSourceWinningCapture,
@@ -444,8 +438,6 @@ struct ThreadLocalData {
         beta_cutoff_index_sum = 0;
         first_move_beta_cutoffs = 0;
         max_best_move_index = 0;
-        diagnostic_nodes_visited = 0;
-        shadow_lmp_nesting = 0;
         detail_diagnostics.fill(0);
         for (TTDiagnostics& diagnostics : tt_diagnostics) {
             diagnostics = {};
@@ -491,8 +483,6 @@ struct ThreadLocalData {
     uint64_t beta_cutoff_index_sum{ 0 };
     uint64_t first_move_beta_cutoffs{ 0 };
     uint32_t max_best_move_index{ 0 };
-    uint64_t diagnostic_nodes_visited{ 0 };
-    uint32_t shadow_lmp_nesting{ 0 };
     std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
     std::array<uint64_t, SEARCH_DIAG_COUNTER_COUNT> detail_diagnostics{};
     bool last_tt_probe_was_shallow{ false };
