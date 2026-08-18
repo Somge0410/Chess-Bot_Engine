@@ -141,6 +141,8 @@ constexpr std::size_t TT_DIAGNOSTIC_MODE_COUNT = 2;
 constexpr std::size_t TT_PROBE_CATEGORY_COUNT = 5;
 constexpr std::size_t MOVE_ORDER_SOURCE_COUNT = 7;
 constexpr std::size_t MOVE_INDEX_BUCKET_COUNT = 7;
+constexpr std::size_t ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT = 10;
+constexpr std::size_t ORDINARY_QUIET_CUTOFF_LOW_DEPTH_COUNT = 3;
 constexpr std::size_t QPLY_BUCKET_COUNT = 7;
 constexpr std::size_t TT_CLUSTER_OCCUPANCY_BUCKET_COUNT = 5;
 constexpr std::size_t DIAGNOSTIC_ITERATION_DEPTH_COUNT = 64;
@@ -200,6 +202,48 @@ enum class SearchDiagCounter : std::size_t {
     CutoffIndex9To16,
     CutoffIndex17To32,
     CutoffIndex33Plus,
+
+    OrdinaryQuietCutoffPct0To10,
+    OrdinaryQuietCutoffPct10To20,
+    OrdinaryQuietCutoffPct20To30,
+    OrdinaryQuietCutoffPct30To40,
+    OrdinaryQuietCutoffPct40To50,
+    OrdinaryQuietCutoffPct50To60,
+    OrdinaryQuietCutoffPct60To70,
+    OrdinaryQuietCutoffPct70To80,
+    OrdinaryQuietCutoffPct80To90,
+    OrdinaryQuietCutoffPct90To100,
+
+    OrdinaryQuietCutoffDepth0Pct0To10,
+    OrdinaryQuietCutoffDepth0Pct10To20,
+    OrdinaryQuietCutoffDepth0Pct20To30,
+    OrdinaryQuietCutoffDepth0Pct30To40,
+    OrdinaryQuietCutoffDepth0Pct40To50,
+    OrdinaryQuietCutoffDepth0Pct50To60,
+    OrdinaryQuietCutoffDepth0Pct60To70,
+    OrdinaryQuietCutoffDepth0Pct70To80,
+    OrdinaryQuietCutoffDepth0Pct80To90,
+    OrdinaryQuietCutoffDepth0Pct90To100,
+    OrdinaryQuietCutoffDepth1Pct0To10,
+    OrdinaryQuietCutoffDepth1Pct10To20,
+    OrdinaryQuietCutoffDepth1Pct20To30,
+    OrdinaryQuietCutoffDepth1Pct30To40,
+    OrdinaryQuietCutoffDepth1Pct40To50,
+    OrdinaryQuietCutoffDepth1Pct50To60,
+    OrdinaryQuietCutoffDepth1Pct60To70,
+    OrdinaryQuietCutoffDepth1Pct70To80,
+    OrdinaryQuietCutoffDepth1Pct80To90,
+    OrdinaryQuietCutoffDepth1Pct90To100,
+    OrdinaryQuietCutoffDepth2Pct0To10,
+    OrdinaryQuietCutoffDepth2Pct10To20,
+    OrdinaryQuietCutoffDepth2Pct20To30,
+    OrdinaryQuietCutoffDepth2Pct30To40,
+    OrdinaryQuietCutoffDepth2Pct40To50,
+    OrdinaryQuietCutoffDepth2Pct50To60,
+    OrdinaryQuietCutoffDepth2Pct60To70,
+    OrdinaryQuietCutoffDepth2Pct70To80,
+    OrdinaryQuietCutoffDepth2Pct80To90,
+    OrdinaryQuietCutoffDepth2Pct90To100,
 
     QPly0,
     QPly1,

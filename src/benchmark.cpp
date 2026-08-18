@@ -283,6 +283,55 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
         index_histogram(SearchDiagCounter::BestIndex1));
     print_diagnostic_row(p, "Beta-cutoff index counts",
         index_histogram(SearchDiagCounter::CutoffIndex1));
+
+    const auto quiet_cutoff_total = [&](SearchDiagCounter base) {
+        uint64_t total = 0;
+        for (std::size_t i = 0; i < ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT; ++i) {
+            total += d.detail[static_cast<std::size_t>(base) + i];
+        }
+        return total;
+    };
+    const auto quiet_cutoff_histogram = [&](SearchDiagCounter base, bool shares) {
+        const uint64_t total = quiet_cutoff_total(base);
+        std::ostringstream output;
+        if (shares) output << std::fixed << std::setprecision(2);
+        for (std::size_t i = 0; i < ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT; ++i) {
+            if (i > 0) output << " | ";
+            const uint64_t count = d.detail[static_cast<std::size_t>(base) + i];
+            if (shares) output << percentage(count, total) << '%';
+            else output << count;
+        }
+        return output.str();
+    };
+    const uint64_t ordinary_quiet_cutoff_total = quiet_cutoff_total(
+        SearchDiagCounter::OrdinaryQuietCutoffPct0To10);
+    print_diagnostic_row(p, "Ordinary-quiet cutoff scope",
+        "main non-root; excludes TT, killer, countermove, dangerous passer");
+    print_diagnostic_row(p, "Ordinary-quiet progress basis",
+        "searched cutoff index / generated legal moves");
+    print_diagnostic_row(p, "Ordinary-quiet progress buckets",
+        "0-10% | 10-20% | 20-30% | 30-40% | 40-50% | 50-60% | 60-70% | 70-80% | 80-90% | 90-100%");
+    print_diagnostic_row(p, "Ordinary-quiet cutoff counts",
+        quiet_cutoff_histogram(SearchDiagCounter::OrdinaryQuietCutoffPct0To10, false));
+    print_diagnostic_row(p, "Ordinary-quiet cutoff shares",
+        quiet_cutoff_histogram(SearchDiagCounter::OrdinaryQuietCutoffPct0To10, true));
+    print_diagnostic_row(p, "Ordinary-quiet cutoffs total",
+        diagnostic_text(ordinary_quiet_cutoff_total));
+    print_diagnostic_row(p, "Ordinary-quiet depth basis",
+        "0 = qsearch quiets; 1/2 = remaining main-search depth");
+    for (std::size_t depth = 0; depth < ORDINARY_QUIET_CUTOFF_LOW_DEPTH_COUNT; ++depth) {
+        const SearchDiagCounter base = static_cast<SearchDiagCounter>(
+            static_cast<std::size_t>(SearchDiagCounter::OrdinaryQuietCutoffDepth0Pct0To10) +
+            depth * ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT);
+        print_diagnostic_row(p,
+            depth == 0 ? "Depth 0 qsearch cutoff counts"
+                       : diagnostic_text("Depth ", depth, " cutoff counts"),
+            quiet_cutoff_histogram(base, false));
+        print_diagnostic_row(p,
+            depth == 0 ? "Depth 0 qsearch cutoff shares"
+                       : diagnostic_text("Depth ", depth, " cutoff shares"),
+            quiet_cutoff_histogram(base, true));
+    }
     print_diagnostic_row(p, "Move-order nodes", diagnostic_text(d.move_order_nodes));
     print_diagnostic_row(p, "Average moves searched",
         diagnostic_text(d.move_order_nodes > 0

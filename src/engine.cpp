@@ -197,6 +197,51 @@ SearchDiagCounter move_index_bucket(uint32_t index, bool cutoff) {
     return static_cast<SearchDiagCounter>(diagnostic_index(base) + offset);
 }
 
+constexpr std::size_t ordinary_quiet_cutoff_percentile_offset(
+    uint32_t moves_searched, uint32_t moves_generated) {
+    if (moves_searched == 0 || moves_generated == 0) return 0;
+
+    // Upper bounds are inclusive: with 100 generated moves, searched moves
+    // 1-10 map to the first bucket, 11-20 to the second, and so on.
+    const uint64_t scaled_index = static_cast<uint64_t>(moves_searched) *
+        ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT;
+    return std::min<std::size_t>(
+        static_cast<std::size_t>((scaled_index - 1) / moves_generated),
+        ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT - 1);
+}
+
+static_assert(ordinary_quiet_cutoff_percentile_offset(1, 100) == 0);
+static_assert(ordinary_quiet_cutoff_percentile_offset(10, 100) == 0);
+static_assert(ordinary_quiet_cutoff_percentile_offset(11, 100) == 1);
+static_assert(ordinary_quiet_cutoff_percentile_offset(100, 100) == 9);
+static_assert(diagnostic_index(SearchDiagCounter::OrdinaryQuietCutoffDepth1Pct0To10) ==
+    diagnostic_index(SearchDiagCounter::OrdinaryQuietCutoffDepth0Pct0To10) +
+        ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT);
+static_assert(diagnostic_index(SearchDiagCounter::OrdinaryQuietCutoffDepth2Pct0To10) ==
+    diagnostic_index(SearchDiagCounter::OrdinaryQuietCutoffDepth1Pct0To10) +
+        ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT);
+
+void record_ordinary_quiet_cutoff(ThreadLocalData* tls, uint32_t moves_searched,
+    uint32_t moves_generated, int search_depth, bool include_in_all_depths = true) {
+    if (!tls || moves_searched == 0 || moves_generated == 0) return;
+
+    const std::size_t percentile_offset = ordinary_quiet_cutoff_percentile_offset(
+        moves_searched, moves_generated);
+    if (include_in_all_depths) {
+        increment_diagnostic(tls, static_cast<SearchDiagCounter>(
+            diagnostic_index(SearchDiagCounter::OrdinaryQuietCutoffPct0To10) +
+            percentile_offset));
+    }
+    if (search_depth >= 0 &&
+        search_depth < static_cast<int>(ORDINARY_QUIET_CUTOFF_LOW_DEPTH_COUNT)) {
+        increment_diagnostic(tls, static_cast<SearchDiagCounter>(
+            diagnostic_index(SearchDiagCounter::OrdinaryQuietCutoffDepth0Pct0To10) +
+            static_cast<std::size_t>(search_depth) *
+                ORDINARY_QUIET_CUTOFF_PERCENTILE_BUCKET_COUNT +
+            percentile_offset));
+    }
+}
+
 SearchDiagCounter qply_bucket(int qply) {
     std::size_t offset = 0;
     if (qply <= 0) offset = 0;
@@ -253,8 +298,10 @@ void record_tt_probe_categories(TTDiagnostics* diagnostics, int depth, int alpha
     }
 }
 
-void record_move_order_diagnostics(ThreadLocalData* tls, uint32_t moves_searched,
-    uint32_t best_move_index, uint32_t beta_cutoff_index,
+void record_move_order_diagnostics(ThreadLocalData* tls, uint32_t moves_generated,
+    uint32_t moves_searched, uint32_t best_move_index, uint32_t beta_cutoff_index,
+    bool beta_cutoff_is_ordinary_quiet = false,
+    int search_depth = -1,
     MoveOrderSource best_source = MoveOrderSource::Unknown,
     MoveOrderSource cutoff_source = MoveOrderSource::Unknown) {
     if (!tls || moves_searched == 0 || best_move_index == 0) {
@@ -273,6 +320,10 @@ void record_move_order_diagnostics(ThreadLocalData* tls, uint32_t moves_searched
         tls->first_move_beta_cutoffs += beta_cutoff_index == 1;
         increment_diagnostic(tls, move_index_bucket(beta_cutoff_index, true));
         increment_move_source(tls, cutoff_source, true);
+        if (beta_cutoff_is_ordinary_quiet && moves_generated > 0) {
+            record_ordinary_quiet_cutoff(tls, beta_cutoff_index,
+                moves_generated, search_depth);
+        }
     }
 }
 #endif
@@ -467,6 +518,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     uint32_t beta_cutoff_index = 0;
     MoveOrderSource best_move_source = MoveOrderSource::Unknown;
     MoveOrderSource beta_cutoff_source = MoveOrderSource::Unknown;
+    bool beta_cutoff_is_ordinary_quiet = false;
     const bool shallow_tt_move = tls->last_tt_probe_was_shallow &&
         tt_move.from_square != NO_SQUARE;
 #endif
@@ -503,7 +555,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		}
         // Late Move Reduction
         int reduction = 0;
-        if (!board.is_dangerous_passer_push(move)) {
+        const bool dangerous_passer_push = board.is_dangerous_passer_push(move);
+        if (!dangerous_passer_push) {
             reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
         }
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -594,6 +647,8 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #if ENABLE_QSEARCH_DIAGNOSTICS
             beta_cutoff_index = static_cast<uint32_t>(moves_searched);
             beta_cutoff_source = current_move_source;
+            beta_cutoff_is_ordinary_quiet = quiet &&
+                current_move_source == MoveOrderSource::History && !dangerous_passer_push;
 #endif
 			update_history_killer(move, depth, ply,tls,previous_move,searched_quiets);
             break;
@@ -610,8 +665,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         increment_diagnostic(tls, SearchDiagCounter::ShallowTTMoveBest);
         if (beta_cutoff_index > 0) increment_diagnostic(tls, SearchDiagCounter::ShallowTTMoveCutoff);
     }
-    record_move_order_diagnostics(tls, static_cast<uint32_t>(moves_searched),
-        best_move_discovery_index, beta_cutoff_index, best_move_source, beta_cutoff_source);
+    record_move_order_diagnostics(tls, static_cast<uint32_t>(moves.size()),
+        static_cast<uint32_t>(moves_searched), best_move_discovery_index, beta_cutoff_index,
+        beta_cutoff_is_ordinary_quiet, depth, best_move_source, beta_cutoff_source);
 #endif
     bool is_result_tempered = store_tt(hash, depth, original_alpha, beta, best_score,
         best_move, ply, is_best_move_tempered, is_any_tempered);
@@ -822,6 +878,11 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (score > alpha) alpha = score;
         if (alpha >= beta) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
+            if (move.is_quiet() && !board.is_dangerous_passer_push(move)) {
+                record_ordinary_quiet_cutoff(tls,
+                    static_cast<uint32_t>(qmoves_searched),
+                    static_cast<uint32_t>(moves.size()), 0, false);
+            }
             if (in_check) {
                 increment_diagnostic(tls, SearchDiagCounter::QEvasionBetaCutoffs);
             }
@@ -1869,8 +1930,8 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
     if (!stop_search.load(std::memory_order_relaxed)) {
         increment_diagnostic(tls, SearchDiagCounter::MainMovesSearched, root_moves_searched);
         increment_diagnostic(tls, SearchDiagCounter::PvMovesSearched, root_moves_searched);
-        record_move_order_diagnostics(tls, root_moves_searched,
-            root_best_move_discovery_index, root_beta_cutoff_index);
+        record_move_order_diagnostics(tls, static_cast<uint32_t>(root_moves.size()),
+            root_moves_searched, root_best_move_discovery_index, root_beta_cutoff_index);
     }
 #endif
 
