@@ -393,7 +393,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     if (nmp_candidate) increment_diagnostic(tls, SearchDiagCounter::NmpCandidates);
 #endif
     if (!king_is_in_check && ((depth <= REVERSE_FUTILITY_MAX_DEPTH && !is_pv_node) || nmp_candidate)) {
-        static_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        static_eval = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     }
     if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -457,7 +457,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         if (static_eval != -MATE_SCORE)
             current_eval = static_eval;
         else
-            current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+            current_eval = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
     }
     
     // Late Move Reduction prerequisites here
