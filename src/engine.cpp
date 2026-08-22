@@ -432,7 +432,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     // avoids generating and searching all quiet moves at this node.
     const bool probcut_candidate = null_move_allowed && !is_pv_node && !king_is_in_check &&
         depth >= PROBCUT_MIN_DEPTH && beta > -MATE_THRESHOLD &&
-        beta < MATE_THRESHOLD - PROBCUT_MARGIN;
+        beta < MATE_THRESHOLD - PROBCUT_MARGIN; 
     if (probcut_candidate) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(tls, SearchDiagCounter::ProbCutCandidates);
