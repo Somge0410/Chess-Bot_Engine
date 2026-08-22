@@ -150,6 +150,10 @@ constexpr std::size_t MOVE_INDEX_BUCKET_COUNT = 7;
 constexpr std::size_t QPLY_BUCKET_COUNT = 7;
 constexpr std::size_t TT_CLUSTER_OCCUPANCY_BUCKET_COUNT = 5;
 constexpr std::size_t DIAGNOSTIC_ITERATION_DEPTH_COUNT = 64;
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+constexpr std::size_t PROBCUT_SHADOW_DEPTH_BUCKET_COUNT = 65;
+constexpr std::size_t PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT = 5;
+#endif
 
 enum class MoveOrderSource : std::size_t {
     TT,
@@ -183,6 +187,7 @@ enum class SearchDiagCounter : std::size_t {
     ProbCutShadowCorrectClearanceSum,
     ProbCutShadowFalseMissSum,
     ProbCutShadowAbsoluteScoreErrorSum,
+    ProbCutShadowMateErrors,
     FutilityChecks,
     FutilityPrunes,
     LmrReductions,
@@ -383,6 +388,13 @@ struct SearchDiagnostics {
     std::array<uint64_t, SEARCH_DIAG_COUNTER_COUNT> detail{};
     std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> iteration_nodes{};
     std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> iteration_time_ms{};
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    std::array<uint64_t, PROBCUT_SHADOW_DEPTH_BUCKET_COUNT> probcut_shadow_correct_by_depth{};
+    std::array<uint64_t, PROBCUT_SHADOW_DEPTH_BUCKET_COUNT> probcut_shadow_bad_by_depth{};
+    std::array<uint64_t, PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT> probcut_shadow_correct_by_headroom{};
+    std::array<uint64_t, PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT> probcut_shadow_bad_by_headroom{};
+    uint64_t max_probcut_shadow_false_beta_miss = 0;
+#endif
 };
 #endif
 class Engine;
@@ -409,6 +421,13 @@ struct ThreadLocalData {
         first_move_beta_cutoffs = 0;
         max_best_move_index = 0;
         detail_diagnostics.fill(0);
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+        probcut_shadow_correct_by_depth.fill(0);
+        probcut_shadow_bad_by_depth.fill(0);
+        probcut_shadow_correct_by_headroom.fill(0);
+        probcut_shadow_bad_by_headroom.fill(0);
+        max_probcut_shadow_false_beta_miss = 0;
+#endif
         for (TTDiagnostics& diagnostics : tt_diagnostics) {
             diagnostics = {};
         }
@@ -455,6 +474,13 @@ struct ThreadLocalData {
     uint32_t max_best_move_index{ 0 };
     std::array<TTDiagnostics, TT_DIAGNOSTIC_MODE_COUNT> tt_diagnostics{};
     std::array<uint64_t, SEARCH_DIAG_COUNTER_COUNT> detail_diagnostics{};
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    std::array<uint64_t, PROBCUT_SHADOW_DEPTH_BUCKET_COUNT> probcut_shadow_correct_by_depth{};
+    std::array<uint64_t, PROBCUT_SHADOW_DEPTH_BUCKET_COUNT> probcut_shadow_bad_by_depth{};
+    std::array<uint64_t, PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT> probcut_shadow_correct_by_headroom{};
+    std::array<uint64_t, PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT> probcut_shadow_bad_by_headroom{};
+    uint64_t max_probcut_shadow_false_beta_miss{ 0 };
+#endif
     bool last_tt_probe_was_shallow{ false };
     bool current_tt_probe_in_check{ false };
 #endif
@@ -500,6 +526,13 @@ class Engine {
         std::array<std::atomic<uint64_t>, SEARCH_DIAG_COUNTER_COUNT> detail_diagnostics{};
         std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> diagnostic_iteration_nodes{};
         std::array<uint64_t, DIAGNOSTIC_ITERATION_DEPTH_COUNT> diagnostic_iteration_time_ms{};
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+        std::array<std::atomic<uint64_t>, PROBCUT_SHADOW_DEPTH_BUCKET_COUNT> probcut_shadow_correct_by_depth{};
+        std::array<std::atomic<uint64_t>, PROBCUT_SHADOW_DEPTH_BUCKET_COUNT> probcut_shadow_bad_by_depth{};
+        std::array<std::atomic<uint64_t>, PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT> probcut_shadow_correct_by_headroom{};
+        std::array<std::atomic<uint64_t>, PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT> probcut_shadow_bad_by_headroom{};
+        std::atomic<uint64_t> max_probcut_shadow_false_beta_miss{ 0 };
+#endif
 #endif
         uint8_t generation=0;
 

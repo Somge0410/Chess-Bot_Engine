@@ -159,6 +159,33 @@ void ThreadLocalData::flush_counters(Engine* engine,bool force) {
             engine->detail_diagnostics[i].fetch_add(detail_diagnostics[i], std::memory_order_relaxed);
             detail_diagnostics[i] = 0;
         }
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+        for (std::size_t i = 0; i < PROBCUT_SHADOW_DEPTH_BUCKET_COUNT; ++i) {
+            engine->probcut_shadow_correct_by_depth[i].fetch_add(
+                probcut_shadow_correct_by_depth[i], std::memory_order_relaxed);
+            engine->probcut_shadow_bad_by_depth[i].fetch_add(
+                probcut_shadow_bad_by_depth[i], std::memory_order_relaxed);
+        }
+        for (std::size_t i = 0; i < PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT; ++i) {
+            engine->probcut_shadow_correct_by_headroom[i].fetch_add(
+                probcut_shadow_correct_by_headroom[i], std::memory_order_relaxed);
+            engine->probcut_shadow_bad_by_headroom[i].fetch_add(
+                probcut_shadow_bad_by_headroom[i], std::memory_order_relaxed);
+        }
+        uint64_t observed_false_miss = engine->max_probcut_shadow_false_beta_miss.load(
+            std::memory_order_relaxed);
+        while (observed_false_miss < max_probcut_shadow_false_beta_miss &&
+            !engine->max_probcut_shadow_false_beta_miss.compare_exchange_weak(
+                observed_false_miss, max_probcut_shadow_false_beta_miss,
+                std::memory_order_relaxed,
+                std::memory_order_relaxed)) {
+        }
+        probcut_shadow_correct_by_depth.fill(0);
+        probcut_shadow_bad_by_depth.fill(0);
+        probcut_shadow_correct_by_headroom.fill(0);
+        probcut_shadow_bad_by_headroom.fill(0);
+        max_probcut_shadow_false_beta_miss = 0;
+#endif
 #endif
     }
 }
@@ -197,8 +224,21 @@ uint64_t score_distance(int lhs, int rhs) {
     return static_cast<uint64_t>(difference >= 0 ? difference : -difference);
 }
 
+std::size_t probcut_shadow_depth_bucket(int depth) {
+    return static_cast<std::size_t>(std::clamp(
+        depth, 0, static_cast<int>(PROBCUT_SHADOW_DEPTH_BUCKET_COUNT - 1)));
+}
+
+std::size_t probcut_shadow_headroom_bucket(int headroom) {
+    if (headroom < 50) return 0;
+    if (headroom < 100) return 1;
+    if (headroom < 150) return 2;
+    if (headroom < 200) return 3;
+    return 4;
+}
+
 void record_probcut_shadow_result(ThreadLocalData* tls, const ProbCutShadowEvent& event,
-    int beta, int normal_score, const Move& normal_move) {
+    int depth, int beta, int normal_score, const Move& normal_move) {
     if (!event.pending) {
         return;
     }
@@ -212,15 +252,30 @@ void record_probcut_shadow_result(ThreadLocalData* tls, const ProbCutShadowEvent
         increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowMoveMatches);
     }
 
+    const std::size_t depth_bucket = probcut_shadow_depth_bucket(depth);
+    const std::size_t headroom_bucket = probcut_shadow_headroom_bucket(event.score - beta);
     if (normal_score >= beta) {
         increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowCorrect);
         increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowCorrectClearanceSum,
             static_cast<uint64_t>(normal_score - beta));
+        tls->probcut_shadow_correct_by_depth[depth_bucket]++;
+        tls->probcut_shadow_correct_by_headroom[headroom_bucket]++;
     }
     else {
+        const uint64_t beta_miss = static_cast<uint64_t>(beta - normal_score);
         increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowFalsePositives);
         increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowFalseMissSum,
-            static_cast<uint64_t>(beta - normal_score));
+            beta_miss);
+        tls->probcut_shadow_bad_by_depth[depth_bucket]++;
+        tls->probcut_shadow_bad_by_headroom[headroom_bucket]++;
+        tls->max_probcut_shadow_false_beta_miss = std::max(
+            tls->max_probcut_shadow_false_beta_miss, beta_miss);
+        const bool involves_mate_score = event.score >= MATE_THRESHOLD ||
+            event.score <= -MATE_THRESHOLD || normal_score >= MATE_THRESHOLD ||
+            normal_score <= -MATE_THRESHOLD;
+        if (involves_mate_score) {
+            increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowMateErrors);
+        }
     }
 }
 #endif
@@ -751,7 +806,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_result_tempered = store_tt(hash, depth, original_alpha, beta, best_score,
         best_move, ply, is_best_move_tempered, is_any_tempered);
 #if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
-    record_probcut_shadow_result(tls, probcut_shadow, beta, best_score, best_move);
+    record_probcut_shadow_result(tls, probcut_shadow, depth, beta, best_score, best_move);
 #endif
     return {best_score,best_move,is_result_tempered};
 }
@@ -2045,6 +2100,21 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
     for (std::atomic<uint64_t>& counter : detail_diagnostics) {
         counter.store(0, std::memory_order_relaxed);
     }
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    for (std::atomic<uint64_t>& counter : probcut_shadow_correct_by_depth) {
+        counter.store(0, std::memory_order_relaxed);
+    }
+    for (std::atomic<uint64_t>& counter : probcut_shadow_bad_by_depth) {
+        counter.store(0, std::memory_order_relaxed);
+    }
+    for (std::atomic<uint64_t>& counter : probcut_shadow_correct_by_headroom) {
+        counter.store(0, std::memory_order_relaxed);
+    }
+    for (std::atomic<uint64_t>& counter : probcut_shadow_bad_by_headroom) {
+        counter.store(0, std::memory_order_relaxed);
+    }
+    max_probcut_shadow_false_beta_miss.store(0, std::memory_order_relaxed);
+#endif
     diagnostic_iteration_nodes.fill(0);
     diagnostic_iteration_time_ms.fill(0);
     for (AtomicTTDiagnostics& diagnostics : tt_diagnostics) {
@@ -2235,6 +2305,22 @@ SearchDiagnostics Engine::get_search_diagnostics(bool include_tt_occupancy) {
     for (std::size_t i = 0; i < SEARCH_DIAG_COUNTER_COUNT; ++i) {
         diagnostics.detail[i] = detail_diagnostics[i].load(std::memory_order_relaxed);
     }
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    for (std::size_t i = 0; i < PROBCUT_SHADOW_DEPTH_BUCKET_COUNT; ++i) {
+        diagnostics.probcut_shadow_correct_by_depth[i] =
+            probcut_shadow_correct_by_depth[i].load(std::memory_order_relaxed);
+        diagnostics.probcut_shadow_bad_by_depth[i] =
+            probcut_shadow_bad_by_depth[i].load(std::memory_order_relaxed);
+    }
+    for (std::size_t i = 0; i < PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT; ++i) {
+        diagnostics.probcut_shadow_correct_by_headroom[i] =
+            probcut_shadow_correct_by_headroom[i].load(std::memory_order_relaxed);
+        diagnostics.probcut_shadow_bad_by_headroom[i] =
+            probcut_shadow_bad_by_headroom[i].load(std::memory_order_relaxed);
+    }
+    diagnostics.max_probcut_shadow_false_beta_miss =
+        max_probcut_shadow_false_beta_miss.load(std::memory_order_relaxed);
+#endif
     diagnostics.iteration_nodes = diagnostic_iteration_nodes;
     diagnostics.iteration_time_ms = diagnostic_iteration_time_ms;
     for (std::size_t i = 0; i < TT_DIAGNOSTIC_MODE_COUNT; ++i) {

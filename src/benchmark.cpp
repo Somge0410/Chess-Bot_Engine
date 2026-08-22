@@ -147,6 +147,19 @@ void accumulate_search_diagnostics(SearchDiagnostics& total, const SearchDiagnos
         total.iteration_nodes[i] += diagnostics.iteration_nodes[i];
         total.iteration_time_ms[i] += diagnostics.iteration_time_ms[i];
     }
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    for (std::size_t i = 0; i < PROBCUT_SHADOW_DEPTH_BUCKET_COUNT; ++i) {
+        total.probcut_shadow_correct_by_depth[i] += diagnostics.probcut_shadow_correct_by_depth[i];
+        total.probcut_shadow_bad_by_depth[i] += diagnostics.probcut_shadow_bad_by_depth[i];
+    }
+    for (std::size_t i = 0; i < PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT; ++i) {
+        total.probcut_shadow_correct_by_headroom[i] += diagnostics.probcut_shadow_correct_by_headroom[i];
+        total.probcut_shadow_bad_by_headroom[i] += diagnostics.probcut_shadow_bad_by_headroom[i];
+    }
+    total.max_probcut_shadow_false_beta_miss = std::max(
+        total.max_probcut_shadow_false_beta_miss,
+        diagnostics.max_probcut_shadow_false_beta_miss);
+#endif
 }
 }
 
@@ -268,6 +281,38 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     print_diagnostic_row(p, "Shadow avg bad beta miss",
         diagnostic_text(average(SearchDiagCounter::ProbCutShadowFalseMissSum,
             SearchDiagCounter::ProbCutShadowFalsePositives), " cp"));
+    print_diagnostic_row(p, "Shadow maximum bad beta miss",
+        diagnostic_text(d.max_probcut_shadow_false_beta_miss, " cp"));
+    print_diagnostic_row(p, "Shadow bad cutoffs involving mate",
+        diagnostic_text(value(SearchDiagCounter::ProbCutShadowMateErrors)));
+    print_diagnostic_row(p, "Shadow depth columns",
+        "completed | correct | bad | false-positive rate");
+    for (std::size_t depth = 0; depth < PROBCUT_SHADOW_DEPTH_BUCKET_COUNT; ++depth) {
+        const uint64_t correct = d.probcut_shadow_correct_by_depth[depth];
+        const uint64_t bad = d.probcut_shadow_bad_by_depth[depth];
+        const uint64_t completed = correct + bad;
+        if (completed == 0) continue;
+        const std::string depth_label = depth + 1 == PROBCUT_SHADOW_DEPTH_BUCKET_COUNT
+            ? diagnostic_text("Shadow depth ", depth, "+")
+            : diagnostic_text("Shadow depth ", depth);
+        print_diagnostic_row(p, depth_label,
+            diagnostic_text(completed, " | ", correct, " | ", bad, " | ",
+                percentage(bad, completed), "%"));
+    }
+    constexpr const char* headroom_labels[PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT] = {
+        "0-49 cp", "50-99 cp", "100-149 cp", "150-199 cp", "200+ cp"
+    };
+    print_diagnostic_row(p, "Shadow headroom columns",
+        "completed | correct | bad | false-positive rate");
+    for (std::size_t i = 0; i < PROBCUT_SHADOW_HEADROOM_BUCKET_COUNT; ++i) {
+        const uint64_t correct = d.probcut_shadow_correct_by_headroom[i];
+        const uint64_t bad = d.probcut_shadow_bad_by_headroom[i];
+        const uint64_t completed = correct + bad;
+        if (completed == 0) continue;
+        print_diagnostic_row(p, diagnostic_text("Shadow headroom ", headroom_labels[i]),
+            diagnostic_text(completed, " | ", correct, " | ", bad, " | ",
+                percentage(bad, completed), "%"));
+    }
 #else
     print_diagnostic_row(p, "ProbCut mode", "active");
     print_diagnostic_row(p, "ProbCut cutoffs",
