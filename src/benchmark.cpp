@@ -11,6 +11,7 @@
 #include "board.h"
 #include "engine.h"
 #include "MoveGenerator.h"
+#include "SPSA_parameters.h"
 #include "uci_helpers.h"
 
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -232,9 +233,47 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     print_diagnostic_row(p, "ProbCut moves searched", diagnostic_text(value(SearchDiagCounter::ProbCutMovesSearched)));
     print_diagnostic_row(p, "ProbCut moves SEE-pruned", diagnostic_text(value(SearchDiagCounter::ProbCutSeePrunes)));
     print_diagnostic_row(p, "ProbCut reduced searches", diagnostic_text(value(SearchDiagCounter::ProbCutReducedSearches)));
+    print_diagnostic_row(p, "ProbCut parameters",
+        diagnostic_text("depth >= ", PROBCUT_MIN_DEPTH, " | reduction ",
+            PROBCUT_REDUCTION, " | margin ", PROBCUT_MARGIN, " cp"));
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    print_diagnostic_row(p, "ProbCut mode", "shadow (would-be cutoffs are suppressed)");
+    print_diagnostic_row(p, "ProbCut would-be cutoffs",
+        diagnostic_text(value(SearchDiagCounter::ProbCutCutoffs), "  (",
+            rate(SearchDiagCounter::ProbCutCutoffs, SearchDiagCounter::ProbCutCandidates), "% of candidates)"));
+    print_diagnostic_row(p, "Shadow validations completed",
+        diagnostic_text(value(SearchDiagCounter::ProbCutShadowCompleted)));
+    print_diagnostic_row(p, "Shadow correct cutoffs",
+        diagnostic_text(value(SearchDiagCounter::ProbCutShadowCorrect), "  (",
+            rate(SearchDiagCounter::ProbCutShadowCorrect, SearchDiagCounter::ProbCutShadowCompleted),
+            "% accuracy)"));
+    print_diagnostic_row(p, "Shadow bad cutoffs",
+        diagnostic_text(value(SearchDiagCounter::ProbCutShadowFalsePositives), "  (",
+            rate(SearchDiagCounter::ProbCutShadowFalsePositives, SearchDiagCounter::ProbCutShadowCompleted),
+            "% false positives)"));
+    print_diagnostic_row(p, "Shadow inconclusive (stopped)",
+        diagnostic_text(value(SearchDiagCounter::ProbCutShadowInconclusive)));
+    print_diagnostic_row(p, "Shadow normal-move matches",
+        diagnostic_text(value(SearchDiagCounter::ProbCutShadowMoveMatches), "  (",
+            rate(SearchDiagCounter::ProbCutShadowMoveMatches, SearchDiagCounter::ProbCutShadowCompleted), "%)"));
+    print_diagnostic_row(p, "Shadow avg ProbCut threshold excess",
+        diagnostic_text(average(SearchDiagCounter::ProbCutShadowScoreExcessSum,
+            SearchDiagCounter::ProbCutShadowCompleted), " cp"));
+    print_diagnostic_row(p, "Shadow avg score error",
+        diagnostic_text(average(SearchDiagCounter::ProbCutShadowAbsoluteScoreErrorSum,
+            SearchDiagCounter::ProbCutShadowCompleted), " cp"));
+    print_diagnostic_row(p, "Shadow avg correct beta clearance",
+        diagnostic_text(average(SearchDiagCounter::ProbCutShadowCorrectClearanceSum,
+            SearchDiagCounter::ProbCutShadowCorrect), " cp"));
+    print_diagnostic_row(p, "Shadow avg bad beta miss",
+        diagnostic_text(average(SearchDiagCounter::ProbCutShadowFalseMissSum,
+            SearchDiagCounter::ProbCutShadowFalsePositives), " cp"));
+#else
+    print_diagnostic_row(p, "ProbCut mode", "active");
     print_diagnostic_row(p, "ProbCut cutoffs",
         diagnostic_text(value(SearchDiagCounter::ProbCutCutoffs), "  (",
             rate(SearchDiagCounter::ProbCutCutoffs, SearchDiagCounter::ProbCutCandidates), "% of candidates)"));
+#endif
     print_diagnostic_row(p, "Futility checks", diagnostic_text(value(SearchDiagCounter::FutilityChecks)));
     print_diagnostic_row(p, "Futility prunes",
         diagnostic_text(value(SearchDiagCounter::FutilityPrunes), "  (",

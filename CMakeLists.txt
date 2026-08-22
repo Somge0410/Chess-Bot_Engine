@@ -7,6 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. Hardware Optimization Toggle
 option(USE_NATIVE_ARCH "Optimize for current CPU" ON)
 option(ENABLE_QSEARCH_DIAGNOSTICS "Collect detailed search benchmark diagnostics" OFF)
+option(ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    "Validate would-be ProbCut cutoffs by continuing the normal search" OFF)
+
+if(ENABLE_PROBCUT_SHADOW_DIAGNOSTICS AND NOT ENABLE_QSEARCH_DIAGNOSTICS)
+    message(FATAL_ERROR
+        "ENABLE_PROBCUT_SHADOW_DIAGNOSTICS requires ENABLE_QSEARCH_DIAGNOSTICS=ON")
+endif()
 
 # 2. Conservative default TT size (in MB).
 # GUIs can still select a larger Hash value for long searches.
@@ -32,6 +39,7 @@ target_include_directories(Chess-Bot_Engine PUBLIC include)
 target_compile_definitions(Chess-Bot_Engine PRIVATE
     DEFAULT_TT_MB=${TT_SIZE_MB}
     ENABLE_QSEARCH_DIAGNOSTICS=$<BOOL:${ENABLE_QSEARCH_DIAGNOSTICS}>
+    ENABLE_PROBCUT_SHADOW_DIAGNOSTICS=$<BOOL:${ENABLE_PROBCUT_SHADOW_DIAGNOSTICS}>
 )
 
 # 5. Git version info

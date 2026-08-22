@@ -184,6 +184,47 @@ void increment_diagnostic(ThreadLocalData* tls, SearchDiagCounter counter, uint6
     }
 }
 
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+struct ProbCutShadowEvent {
+    bool pending = false;
+    int score = 0;
+    int threshold = 0;
+    Move move;
+};
+
+uint64_t score_distance(int lhs, int rhs) {
+    const int64_t difference = static_cast<int64_t>(lhs) - static_cast<int64_t>(rhs);
+    return static_cast<uint64_t>(difference >= 0 ? difference : -difference);
+}
+
+void record_probcut_shadow_result(ThreadLocalData* tls, const ProbCutShadowEvent& event,
+    int beta, int normal_score, const Move& normal_move) {
+    if (!event.pending) {
+        return;
+    }
+
+    increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowCompleted);
+    increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowAbsoluteScoreErrorSum,
+        score_distance(event.score, normal_score));
+    increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowScoreExcessSum,
+        static_cast<uint64_t>(event.score - event.threshold));
+    if (normal_move == event.move) {
+        increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowMoveMatches);
+    }
+
+    if (normal_score >= beta) {
+        increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowCorrect);
+        increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowCorrectClearanceSum,
+            static_cast<uint64_t>(normal_score - beta));
+    }
+    else {
+        increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowFalsePositives);
+        increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowFalseMissSum,
+            static_cast<uint64_t>(beta - normal_score));
+    }
+}
+#endif
+
 SearchDiagCounter move_index_bucket(uint32_t index, bool cutoff) {
     const SearchDiagCounter base = cutoff ? SearchDiagCounter::CutoffIndex1 : SearchDiagCounter::BestIndex1;
     std::size_t offset = 0;
@@ -426,6 +467,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 
 	MoveList& moves = tls->move_lists[ply];
 	MoveList& searched_quiets = tls->searched_quiets[ply];
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    ProbCutShadowEvent probcut_shadow;
+#endif
 
     // ProbCut: at sufficiently deep non-PV nodes, test promising captures against
     // a beta threshold with an intentionally reduced search. A successful test
@@ -496,7 +540,17 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 increment_diagnostic(tls, SearchDiagCounter::ProbCutCutoffs);
 #endif
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+                probcut_shadow.pending = true;
+                probcut_shadow.score = probcut_score;
+                probcut_shadow.threshold = probcut_beta;
+                probcut_shadow.move = move;
+                // Match real ProbCut behavior by accepting only the first move
+                // that passes the test, but continue with the normal node search.
+                break;
+#else
                 return { probcut_score, move };
+#endif
             }
         }
     }
@@ -648,6 +702,11 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         
         if (stop_search.load(std::memory_order_relaxed))
         {   // Better: Best Move so far??
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+            if (probcut_shadow.pending) {
+                increment_diagnostic(tls, SearchDiagCounter::ProbCutShadowInconclusive);
+            }
+#endif
             return{0,Move(),true};
         }
         if (evaluation > best_score)
@@ -691,6 +750,9 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #endif
     bool is_result_tempered = store_tt(hash, depth, original_alpha, beta, best_score,
         best_move, ply, is_best_move_tempered, is_any_tempered);
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+    record_probcut_shadow_result(tls, probcut_shadow, beta, best_score, best_move);
+#endif
     return {best_score,best_move,is_result_tempered};
 }
 int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Board& board, ThreadLocalData* tls, const Move& previous_move) {

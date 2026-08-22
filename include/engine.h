@@ -19,6 +19,12 @@
 #ifndef ENABLE_QSEARCH_DIAGNOSTICS
 #define ENABLE_QSEARCH_DIAGNOSTICS 0
 #endif
+#ifndef ENABLE_PROBCUT_SHADOW_DIAGNOSTICS
+#define ENABLE_PROBCUT_SHADOW_DIAGNOSTICS 0
+#endif
+#if ENABLE_PROBCUT_SHADOW_DIAGNOSTICS && !ENABLE_QSEARCH_DIAGNOSTICS
+#error "ProbCut shadow diagnostics require search diagnostics"
+#endif
 
 enum TTFlag {
     EXACT,
@@ -168,6 +174,15 @@ enum class SearchDiagCounter : std::size_t {
     ProbCutSeePrunes,
     ProbCutReducedSearches,
     ProbCutCutoffs,
+    ProbCutShadowCompleted,
+    ProbCutShadowCorrect,
+    ProbCutShadowFalsePositives,
+    ProbCutShadowInconclusive,
+    ProbCutShadowMoveMatches,
+    ProbCutShadowScoreExcessSum,
+    ProbCutShadowCorrectClearanceSum,
+    ProbCutShadowFalseMissSum,
+    ProbCutShadowAbsoluteScoreErrorSum,
     FutilityChecks,
     FutilityPrunes,
     LmrReductions,
