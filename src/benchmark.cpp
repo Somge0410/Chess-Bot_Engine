@@ -227,6 +227,14 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
     print_diagnostic_row(p, "NMP cutoffs",
         diagnostic_text(value(SearchDiagCounter::NmpCutoffs), "  (",
             rate(SearchDiagCounter::NmpCutoffs, SearchDiagCounter::NmpSearches), "% of searches)"));
+    print_diagnostic_row(p, "ProbCut candidates", diagnostic_text(value(SearchDiagCounter::ProbCutCandidates)));
+    print_diagnostic_row(p, "ProbCut moves generated", diagnostic_text(value(SearchDiagCounter::ProbCutMovesGenerated)));
+    print_diagnostic_row(p, "ProbCut moves searched", diagnostic_text(value(SearchDiagCounter::ProbCutMovesSearched)));
+    print_diagnostic_row(p, "ProbCut moves SEE-pruned", diagnostic_text(value(SearchDiagCounter::ProbCutSeePrunes)));
+    print_diagnostic_row(p, "ProbCut reduced searches", diagnostic_text(value(SearchDiagCounter::ProbCutReducedSearches)));
+    print_diagnostic_row(p, "ProbCut cutoffs",
+        diagnostic_text(value(SearchDiagCounter::ProbCutCutoffs), "  (",
+            rate(SearchDiagCounter::ProbCutCutoffs, SearchDiagCounter::ProbCutCandidates), "% of candidates)"));
     print_diagnostic_row(p, "Futility checks", diagnostic_text(value(SearchDiagCounter::FutilityChecks)));
     print_diagnostic_row(p, "Futility prunes",
         diagnostic_text(value(SearchDiagCounter::FutilityPrunes), "  (",

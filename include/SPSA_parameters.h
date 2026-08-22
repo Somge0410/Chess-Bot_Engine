@@ -18,6 +18,11 @@ inline int NMP_DEPTH_DIVISOR = 6;
 inline int NMP_EVAL_DIVISOR = 200;
 inline int NMP_MAX_EVAL_REDUCTION = 2;
 
+// --- ProbCut ---
+inline int PROBCUT_MIN_DEPTH = 5;
+inline int PROBCUT_REDUCTION = 4;
+inline int PROBCUT_MARGIN = 200;
+
 // --- NEU: Move Ordering ---
 inline int TT_STAGE = 7;
 inline int PROMO_STAGE = 6;

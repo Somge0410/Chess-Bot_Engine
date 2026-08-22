@@ -271,6 +271,9 @@ static void run_perft(const Board& root_board, int depth) {
     X(NMP_DEPTH_DIVISOR, 1, 64) \
     X(NMP_EVAL_DIVISOR, 1, 10000) \
     X(NMP_MAX_EVAL_REDUCTION, 0, 16) \
+    X(PROBCUT_MIN_DEPTH, 1, 64) \
+    X(PROBCUT_REDUCTION, 1, 64) \
+    X(PROBCUT_MARGIN, 0, 10000) \
     X(TT_STAGE, 0, 16) \
     X(PROMO_STAGE, 0, 16) \
     X(MVV_LVA_STAGE, 0, 16) \

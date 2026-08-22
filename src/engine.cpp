@@ -421,11 +421,87 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         increment_diagnostic(tls, SearchDiagCounter::NmpCutoffs);
 #endif
         return {nmp_score,Move()};
-	}
+    }
     // End of Null-move pruning
-	//Generate moves
+
 	MoveList& moves = tls->move_lists[ply];
 	MoveList& searched_quiets = tls->searched_quiets[ply];
+
+    // ProbCut: at sufficiently deep non-PV nodes, test promising captures against
+    // a beta threshold with an intentionally reduced search. A successful test
+    // avoids generating and searching all quiet moves at this node.
+    const bool probcut_candidate = null_move_allowed && !is_pv_node && !king_is_in_check &&
+        depth >= PROBCUT_MIN_DEPTH && beta > -MATE_THRESHOLD &&
+        beta < MATE_THRESHOLD - PROBCUT_MARGIN;
+    if (probcut_candidate) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::ProbCutCandidates);
+#endif
+        if (static_eval == -MATE_SCORE) {
+            static_eval = board.is_white_to_move()
+                ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE)
+                : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        }
+
+        const int probcut_beta = beta + PROBCUT_MARGIN;
+        // The capture itself consumes the first ply. Passing depth - reduction
+        // here gives the usual ProbCut reduction without subtracting that ply twice.
+        const int probcut_depth = std::max(0, depth - PROBCUT_REDUCTION);
+        const int see_threshold = probcut_beta - static_eval;
+
+        moves.clear();
+        MoveGenerator::generate_captures(board, moves, checkers);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        increment_diagnostic(tls, SearchDiagCounter::ProbCutMovesGenerated, moves.size());
+#endif
+        int* probcut_scores = tls->move_scores[ply];
+        score_qsearch_moves(moves, probcut_scores);
+
+        for (int i = 0; i < static_cast<int>(moves.size()); ++i) {
+            pick_best(moves, probcut_scores, i);
+            const Move move = moves[i];
+
+            if (!see_move_ge(board, move, see_threshold)) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::ProbCutSeePrunes);
+#endif
+                continue;
+            }
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+            increment_diagnostic(tls, SearchDiagCounter::ProbCutMovesSearched);
+#endif
+            board.make_move(move);
+            const uint64_t child_checkers = board.get_checkers();
+
+            int probcut_score = -quiescence_search(board, -probcut_beta,
+                -probcut_beta + 1, ply + 1, 0, tls, child_checkers);
+            bool probcut_tempered = false;
+            if (probcut_score >= probcut_beta && probcut_depth > 0 &&
+                !stop_search.load(std::memory_order_relaxed)) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::ProbCutReducedSearches);
+#endif
+                SearchResult result = negamax(board, probcut_depth, -probcut_beta,
+                    -probcut_beta + 1, ply + 1, tls, move, child_checkers);
+                probcut_score = -result.score;
+                probcut_tempered = result.is_tempered;
+            }
+            board.undo_move(move);
+
+            if (stop_search.load(std::memory_order_relaxed)) {
+                return { 0, Move(), true };
+            }
+            if (probcut_score >= probcut_beta && !probcut_tempered) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+                increment_diagnostic(tls, SearchDiagCounter::ProbCutCutoffs);
+#endif
+                return { probcut_score, move };
+            }
+        }
+    }
+
+	//Generate moves
     moves.clear();
 	searched_quiets.clear();
     MoveGenerator::generate_moves(board,moves,checkers);
