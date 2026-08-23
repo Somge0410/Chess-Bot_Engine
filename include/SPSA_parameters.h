@@ -20,7 +20,7 @@ inline int NMP_MAX_EVAL_REDUCTION = 2;
 // ProbCut
 inline int PROBCUT_MIN_DEPTH = 5;
 inline int PROBCUT_REDUCTION = 4;
-inline int PROBCUT_MARGIN = 150;
+inline int PROBCUT_MARGIN = 150; 
 
 // Late-move reductions (LMR)
 inline int LMR_MIN_DEPTH = 1;
