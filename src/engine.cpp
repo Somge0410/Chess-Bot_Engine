@@ -1488,7 +1488,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
     double effective_branching_factor = 1;
     double time_growth = 1;
     double predicted_next_iteration_ms = 0;
-    Move recent_best_moves[MAX_RECENT_BEST_COUNT] = { };
+    Move recent_best_moves[RECENT_BEST_MOVE_WINDOW] = { };
     int recent_best_move_count = 0;
     const int initial_budget_ms = tc.time_ms;
     const int maximum_budget = tc.max_time_ms;
@@ -1597,17 +1597,17 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
             auto elapsed = now_tp - start_time;
 
-            recent_best_moves[recent_best_move_count % MAX_RECENT_BEST_COUNT] = best_move;
+            recent_best_moves[recent_best_move_count % RECENT_BEST_MOVE_WINDOW] = best_move;
             recent_best_move_count++;
 
-            if (recent_best_move_count >= 6 && current_budget_ms < maximum_budget) {
+            if (recent_best_move_count >= RECENT_BEST_MOVE_WINDOW && current_budget_ms < maximum_budget) {
                 int changes = 0;
                 int consecutive_changes = 0;
                 bool has_two_consecutive_changes = false;
-                int start = recent_best_move_count - MAX_RECENT_BEST_COUNT;
-                for (int i = 0; i < MAX_RECENT_BEST_COUNT; ++i) {
-                    const Move& a = recent_best_moves[(start + i) % MAX_RECENT_BEST_COUNT];
-                    const Move& b = recent_best_moves[(start + i + 1) % MAX_RECENT_BEST_COUNT];
+                const int start = recent_best_move_count - RECENT_BEST_MOVE_WINDOW;
+                for (int i = 0; i + 1 < RECENT_BEST_MOVE_WINDOW; ++i) {
+                    const Move& a = recent_best_moves[(start + i) % RECENT_BEST_MOVE_WINDOW];
+                    const Move& b = recent_best_moves[(start + i + 1) % RECENT_BEST_MOVE_WINDOW];
                     if (a != b) {
                         changes++;
                         consecutive_changes++;
