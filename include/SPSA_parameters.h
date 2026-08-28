@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // For Pruning and search
 inline int FUTILITY_MARGIN_D1 = 244;
@@ -17,7 +17,7 @@ inline int NMP_REDUCTION = 2;
 inline int NMP_DEPTH_DIVISOR = 6;
 inline int NMP_EVAL_DIVISOR = 200;
 inline int NMP_MAX_EVAL_REDUCTION = 2;
-
+ 
 // --- NEU: Move Ordering ---
 inline int TT_STAGE = 7;
 inline int PROMO_STAGE = 6;
