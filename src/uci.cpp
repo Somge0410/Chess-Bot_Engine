@@ -261,10 +261,9 @@ static void run_perft(const Board& root_board, int depth) {
 #define SPSA_INT_PARAMS(X) \
     X(FUTILITY_MARGIN_D1, 0, 10000) \
     X(FUTILITY_MARGIN_D2, 0, 10000) \
-    X(DELTA_MARGIN, 0, 10000) \
     X(MAX_QUIET_PLY, 1, 64) \
     X(LMR_MIN_DEPTH, 0, 64) \
-    X(LMR_MIN_MOVES_SEARCHED, 1, 256) \
+    X(LMR_FIRST_REDUCED_MOVE, 1, 256) \
     X(LMR_REDUCTION_AMOUNT, 0, 64) \
     X(NMP_MIN_DEPTH, 0, 64) \
     X(NMP_REDUCTION, 1, 64) \

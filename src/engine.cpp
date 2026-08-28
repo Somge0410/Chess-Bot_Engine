@@ -879,7 +879,11 @@ TimeControlDecision Engine::decide_time_control(const Board& position, const Sea
 		const int moves_after_threshold = std::max(0, position.get_move_count() - MOVE_COUNT_THRESHOLD);
 
         moves_to_go -= std::min(MAX_MOVE_COUNT_REDUCTION,MOVE_COUNT_WEIGHT * moves_after_threshold);
-        moves_to_go = std::clamp(moves_to_go, MIN_MOVES_TO_GO, MAX_MOVES_TO_GO);
+		// SPSA updates related options through separate setoption commands. Keep the
+		// effective interval valid even while, or if, the two endpoints cross.
+		const double min_moves_to_go = std::min(MIN_MOVES_TO_GO, MAX_MOVES_TO_GO);
+		const double max_moves_to_go = std::max(MIN_MOVES_TO_GO, MAX_MOVES_TO_GO);
+		moves_to_go = std::clamp(moves_to_go, min_moves_to_go, max_moves_to_go);
 
         const double increment_contribution = inc * INC_USAGE_FACTOR;
         
@@ -1189,7 +1193,7 @@ bool Engine::should_futility_prune(int depth, int eval, int alpha, bool in_check
 }
 int Engine::late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls, const Move& previous_move) {
     if (depth >= 64 || moves_searched >= 218) return 7;
-    if (depth <= 1 || moves_searched <= 1) return 0; // No reduction for the first move
+    if (depth < LMR_MIN_DEPTH || moves_searched +1<LMR_FIRST_REDUCED_MOVE) return 0; // No reduction for the first move
     bool is_killer = (ply > 0 && (move == tls->killer_moves[ply][0] || move == tls->killer_moves[ply][1]));
     if (is_killer) return 0;
     bool is_quiet = move.is_quiet();
@@ -1761,7 +1765,13 @@ void Engine::perturb_root_order(MoveList& moves, int thread_id, int depth, uint6
     if (moves.size() <= ROOT_PERTURBATION_MIN_HELPERS) return;
 
     int helpers = std::max(0, thread_count - 1);
-    int K = std::clamp(2 * helpers, ROOT_PERTURBATION_MIN_BAND_SIZE, ROOT_PERTURBATION_MAX_BAND_SIZE);
+    // Treat crossed SPSA endpoints as an unordered interval. This avoids an
+    // invalid std::clamp range and makes the result independent of set order.
+    const int min_band_size = std::min(ROOT_PERTURBATION_MIN_BAND_SIZE,
+        ROOT_PERTURBATION_MAX_BAND_SIZE);
+    const int max_band_size = std::max(ROOT_PERTURBATION_MIN_BAND_SIZE,
+        ROOT_PERTURBATION_MAX_BAND_SIZE);
+    int K = std::clamp(2 * helpers, min_band_size, max_band_size);
     int bandSize = std::min<int>(K, (int)moves.size() - 1);
     if (bandSize <= 1) return;
 

@@ -1,14 +1,13 @@
-#pragma once
+﻿#pragma once
 
 // For Pruning and search
 inline int FUTILITY_MARGIN_D1 = 244;
 inline int FUTILITY_MARGIN_D2 = 460;
-inline int DELTA_MARGIN = 179;
 inline int MAX_QUIET_PLY = 7;
 
 // --- NEU: Late Move Reduction (LMR) ---
-inline int LMR_MIN_DEPTH = 1;
-inline int LMR_MIN_MOVES_SEARCHED = 3;
+inline int LMR_MIN_DEPTH = 2;
+inline int LMR_FIRST_REDUCED_MOVE = 3;
 inline int LMR_REDUCTION_AMOUNT = 2;
 
 // --- NEU: Null Move Pruning (NMP) ---
