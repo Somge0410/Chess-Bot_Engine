@@ -69,7 +69,7 @@ inline double Q_LOG_BASE = 1.37;
 inline double Q_LOG_DIV = 3.356;
 
 // --- NEU: Root Move Perturbation (Multi-Threading) ---
-inline int ROOT_PERTURBATION_MIN_HELPERS = 2;
+inline int ROOT_PERTURBATION_MIN_HELPERS = 2; 
 inline int ROOT_PERTURBATION_MIN_BAND_SIZE = 6;
 inline int ROOT_PERTURBATION_MAX_BAND_SIZE = 16;
 
