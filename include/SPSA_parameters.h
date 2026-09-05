@@ -25,7 +25,7 @@ inline int KILLER_STAGE = 4;
 inline int COUNTERMOVE_STAGE = 3;
 inline int QUIET_STAGE = 2;
 inline int LOSING_CAPTURE_STAGE = 1;
-
+ 
 inline int CAPTURE_SCORE_TIEBREAK_DIVISOR = 16;
 
 // --- NEU: History Heuristic ---
