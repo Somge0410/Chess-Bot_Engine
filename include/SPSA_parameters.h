@@ -46,7 +46,7 @@ inline double MAX_MOVES_TO_GO = 70;
 inline double INC_USAGE_FACTOR = 0.9; 
 inline double MOVE_COUNT_WEIGHT = 0.1;
 inline double REFERENCE_TIME = 300000.0; // 5 minutes
-inline double MAX_MULTIPLIER_FAST = 1.5;
+inline double MAX_MULTIPLIER_FAST = 1.4907;
 inline double MAX_MULTIPLIER_SLOW = 2.5;
 constexpr int RECENT_BEST_MOVE_WINDOW = 6;
 inline double TIME_CHANGES_COUNT_BIG = 0.1;
@@ -62,7 +62,7 @@ inline double MAX_MOVE_COUNT_REDUCTION = 8.0;
 
 
 
-inline double TIME_MARGIN = 0.3916;
+inline double TIME_MARGIN = 0.4083;
 inline double LOG_BASE = 0.209;
 inline double LOG_DIV = 3.36;
 inline double Q_LOG_BASE = 1.37;
