@@ -14,7 +14,7 @@ inline int LMR_REDUCTION_AMOUNT = 2;
 inline int NMP_MIN_DEPTH = 5;
 inline int NMP_REDUCTION = 2;
 inline int NMP_DEPTH_DIVISOR = 6;
-inline int NMP_EVAL_DIVISOR = 200;
+inline int NMP_EVAL_DIVISOR = 196;
 inline int NMP_MAX_EVAL_REDUCTION = 2;
 
 // --- NEU: Move Ordering ---
@@ -32,8 +32,8 @@ inline int CAPTURE_SCORE_TIEBREAK_DIVISOR = 16;
 inline int HISTORY_BONUS_MULTIPLIER = 8;  // bonus = depth * depth * multiplier
 
 // --- NEU: Aspiration Window ---
-inline int ASPIRATION_WINDOW_INITIAL = 45;
-inline double ASPIRATION_WINDOW_MULTIPLIER = 2.662;
+inline int ASPIRATION_WINDOW_INITIAL = 42;
+inline double ASPIRATION_WINDOW_MULTIPLIER = 2.6458;
 
 // --- NEU: Time Management ---
 inline int MOVE_OVERHEAD_MS = 50;
