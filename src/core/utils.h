@@ -4,7 +4,6 @@
 #include <iostream>
 #include <algorithm>
 #include "constants.h"
-#include "pst.h"
 #include "Move.h"
 #include "notation_utils.h"
 #include "bishop_tables.h"

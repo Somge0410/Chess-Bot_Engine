@@ -15,18 +15,29 @@ set(TT_SIZE_MB ${DEFAULT_TT_MB} CACHE STRING "Transposition table size in MB")
 
 # 3. Define the Executable
 add_executable(Chess-Bot_Engine
-    src/benchmark.cpp
-    src/board.cpp
-    src/engine.cpp
-    src/evaluation.cpp
-    src/main.cpp
-    src/MoveGenerator.cpp
-    src/notation_utils.cpp
-    src/zobrist.cpp
-    src/uci.cpp
- "include/pst.h"  "include/Squares.h" "include/evaluation.h" "src/evaluation.cpp" "src/weights.cpp")
+    src/app/main.cpp
+    src/tools/benchmark.cpp
+    src/core/board.cpp
+    src/search/engine.cpp
+    src/evaluation/evaluation.cpp
+    src/evaluation/weights.cpp
+    src/movegen/MoveGenerator.cpp
+    src/core/notation_utils.cpp
+    src/core/zobrist.cpp
+    src/uci/uci.cpp
+ "src/core/types.h" "src/core/position.h" "src/core/position.cpp" "src/core/state.h" "src/core/fen.h" "src/core/fen.cpp" "src/core/bitboard.h" "src/core/Square.h")
 
-target_include_directories(Chess-Bot_Engine PUBLIC include)
+target_include_directories(Chess-Bot_Engine PRIVATE
+    include
+    src/app
+    src/core
+    src/evaluation
+    src/movegen
+    src/search
+    src/tools
+    src/uci
+    src/generated
+)
 
 # 4. Pass build options as compile definitions
 target_compile_definitions(Chess-Bot_Engine PRIVATE
