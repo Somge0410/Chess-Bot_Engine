@@ -1,4 +1,4 @@
-#include "zobrist.h"
+﻿#include "zobrist.h"
 #include <random>
 
 uint64_t Zobrist::piece_keys[2][6][64];

@@ -6,9 +6,12 @@ using Bitboard = std::uint64_t;
 
 enum class Color : std::uint8_t {
 	White,
-	Black
+	Black,
+	None,
 };
-
+constexpr Color flip_color(Color color) {
+	return (color == Color::White) ? Color::Black : Color::White;
+}
 enum class PieceType : std::uint8_t {
 	Pawn,
 	Knight,
@@ -32,8 +35,21 @@ constexpr CastlingRights& operator|=(CastlingRights& a, CastlingRights b) {
 	a = a | b;
 	return a;
 }
+constexpr CastlingRights operator&(CastlingRights a, CastlingRights b) {
+	return static_cast<CastlingRights>(static_cast<std::uint8_t>(a) & static_cast<std::uint8_t>(b));
+}
+constexpr CastlingRights& operator&=(CastlingRights& a, CastlingRights b) {
+	a = a & b;
+	return a;
+}
 constexpr bool has_castling_right(CastlingRights rights, CastlingRights check) {
 	return (static_cast<std::uint8_t>(rights) & static_cast<std::uint8_t>(check)) != 0;
+}
+constexpr CastlingRights operator~(CastlingRights a) {
+	return static_cast<CastlingRights>(~static_cast<std::uint8_t>(a));
+}
+constexpr CastlingRights operator-(CastlingRights a, CastlingRights b) {
+	return static_cast<CastlingRights>(static_cast<std::uint8_t>(a) & ~static_cast<std::uint8_t>(b));
 }
 enum Square : std::uint8_t {
 	A1, B1, C1, D1, E1, F1, G1, H1,
@@ -55,4 +71,46 @@ constexpr int color_index(Color color) {
 	return static_cast<int>(color);
 }
 
-using PieceBoards = std::array<std::array<Bitboard, 6>, 2>; // [color][piece_type]
+struct PieceBoards {
+	std::array<std::array<Bitboard, 6>, 2> data{}; // [color][piece_type]
+	constexpr Bitboard& operator()(Color color, PieceType piece_type) {
+		return data[color_index(color)][piece_index(piece_type)];
+	}
+	constexpr const Bitboard& operator()(Color color, PieceType piece_type) const {
+		return data[color_index(color)][piece_index(piece_type)];
+	}
+};
+
+
+struct EvaluationResult {
+	int16_t mg_score;
+	int16_t eg_score;
+	EvaluationResult& operator+=(const EvaluationResult& other) {
+		this->mg_score += other.mg_score;
+		this->eg_score += other.eg_score;
+		return *this;
+	}
+	EvaluationResult& operator-=(const EvaluationResult& other) {
+		this->mg_score -= other.mg_score;
+		this->eg_score -= other.eg_score;
+		return *this;
+	}
+	EvaluationResult& operator*=(int multiplier) {
+		this->mg_score = static_cast<int16_t>(this->mg_score * multiplier);
+		this->eg_score = static_cast<int16_t>(this->eg_score * multiplier);
+		return *this;
+	}
+};
+inline EvaluationResult operator+(EvaluationResult lhs, const EvaluationResult& rhs) {
+	lhs += rhs;
+	return lhs;
+}
+inline EvaluationResult operator-(EvaluationResult lhs, const EvaluationResult& rhs) {
+	lhs.mg_score -= rhs.mg_score;
+	lhs.eg_score -= rhs.eg_score;
+	return lhs;
+}
+inline EvaluationResult operator*(EvaluationResult lhs, int multiplier) {
+	lhs *= multiplier;
+	return lhs;
+}

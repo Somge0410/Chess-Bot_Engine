@@ -149,47 +149,6 @@ inline Move parse_move(const std::string& move_str, MoveList& move_list) {
     return Move();
 
 }
-inline uint64_t get_knight_attacks(int square) {
-    return KNIGHT_ATTACKS[square];
-}
-inline uint64_t get_king_attacks(int square) {
-    return KING_ATTACKS[square];
-}
-inline uint64_t get_bishop_attacks(int from_square, uint64_t occupied) {
-
-    uint64_t bishop_blockers = BISHOP_BLOCKER_MASK[from_square] & occupied;
-    uint64_t index = (bishop_blockers * MAGIC_BISHOP_NUMBER[from_square]) >> BISHOP_SHIFT_NUMBERS[from_square];
-    return BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index];
-}
-inline uint64_t get_rook_attacks(int from_square, uint64_t occupied) {
-    if (from_square < 0 || from_square>63) return 0;
-    uint64_t rook_blockers = ROOK_BLOCKER_MASK[from_square] & occupied;
-    uint64_t index = (rook_blockers * MAGIC_ROOK_NUMBER[from_square]) >> ROOK_SHIFT_NUMBERS[from_square];
-    return ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index];
-}
-inline uint64_t get_queen_attacks(int from_square, uint64_t occupied) {
-    return get_bishop_attacks(from_square, occupied) | get_rook_attacks(from_square, occupied);
-}
-inline uint64_t get_piece_attacks(PieceType pt, int from_square, uint64_t occupied) {
-    if (pt == PieceType::KNIGHT) return get_knight_attacks(from_square);
-    else if (pt == PieceType::BISHOP) return get_bishop_attacks(from_square, occupied);
-    else if (pt == PieceType::ROOK) return get_rook_attacks(from_square, occupied);
-    else if (pt == PieceType::QUEEN) return get_queen_attacks(from_square, occupied);
-    else return 0;
-}
-inline uint64_t get_pawn_attacks(uint64_t pawns, Color color) {
-    if (Color::WHITE == color) {
-        return ((pawns & NOT_FILE_A) << 7) | ((pawns & NOT_FILE_H) << 9);
-    }
-    else {
-        return ((pawns & NOT_FILE_H) >> 7) | ((pawns & NOT_FILE_A) >> 9);
-
-    }
-}
-inline uint64_t get_pawn_attackers(int to_square, Color attacker_color, uint64_t attacker_pawns) {
-    uint64_t bb = get_pawn_attacks(bit64(to_square), flip_color(attacker_color));
-    return bb & attacker_pawns;
-}
 inline Move recover_move_from_int(uint16_t m_int) {
     if (m_int == 1u << 15) return Move();
     int from_square = m_int & 0x3F;

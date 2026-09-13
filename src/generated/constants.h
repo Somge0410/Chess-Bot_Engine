@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <map>
 #include <cstdint>
@@ -11,8 +11,6 @@
 constexpr size_t MAX_MEMORY_TT_MB = DEFAULT_TT_MB; // in MB
 
 //color and piece constants
-enum class Color: uint8_t { WHITE, BLACK, NONE };
-enum class PieceType: uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
 inline const uint8_t WHITE_KING_CASTLE = 1U << 3;
 inline const uint8_t WHITE_QUEEN_CASTLE = 1U << 2;
 inline const uint8_t BLACK_KING_CASTLE = 1U << 1;

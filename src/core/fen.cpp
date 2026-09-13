@@ -5,6 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <Square.h>
 namespace fen {
     namespace {
 
@@ -50,11 +51,8 @@ namespace fen {
                     const PieceType piece_type = to_piece_type(c);
                     const Square square = to_square(file, rank);
 
-                    data.pieces[to_int(color)][to_int(piece_type)] |= bit64(square);
+                    data.pieces(color, piece_type) |= bit64(square);
 
-                    if (piece_type == PieceType::King) {
-                        data.king_squares[to_int(color)] = square;
-                    }
 
                     ++file;
 

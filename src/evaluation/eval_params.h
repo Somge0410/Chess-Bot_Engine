@@ -1,40 +1,6 @@
-#pragma once
+﻿#pragma once
 
 #include <cstdint>
-
-
-struct EvaluationResult {
-    int16_t mg_score;
-    int16_t eg_score;
-    EvaluationResult& operator+=(const EvaluationResult& other) {
-        this->mg_score += other.mg_score;
-        this->eg_score += other.eg_score;
-        return *this;
-    }
-    EvaluationResult& operator-=(const EvaluationResult& other) {
-        this->mg_score -= other.mg_score;
-        this->eg_score -= other.eg_score;
-        return *this;
-	}
-    EvaluationResult& operator*=(int multiplier) {
-        this->mg_score = static_cast<int16_t>(this->mg_score * multiplier);
-        this->eg_score = static_cast<int16_t>(this->eg_score * multiplier);
-        return *this;
-	}
-};
-inline EvaluationResult operator+(EvaluationResult lhs, const EvaluationResult& rhs) {
-    lhs += rhs;
-    return lhs;
-}
-inline EvaluationResult operator-(EvaluationResult lhs, const EvaluationResult& rhs) {
-    lhs.mg_score -= rhs.mg_score;
-    lhs.eg_score -= rhs.eg_score;
-    return lhs;
-}
-inline EvaluationResult operator*(EvaluationResult lhs, int multiplier) {
-    lhs *= multiplier;
-    return lhs;
-}
 
 enum EvalParam {
 	PAWN,
@@ -112,23 +78,64 @@ enum EvalParam {
 extern EvaluationResult EvalWeights[PARAM_COUNT];
 inline EvaluationResult get_piece_values(const Color& color, const PieceType& piece) {
 	EvaluationResult result = { 0,0 };
-	if (piece==PieceType::PAWN) {
-		return color == Color::WHITE ? EvalWeights[EvalParam::PAWN] : EvalWeights[EvalParam::PAWN] * -1;
+	if (piece==PieceType::Pawn) {
+		return color == Color::White ? EvalWeights[EvalParam::PAWN] : EvalWeights[EvalParam::PAWN] * -1;
 	}
-	else if (piece == PieceType::KNIGHT) {
-		return color == Color::WHITE ? EvalWeights[EvalParam::KNIGHT] : EvalWeights[EvalParam::KNIGHT] * -1;
+	else if (piece == PieceType::Knight) {
+		return color == Color::White ? EvalWeights[EvalParam::KNIGHT] : EvalWeights[EvalParam::KNIGHT] * -1;
 	}
-	else if (piece == PieceType::BISHOP) {
-		return color == Color::WHITE ? EvalWeights[EvalParam::BISHOP] : EvalWeights[EvalParam::BISHOP] * -1;
+	else if (piece == PieceType::Bishop) {
+		return color == Color::White ? EvalWeights[EvalParam::BISHOP] : EvalWeights[EvalParam::BISHOP] * -1;
 	}
-	else if (piece == PieceType::ROOK) {
-		return color == Color::WHITE ? EvalWeights[EvalParam::ROOK] : EvalWeights[EvalParam::ROOK] * -1;
+	else if (piece == PieceType::Rook) {
+		return color == Color::White ? EvalWeights[EvalParam::ROOK] : EvalWeights[EvalParam::ROOK] * -1;
 	}
-	else if (piece == PieceType::QUEEN) {
-		return color == Color::WHITE ? EvalWeights[EvalParam::QUEEN] : EvalWeights[EvalParam::QUEEN] * -1;
+	else if (piece == PieceType::Queen) {
+		return color == Color::White ? EvalWeights[EvalParam::QUEEN] : EvalWeights[EvalParam::QUEEN] * -1;
 	}
-	else if (piece == PieceType::KING) {
+	else if (piece == PieceType::King) {
 		return { 0,0 };
 	}
 	else return { 0,0 };
+}
+
+inline int get_mg_pos_score(const Color& color, const PieceType& piece, const int& square) {
+	if (color == Color::White) {
+		if (piece == PieceType::Pawn) return EvalWeights[PAWN_PST_START + square].mg_score;
+		else if (piece == PieceType::Knight) return EvalWeights[KNIGHT_PST_START + square].mg_score;
+		else if (piece == PieceType::Bishop) return EvalWeights[BISHOP_PST_START + square].mg_score;
+		else if (piece == PieceType::Rook) return EvalWeights[ROOK_PST_START + square].mg_score;
+		else if (piece == PieceType::Queen) return EvalWeights[QUEEN_PST_START + square].mg_score;
+		else if (piece == PieceType::King) return EvalWeights[KING_PST_START + square].mg_score;
+		else return 0;
+	}
+	else {
+		if (piece == PieceType::Pawn) return -EvalWeights[PAWN_PST_START + flip_square(square)].mg_score;
+		else if (piece == PieceType::Knight) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].mg_score;
+		else if (piece == PieceType::Bishop) return -EvalWeights[BISHOP_PST_START + flip_square(square)].mg_score;
+		else if (piece == PieceType::Rook) return -EvalWeights[ROOK_PST_START + flip_square(square)].mg_score;
+		else if (piece == PieceType::Queen) return -EvalWeights[QUEEN_PST_START + flip_square(square)].mg_score;
+		else if (piece == PieceType::King) return -EvalWeights[KING_PST_START + flip_square(square)].mg_score;
+		else return 0;
+	}
+}
+inline int get_eg_pos_score(const Color& color, const PieceType& piece, const int& square) {
+	if (color == Color::WHITE) {
+		if (piece == PieceType::PAWN) return EvalWeights[PAWN_PST_START + square].eg_score;
+		else if (piece == PieceType::KNIGHT) return EvalWeights[KNIGHT_PST_START + square].eg_score;
+		else if (piece == PieceType::BISHOP) return EvalWeights[BISHOP_PST_START + square].eg_score;
+		else if (piece == PieceType::ROOK) return EvalWeights[ROOK_PST_START + square].eg_score;
+		else if (piece == PieceType::QUEEN) return EvalWeights[QUEEN_PST_START + square].eg_score;
+		else if (piece == PieceType::KING) return EvalWeights[KING_PST_START + square].eg_score;
+		else return 0;
+	}
+	else {
+		if (piece == PieceType::PAWN) return -EvalWeights[PAWN_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::KNIGHT) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::BISHOP) return -EvalWeights[BISHOP_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::ROOK) return -EvalWeights[ROOK_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::QUEEN) return -EvalWeights[QUEEN_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::KING) return -EvalWeights[KING_PST_START + flip_square(square)].eg_score;
+		else return 0;
+	}
 }

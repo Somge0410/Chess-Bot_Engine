@@ -1,6 +1,5 @@
-#pragma once
+﻿#pragma once
 #include <cstdint>
-#include "constants.h"
 
 class Zobrist {
     public:

@@ -8,7 +8,6 @@
 
 struct FenData {
 	PieceBoards pieces{};
-	std::array<Square, 2> king_squares;
 	Color side_to_move{Color::White };
 	CastlingRights castling_rights{};
 	EnPassantRights en_passant_square{ NO_SQUARE };

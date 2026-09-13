@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "board.h"
+#include "position.h"
 #include "Move.h"
 #include <vector>
 #include <map>
@@ -482,7 +482,7 @@ class Engine {
 #endif
         uint8_t generation=0;
 
-        Move search(const Board& position, const SearchLimits& limits);
+        Move search(const Position& position, const SearchLimits& limits);
         void stop_search_and_wait() {
             stop_search.store(true, std::memory_order_release);
         }
@@ -505,16 +505,16 @@ class Engine {
         int active_workers = 0;
         int job_thread_count = 1;
 
-        Board job_position;
+        Position job_position;
 		SearchLimits job_limits;
 
         static constexpr uint64_t CHECKERS_UNKNOWN = std::numeric_limits<uint64_t>::max();
         static constexpr int LMR_DEPTH_COUNT = 64;
         static constexpr int LMR_MOVE_COUNT = 218;
 
-        SearchResult negamax(Board & board, int depth, int alpha, int beta, int ply,ThreadLocalData* tls,
+        SearchResult negamax(Position & pos, int depth, int alpha, int beta, int ply,ThreadLocalData* tls,
             const Move& previous_move=Move(), uint64_t checkers=CHECKERS_UNKNOWN, bool null_move_allowed=true);
-        int quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply,
+        int quiescence_search(Position& pos, int alpha, int beta, int search_ply, int qply,
             ThreadLocalData* tls, uint64_t checkers=CHECKERS_UNKNOWN, bool after_check_invasion=false);
         Move best_move_this_iteration;
         std::vector<TTCluster> tt;/*
@@ -528,29 +528,29 @@ class Engine {
         void set_time_budget_ms(int total_time_ms);
         bool is_time_up() const;
         void initialize_lmr_tables();
-        void sort_moves(MoveList& moves, const Board& board, int ply,const Move& tt_move, bool tt_depth_0 = false,ThreadLocalData* tls={}, const Move& previous_move=Move());
-        int score_move(const Move& move, int ply,const Move& tt_move, bool depth_0,const Board& board,ThreadLocalData* tls, const Move& previous_move);
-        TimeControlDecision decide_time_control(const Board& position, const SearchLimits& limits);
+        void sort_moves(MoveList& moves, const Position& pos, int ply,const Move& tt_move, bool tt_depth_0 = false,ThreadLocalData* tls={}, const Move& previous_move=Move());
+        int score_move(const Move& move, int ply,const Move& tt_move, bool depth_0,const Position& pos,ThreadLocalData* tls, const Move& previous_move);
+        TimeControlDecision decide_time_control(const Position& position, const SearchLimits& limits);
         bool probe_tt(uint64_t hash, int depth, int alpha, int beta, int& out_score, Move& out_move, int ply, bool is_depth_0 = false, TTMode mode = TTMode::Negamax);
         bool store_tt(uint64_t hash, int depth, int original_alpha, int beta, int best_score, Move& best_move, int ply, bool is_best_tempered, bool is_any_tempered = false, TTMode mode = TTMode::Negamax);
 		bool should_futility_prune(int depth, int eval, int alpha, bool in_check,const Move& move);
 		int late_move_reduction(int depth, int moves_searched, const Move& move, int ply, ThreadLocalData* tls,const Move& previous_move);
-		bool try_null_move_pruning(Board& board,bool is_in_check, int depth, int alpha, int beta, int ply,
+		bool try_null_move_pruning(Position& pos,bool is_in_check, int depth, int alpha, int beta, int ply,
             int static_eval, int& out_score,ThreadLocalData* tls);
-		SearchResult terminal_eval(const Board& board, bool king_is_in_check,int ply);
+		SearchResult terminal_eval(const Position& pos, bool king_is_in_check,int ply);
 		void update_history_killer(const Move& move, int depth, int ply,ThreadLocalData* tls, const Move& previous_move=Move(),const MoveList& searched_quiets=MoveList());
         void init_tt(size_t tt_size_mb = MAX_MEMORY_TT_MB);
-        bool move_could_result_in_repetition(Board& board, Move& move, int count=3);
-        void recover_move_fully(Move& move,const Board& board);
+        bool move_could_result_in_repetition(Position& pos, Move& move, int count=3);
+        void recover_move_fully(Move& move,const Position& pos);
         void score_moves(const MoveList& moves, int* scores, 
-		int ply, const Move& tt_move, bool depth_0,const Board& board, ThreadLocalData* tls,
+		int ply, const Move& tt_move, bool depth_0,const Position& pos, ThreadLocalData* tls,
             const Move& previous_move, bool lazy_see=false);
-        void pick_next_staged(MoveList& moves, int* scores, int start, const Board& board);
+        void pick_next_staged(MoveList& moves, int* scores, int start, const Position& pos);
         void score_qsearch_moves(const MoveList& moves, int* scores);
-		int relevant_pawn_push(const Board& board, const Move& move);
-		void iterative_deepening_new(int thread_id, bool is_master,Move& out_best_move ,int& io_best_score,const Board& board, TimeControlDecision& tc,ThreadLocalData* tls);
+		int relevant_pawn_push(const Position& pos, const Move& move);
+		void iterative_deepening_new(int thread_id, bool is_master,Move& out_best_move ,int& io_best_score,const Position& pos, TimeControlDecision& tc,ThreadLocalData* tls);
 		void perturb_root_order(MoveList& moves, int thread_id, int current_depth, uint64_t hash);
-        void root_pvs(const Board& pos,
+        void root_pvs(const Position& pos,
             MoveList& root_moves,
             int current_depth,
             int alpha,
@@ -560,7 +560,7 @@ class Engine {
             int& out_second_best_score,
             Move& second_best_move,
 			ThreadLocalData* tls);
-		std::string create_pv_string(const Board& board,const Move& best_move, int depth);
+		std::string create_pv_string(const Position& pos,const Move& best_move, int depth);
 		void add_history(ThreadLocalData* tls, const Move& move, int bonus);
         std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> quiet_lmr{};
         std::array<std::array<uint8_t, LMR_MOVE_COUNT>, LMR_DEPTH_COUNT> tactical_lmr{};

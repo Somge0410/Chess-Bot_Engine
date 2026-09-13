@@ -10,7 +10,7 @@
 #include "utils.h"
 #include <fstream>
 #include "see.h"
-#include "bitboard_masks.h"
+#include "bitpos_masks.h"
 #include <atomic>
 #include <bit>
 #include <mutex>
@@ -280,11 +280,11 @@ constexpr int PIECE_VALUES_MG[7] = {100,320,320,500,900,10000,0};
 
 #if ENABLE_QSEARCH_DIAGNOSTICS
 MoveOrderSource classify_move_order_source(const Move& move, const Move& tt_move, bool tt_depth_0,
-    const Board& board, ThreadLocalData* tls, const Move& previous_move, int ply) {
+    const Position& pos, ThreadLocalData* tls, const Move& previous_move, int ply) {
     if (move == tt_move && !tt_depth_0) return MoveOrderSource::TT;
     if (move.promotion_piece != PieceType::NONE) return MoveOrderSource::Promotion;
     if (move.piece_captured != PieceType::NONE) {
-        return see_move(board, move) >= 0
+        return see_move(pos, move) >= 0
             ? MoveOrderSource::WinningCapture
             : MoveOrderSource::LosingCapture;
     }
@@ -315,7 +315,7 @@ Engine::Engine(size_t tt_size_mb){
     checkmate_count=0;
 	int overwrite_tt_counter = 0;
 }
-SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int ply, ThreadLocalData* tls,
+SearchResult Engine::negamax(Position& pos, int depth, int alpha, int beta, int ply, ThreadLocalData* tls,
     const Move& previous_move, uint64_t checkers, bool null_move_allowed) {
     if (stop_search.load(std::memory_order_relaxed)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
@@ -329,20 +329,20 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         }
     }
 #if ENABLE_QSEARCH_DIAGNOSTICS
-    if (board.is_fifty_move_rule_draw()) {
+    if (pos.is_fifty_move_rule_draw()) {
         increment_diagnostic(tls, SearchDiagCounter::SearchFiftyMoveDraws);
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
-    if (board.is_repetition_draw(3)) {
+    if (pos.is_repetition_draw(3)) {
         increment_diagnostic(tls, SearchDiagCounter::SearchRepetitionDraws);
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
 #else
-    if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
+    if (pos.is_fifty_move_rule_draw() || pos.is_repetition_draw(3)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
 #endif
-    uint64_t hash=board.get_hash();
+    uint64_t hash=pos.get_hash();
     int original_alpha=alpha;
     int tt_score;
     Move tt_move;
@@ -350,16 +350,16 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_from_depth_0 = false;
 #if ENABLE_QSEARCH_DIAGNOSTICS
     if (checkers == CHECKERS_UNKNOWN) {
-        checkers = board.get_checkers();
+        checkers = pos.get_checkers();
     }
     tls->current_tt_probe_in_check = checkers != 0;
     tls->last_tt_probe_was_shallow = false;
 #endif
     if (probe_tt(hash, depth, alpha, beta, tt_score, tt_move, ply, is_from_depth_0)) {
-        bool is_draw = move_could_result_in_repetition(board, tt_move);
+        bool is_draw = move_could_result_in_repetition(pos, tt_move);
         //is_draw = false;
         if (!is_draw) {
-            recover_move_fully(tt_move, board);
+            recover_move_fully(tt_move, pos);
             return { tt_score,tt_move};
         }
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -369,13 +369,13 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     
     if (depth==0)
     {
-        int q_score=quiescence_search(board, alpha, beta, ply, 0, tls, checkers);
+        int q_score=quiescence_search(pos, alpha, beta, ply, 0, tls, checkers);
         
         return {q_score,Move()};
     }
 
     if (checkers == CHECKERS_UNKNOWN) {
-        checkers = board.get_checkers();
+        checkers = pos.get_checkers();
     }
     bool king_is_in_check = checkers != 0;
 	int static_eval = -MATE_SCORE;
@@ -388,12 +388,12 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     if (king_is_in_check) increment_diagnostic(tls, SearchDiagCounter::InCheckNodes);
 #endif
     const bool nmp_candidate = null_move_allowed && !is_pv_node && depth >= NMP_MIN_DEPTH && !king_is_in_check &&
-        std::abs(beta) < MATE_THRESHOLD && board.has_enough_material_for_nmp();
+        std::abs(beta) < MATE_THRESHOLD && pos.has_enough_material_for_nmp();
 #if ENABLE_QSEARCH_DIAGNOSTICS
     if (nmp_candidate) increment_diagnostic(tls, SearchDiagCounter::NmpCandidates);
 #endif
     if (!king_is_in_check && ((depth <= REVERSE_FUTILITY_MAX_DEPTH && !is_pv_node) || nmp_candidate)) {
-        static_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        static_eval = pos.is_white_to_move() ? evaluate(pos, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(pos, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -415,7 +415,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #if ENABLE_QSEARCH_DIAGNOSTICS
         && (increment_diagnostic(tls, SearchDiagCounter::NmpSearches), true)
 #endif
-        && try_null_move_pruning(board,king_is_in_check,depth,alpha,beta,ply,static_eval,nmp_score,tls))
+        && try_null_move_pruning(pos,king_is_in_check,depth,alpha,beta,ply,static_eval,nmp_score,tls))
     {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(tls, SearchDiagCounter::NmpCutoffs);
@@ -428,7 +428,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 	MoveList& searched_quiets = tls->searched_quiets[ply];
     moves.clear();
 	searched_quiets.clear();
-    MoveGenerator::generate_moves(board,moves,checkers);
+    MoveGenerator::generate_moves(pos,moves,checkers);
 #if ENABLE_QSEARCH_DIAGNOSTICS
     increment_diagnostic(tls, SearchDiagCounter::MainMovesGenerated, moves.size());
     increment_diagnostic(tls, is_pv_node ? SearchDiagCounter::PvMovesGenerated : SearchDiagCounter::NonPvMovesGenerated,
@@ -440,13 +440,13 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         return { 0,moves[0] };
     }
     //Sort moves
-    //sort_moves(moves,board,ply,tt_move);
+    //sort_moves(moves,pos,ply,tt_move);
     int best_score=-MATE_SCORE;
     Move best_move;
 	//If no moves available, check for checkmate or stalemate
     if (moves.empty())
     {
-		return terminal_eval(board, king_is_in_check,ply);
+		return terminal_eval(pos, king_is_in_check,ply);
     }
     
 
@@ -457,7 +457,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         if (static_eval != -MATE_SCORE)
             current_eval = static_eval;
         else
-            current_eval = board.is_white_to_move() ? evaluate(board, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(board,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+            current_eval = pos.is_white_to_move() ? evaluate(pos, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(pos,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
     }
     
     // Late Move Reduction prerequisites here
@@ -476,14 +476,14 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
     bool is_best_move_tempered = false;
     bool current_move_tempered = false;
     int* scores = tls->move_scores[ply];
-	score_moves(moves, scores, ply, tt_move, is_from_depth_0,board,tls,previous_move,true);
+	score_moves(moves, scores, ply, tt_move, is_from_depth_0,pos,tls,previous_move,true);
     for (int i=0;i<(int)moves.size();++i)
     {   
-		pick_next_staged(moves, scores, i, board);
+		pick_next_staged(moves, scores, i, pos);
 		const Move move = moves[i];
 #if ENABLE_QSEARCH_DIAGNOSTICS
         const MoveOrderSource current_move_source = classify_move_order_source(
-            move, tt_move, is_from_depth_0, board, tls, previous_move, ply);
+            move, tt_move, is_from_depth_0, pos, tls, previous_move, ply);
         if (shallow_tt_move && i == 0 && move == tt_move) {
             increment_diagnostic(tls, SearchDiagCounter::ShallowTTMoveFirst);
         }
@@ -503,7 +503,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		}
         // Late Move Reduction
         int reduction = 0;
-        if (!board.is_dangerous_passer_push(move)) {
+        if (!pos.is_dangerous_passer_push(move)) {
             reduction = late_move_reduction(depth, moves_searched, move, ply, tls, previous_move);
         }
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -511,11 +511,11 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #endif
         moves_searched++;
         //Now make the move
-        board.make_move(move);
+        pos.make_move(move);
 
 		//If in check, we should increase depth by 1
         int extension = 0;
-        const uint64_t child_checkers = board.get_checkers();
+        const uint64_t child_checkers = pos.get_checkers();
         if (child_checkers != 0 && ply<64 && depth<=3)
         {
             extension=1;
@@ -525,7 +525,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 		}
         int evaluation;
         if (first) { 
-			SearchResult first_result = negamax(board, depth - 1 + extension, -beta, -alpha, ply + 1,tls,move,child_checkers);
+			SearchResult first_result = negamax(pos, depth - 1 + extension, -beta, -alpha, ply + 1,tls,move,child_checkers);
             evaluation = -first_result.score;
             current_move_tempered = first_result.is_tempered;
 			first = false;
@@ -537,7 +537,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
             int new_depth = depth - 1 + extension;
 			int reduced_depth = new_depth - reduction;
 
-            SearchResult other_result = negamax(board, reduced_depth, -alpha - 1, -alpha, ply + 1,tls,move,child_checkers);
+            SearchResult other_result = negamax(pos, reduced_depth, -alpha - 1, -alpha, ply + 1,tls,move,child_checkers);
             evaluation = -other_result.score;
             current_move_tempered = other_result.is_tempered;
 
@@ -545,7 +545,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 increment_diagnostic(tls, SearchDiagCounter::LmrResearches);
 #endif
-                other_result = negamax(board, new_depth, -alpha - 1, -alpha, ply + 1,tls,move,child_checkers);
+                other_result = negamax(pos, new_depth, -alpha - 1, -alpha, ply + 1,tls,move,child_checkers);
                 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -557,13 +557,13 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 increment_diagnostic(tls, SearchDiagCounter::PvsFullWindowResearches);
 #endif
-                 other_result = negamax(board, new_depth, -beta, -alpha, ply + 1,tls,move,child_checkers);
+                 other_result = negamax(pos, new_depth, -beta, -alpha, ply + 1,tls,move,child_checkers);
 				 evaluation = -other_result.score;
 				current_move_tempered = other_result.is_tempered;
             }
         }
         is_any_tempered |= current_move_tempered;
-        board.undo_move(move);
+        pos.undo_move(move);
 		bool quiet = move.piece_captured == PieceType::NONE && move.promotion_piece == PieceType::NONE;
 
         if (quiet) {
@@ -617,7 +617,7 @@ SearchResult Engine::negamax(Board& board, int depth, int alpha, int beta, int p
         best_move, ply, is_best_move_tempered, is_any_tempered);
     return {best_score,best_move,is_result_tempered};
 }
-int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Board& board, ThreadLocalData* tls, const Move& previous_move) {
+int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Position& pos, ThreadLocalData* tls, const Move& previous_move) {
    
 
     int stage = 0;
@@ -628,7 +628,7 @@ int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_
         stage = PROMO_STAGE; sub = PIECE_VALUES_MG[to_int(move.promotion_piece)] - PIECE_VALUES_MG[to_int(move.piece_captured)];
     }
     else if (move.piece_captured != PieceType::NONE) {
-        int see = see_move(board, move);
+        int see = see_move(pos, move);
 
         int attacker_val = PIECE_VALUES_MG[to_int(move.piece_moved)];
         int victim_val = PIECE_VALUES_MG[to_int(move.piece_captured)];
@@ -646,14 +646,14 @@ int Engine::score_move(const Move& move, int ply,const Move& tt_move,bool depth_
         sub = 0;
     }
     else {
-        stage = QUIET_STAGE; sub = tls->history_scores[to_int(move.move_color)][to_int(move.piece_moved)][move.to_square] +relevant_pawn_push(board,move);
+        stage = QUIET_STAGE; sub = tls->history_scores[to_int(move.move_color)][to_int(move.piece_moved)][move.to_square] +relevant_pawn_push(pos,move);
 	}
 	return stage * 100000 + sub;
 }      
-void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& tt_move,bool tt_depth_0, ThreadLocalData* tls, const Move& previous_move){
+void Engine::sort_moves(MoveList& moves,const Position& pos, int ply,const Move& tt_move,bool tt_depth_0, ThreadLocalData* tls, const Move& previous_move){
     std::vector<std::pair<int, Move>> scored;
     scored.reserve(moves.size());
-    for (const auto& m : moves) scored.emplace_back(score_move(m, ply, tt_move,tt_depth_0,board,tls,previous_move), m);
+    for (const auto& m : moves) scored.emplace_back(score_move(m, ply, tt_move,tt_depth_0,pos,tls,previous_move), m);
 
     std::sort(scored.begin(), scored.end(), [](const auto& a, const auto& b) {
         if(a.first != b.first)
@@ -663,7 +663,7 @@ void Engine::sort_moves(MoveList& moves,const Board& board, int ply,const Move& 
 
     for (size_t i = 0; i < moves.size(); ++i) moves[i]=scored[i].second;
 }
-int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply, int qply,
+int Engine::quiescence_search(Position& pos, int alpha, int beta, int search_ply, int qply,
     ThreadLocalData* tls, uint64_t checkers, bool after_check_invasions) {
     if (stop_search.load(std::memory_order_relaxed)) {
         return 0;
@@ -682,21 +682,21 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
     }
 #if ENABLE_QSEARCH_DIAGNOSTICS
-    if (board.is_fifty_move_rule_draw()) {
+    if (pos.is_fifty_move_rule_draw()) {
         increment_diagnostic(tls, SearchDiagCounter::QFiftyMoveDraws);
         return 0;
     }
-    if (board.is_repetition_draw(3)) {
+    if (pos.is_repetition_draw(3)) {
         increment_diagnostic(tls, SearchDiagCounter::QRepetitionDraws);
         return 0;
     }
 #else
-    if (board.is_fifty_move_rule_draw() || board.is_repetition_draw(3)) {
+    if (pos.is_fifty_move_rule_draw() || pos.is_repetition_draw(3)) {
         return 0;
     }
 #endif
     if (checkers == CHECKERS_UNKNOWN) {
-        checkers = board.get_checkers();
+        checkers = pos.get_checkers();
     }
     bool in_check = checkers != 0;
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -708,7 +708,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
     const int qmove_list_index = std::min(qply, max_qply_index);
     MoveList& moves = tls->qmove_lists[qmove_list_index];
     moves.clear();
-	const uint64_t hash = board.get_hash();
+	const uint64_t hash = pos.get_hash();
 
     for(int previous =qply-2;previous >=0; previous -= 2) {
         if (tls->qsearch_hashes[previous]== hash) {
@@ -724,7 +724,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(tls, SearchDiagCounter::QSoftCapStaticReturns);
 #endif
-        return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+        return pos.is_white_to_move() ? evaluate(pos) : -evaluate(pos);
 	}
     if (qply >=max_qply_index) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -736,7 +736,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QHardCapStaticReturns);
 #endif
-            return board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+            return pos.is_white_to_move() ? evaluate(pos) : -evaluate(pos);
         }
         else {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -748,7 +748,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
 
 
     if (in_check) {
-        MoveGenerator::generate_moves(board, moves, checkers);
+        MoveGenerator::generate_moves(pos, moves, checkers);
         if (moves.empty()) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QCheckmates);
@@ -757,7 +757,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         }
     }
     else {
-        int stand_pat = board.is_white_to_move() ? evaluate(board) : -evaluate(board);
+        int stand_pat = pos.is_white_to_move() ? evaluate(pos) : -evaluate(pos);
         if (stand_pat >= beta) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QStandPatCutoffs);
@@ -767,9 +767,9 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (stand_pat > alpha) alpha = stand_pat;
 		const bool include_quiet_checks = qply == 0 || after_check_invasions;
         if(include_quiet_checks)
-            MoveGenerator::generate_captures_with_checks(board, moves, checkers);
+            MoveGenerator::generate_captures_with_checks(pos, moves, checkers);
         else
-			MoveGenerator::generate_captures(board, moves, checkers);
+			MoveGenerator::generate_captures(pos, moves, checkers);
     }
 #if ENABLE_QSEARCH_DIAGNOSTICS
     increment_diagnostic(tls, SearchDiagCounter::QMovesGenerated, moves.size());
@@ -792,7 +792,7 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
         if (!in_check) {
             if (scores[i] == std::numeric_limits<int>::min()) break;
             const bool is_capture = move.piece_captured != PieceType::NONE;
-            if (is_capture && see_move(board, move) < 0) {
+            if (is_capture && see_move(pos, move) < 0) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 increment_diagnostic(tls, SearchDiagCounter::QSeePrunes);
 #endif
@@ -801,8 +801,8 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             }
         }
 
-        board.make_move(move);
-        const uint64_t child_checkers = board.get_checkers();
+        pos.make_move(move);
+        const uint64_t child_checkers = pos.get_checkers();
 #if ENABLE_QSEARCH_DIAGNOSTICS
         if (tls && !in_check &&
             move.piece_captured == PieceType::NONE &&
@@ -810,8 +810,8 @@ int Engine::quiescence_search(Board& board, int alpha, int beta, int search_ply,
             tls->quiet_checks_searched++;
         }
 #endif
-        int score = -quiescence_search(board, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check);
-        board.undo_move(move);
+        int score = -quiescence_search(pos, -beta, -alpha, search_ply + 1, qply + 1, tls, child_checkers,in_check);
+        pos.undo_move();
 		++i;
 #if ENABLE_QSEARCH_DIAGNOSTICS
         qmoves_searched++;
@@ -857,7 +857,7 @@ double interpolate_phase(double phase, double endgame_value, double midgame_valu
 	const double t = (phase - 12.0) / 12.0;
 	return midgame_value + t * (opening_value - midgame_value);
 }
-TimeControlDecision Engine::decide_time_control(const Board& position, const SearchLimits& limits) {
+TimeControlDecision Engine::decide_time_control(const Position& position, const SearchLimits& limits) {
     TimeControlDecision tc{};
     tc.max_depth = limits.depth > 0 ? limits.depth : INFINITE_DEPTH;
     if (limits.movetime > 0) {
@@ -1219,22 +1219,22 @@ void Engine::initialize_lmr_tables() {
         }
     }
 }
-bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int depth, int alpha, int beta, int ply,
+bool Engine::try_null_move_pruning(Position& pos, bool king_is_in_check, int depth, int alpha, int beta, int ply,
     int static_eval, int& out_score,ThreadLocalData* tls) {
 	bool is_mate_score_possible = (alpha >= MATE_THRESHOLD || beta <= -MATE_THRESHOLD);
 
-    if(is_mate_score_possible|| depth < NMP_MIN_DEPTH || king_is_in_check || !board.has_enough_material_for_nmp()) {
+    if(is_mate_score_possible|| depth < NMP_MIN_DEPTH || king_is_in_check || !pos.has_enough_material_for_nmp()) {
         return false;
 	}
 	const int eval_reduction = std::clamp((static_eval - beta) / std::max(1, NMP_EVAL_DIVISOR),
         0, NMP_MAX_EVAL_REDUCTION);
 	const int reduction = NMP_REDUCTION + depth / std::max(1, NMP_DEPTH_DIVISOR) + eval_reduction;
 	const int null_depth = std::max(0, depth - 1 - reduction);
-	int original_ep_square = board.make_null_move();
-	int null_move_score = negamax(board, null_depth, -beta, -beta + 1, ply + 1,tls,
+	int original_ep_square = pos.make_null_move();
+	int null_move_score = negamax(pos, null_depth, -beta, -beta + 1, ply + 1,tls,
         Move(), CHECKERS_UNKNOWN, false).score;
 	null_move_score = -null_move_score;
-	board.undo_null_move(original_ep_square);
+	pos.undo_null_move(original_ep_square);
     if (stop_search.load(std::memory_order_relaxed)) {
         out_score = 0;
         return true;
@@ -1245,7 +1245,7 @@ bool Engine::try_null_move_pruning(Board& board, bool king_is_in_check, int dept
     }
 	return false;
 }
-SearchResult Engine::terminal_eval(const Board& board, bool king_is_in_check,int ply) {
+SearchResult Engine::terminal_eval(const Position& pos, bool king_is_in_check,int ply) {
     if (king_is_in_check) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(&tls_data, SearchDiagCounter::TerminalCheckmates);
@@ -1289,20 +1289,20 @@ void Engine::init_tt(size_t tt_size_mb) {
     clusters = std::bit_floor(clusters);
     tt.resize(clusters);
 }
-bool Engine::move_could_result_in_repetition(Board& board, Move& move, int count) {
+bool Engine::move_could_result_in_repetition(Position& pos, Move& move, int count) {
     if (move.piece_captured != PieceType::NONE || move.piece_moved == PieceType::PAWN || move.is_castle) return false;
-    return board.has_twofold();
+    return pos.has_twofold();
 }
-void Engine::recover_move_fully(Move& move,const Board& board) {
-    move.move_color = board.get_turn();
-    move.piece_moved = board.get_piece_on_square(move.from_square);
-    move.piece_captured = board.get_piece_on_square(move.to_square);
+void Engine::recover_move_fully(Move& move,const Position& pos) {
+    move.move_color = pos.get_turn();
+    move.piece_moved = pos.get_piece_on_square(move.from_square);
+    move.piece_captured = pos.get_piece_on_square(move.to_square);
 	int abs = std::abs(move.to_square - move.from_square);
 	move.is_castle = move.piece_moved == PieceType::KING && abs == 2;
-    move.is_en_passant = move.piece_moved == PieceType::PAWN && move.to_square==board.get_en_passant_rights();
+    move.is_en_passant = move.piece_moved == PieceType::PAWN && move.to_square==pos.get_en_passant_rights();
 }
 void Engine::score_moves(const MoveList& moves, int* scores,
-    int ply, const Move& tt_move, bool tt_depth_0,const Board& board,ThreadLocalData* tls,
+    int ply, const Move& tt_move, bool tt_depth_0,const Position& pos,ThreadLocalData* tls,
     const Move& previous_move, bool lazy_see) {
     for (int i = 0; i < (int)moves.size(); ++i) {
         const Move& move = moves[i];
@@ -1317,11 +1317,11 @@ void Engine::score_moves(const MoveList& moves, int* scores,
                 (victim - attacker) / CAPTURE_SCORE_TIEBREAK_DIVISOR;
         }
         else {
-            scores[i] = score_move(move, ply, tt_move, tt_depth_0,board, tls,previous_move);
+            scores[i] = score_move(move, ply, tt_move, tt_depth_0,pos, tls,previous_move);
         }
     }
 }
-void Engine::pick_next_staged(MoveList& moves, int* scores, int start, const Board& board) {
+void Engine::pick_next_staged(MoveList& moves, int* scores, int start, const Position& pos) {
     while (true) {
         int best = start;
         for (int i = start + 1; i < static_cast<int>(moves.size()); ++i) {
@@ -1334,7 +1334,7 @@ void Engine::pick_next_staged(MoveList& moves, int* scores, int start, const Boa
             scores[best] >= MVV_LVA_STAGE * 100000 + 40000 &&
             scores[best] < MVV_LVA_STAGE * 100000 + 60000;
         if (untested_capture) {
-            const int see = see_move(board, candidate);
+            const int see = see_move(pos, candidate);
             if (see < 0) {
                 scores[best] = LOSING_CAPTURE_STAGE * 100000 + see;
                 continue;
@@ -1361,16 +1361,16 @@ void Engine::score_qsearch_moves(const MoveList& moves, int* scores) {
         scores[i] += victim - attacker;
     }
 }
-int Engine::relevant_pawn_push(const Board& board, const Move& move) {
+int Engine::relevant_pawn_push(const Position& pos, const Move& move) {
     if (move.piece_moved != PieceType::PAWN) return 0;
     int score = 0;
-    Color us = board.get_turn();
+    Color us = pos.get_turn();
 
     int to = move.to_square;
 	int rank = to / 8;
 	int relative_rank = (us == Color::WHITE) ? rank : 7 - rank;
 
-    bool passed = board.is_passed_after(move);
+    bool passed = pos.is_passed_after(move);
 
     if (passed) {
         score += PAWN_PUSH_SCORE1;
@@ -1378,11 +1378,11 @@ int Engine::relevant_pawn_push(const Board& board, const Move& move) {
         if (relative_rank >= 5) score += PAWN_PUSH_SCORE3;
         if (relative_rank >= 6) score += PAWN_PUSH_SCORE4;
 
-        if (board.count_attacker_on_square(to, flip_color(us), 1, false).count == 0) {
+        if (pos.count_attacker_on_square(to, flip_color(us), 1, false).count == 0) {
             score += PAWN_PUSH_SCORE5;
         }
     }
-    int king_square = board.get_king_square(flip_color(us));
+    int king_square = pos.get_king_square(flip_color(us));
     if (KING_ZONE[king_square] & bit64(to)) {
         score += PAWN_PUSH_SCORE6;
     }
@@ -1442,7 +1442,7 @@ void Engine::worker_loop(int thread_id, uint64_t initial_job_id) {
     int local_score = 0;
 
     while (true) {
-        Board pos;
+        Position pos;
         SearchLimits limits;
         uint64_t assigned_job = 0;
         bool participates = false;
@@ -1477,7 +1477,7 @@ void Engine::worker_loop(int thread_id, uint64_t initial_job_id) {
     }
 }
 
-void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_best_move, int& io_best_score, const Board& position, TimeControlDecision& tc , ThreadLocalData* tls) {
+void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_best_move, int& io_best_score, const Position& position, TimeControlDecision& tc , ThreadLocalData* tls) {
     int start_depth = 1 + (thread_id & 1);
     uint64_t prev_total_nodes = 0;
     uint64_t prev_elapsed_ms = 0;
@@ -1503,10 +1503,10 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 #if ENABLE_QSEARCH_DIAGNOSTICS
         const Move previous_iteration_best = io_best_move;
 #endif
-        Board board = position;
+        Position pos = position;
         MoveList root_moves;
 
-        MoveGenerator::generate_moves(board, root_moves);
+        MoveGenerator::generate_moves(pos, root_moves);
         if (root_moves.empty()) {
             if (is_master) {
                 std::cerr << "No legal moves available, stopping search.\n";
@@ -1528,8 +1528,8 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
 
         //If we dont have a valid previous best yet, seed it so ordering is stable.
 
-        sort_moves(root_moves, board, 0, io_best_move, false, tls);
-        perturb_root_order(root_moves, thread_id, current_depth,board.get_zobrist_hash());
+        sort_moves(root_moves, pos, 0, io_best_move, false, tls);
+        perturb_root_order(root_moves, thread_id, current_depth,pos.get_zobrist_hash());
 
         //Aspiration window (per thread).
         int window = ASPIRATION_WINDOW_INITIAL;
@@ -1568,7 +1568,7 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                 beta = std::min(MATE_SCORE, best_score + window);
 
                 //Put the current best move first to speed up re-search.
-                sort_moves(root_moves, board, 0, best_move, false, tls);
+                sort_moves(root_moves, pos, 0, best_move, false, tls);
                 continue;
             }
             //Inside the window-> done.
@@ -1702,12 +1702,12 @@ void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_bes
                     : -(MATE_SCORE + best_score + 1) / 2;
                 std::cout << " score mate " << mate_in;
             } else {
-                std::cout << " score cp " << (board.get_turn() == Color::WHITE ? best_score : -best_score);
+                std::cout << " score cp " << (pos.get_turn() == Color::WHITE ? best_score : -best_score);
             }
             std::cout << " time " << elapsed_ms
                       << " nodes " << total_nodes
                       << " nps " << nps
-                      << " pv " << create_pv_string(board, best_move, current_depth)
+                      << " pv " << create_pv_string(pos, best_move, current_depth)
                       << "\n";
             std::cout.flush();
 			iteration_nodes = total_nodes - prev_total_nodes;
@@ -1794,7 +1794,7 @@ void Engine::perturb_root_order(MoveList& moves, int thread_id, int depth, uint6
     //std::rotate(moves.begin() + 1, moves.begin() + 1 + shift, moves.end());
 
     }
-void Engine::root_pvs(const Board& pos, MoveList& root_moves,
+void Engine::root_pvs(const Position& pos, MoveList& root_moves,
     int current_depth,
     int alpha,
     int beta,
@@ -1818,7 +1818,7 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
 #endif
 
 
-    Board b = pos;
+    Position b = pos;
     for (size_t i = 0; i < root_moves.size(); ++i) {
         if (stop_search.load(std::memory_order_relaxed)) break;
 
@@ -1889,7 +1889,7 @@ void Engine::root_pvs(const Board& pos, MoveList& root_moves,
     out_second_best_score = second_best_score;
     out_second_best_move = local_second_best_move;
 }
-Move Engine::search(const Board& position, const SearchLimits& limits) {
+Move Engine::search(const Position& position, const SearchLimits& limits) {
     //decide time control
 	auto tc = decide_time_control(position, limits);
     initialize_lmr_tables();
@@ -1929,9 +1929,9 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
 	stop_search.store(false, std::memory_order_relaxed);
 
     //Seed fallback move (ideally after sort_moves so its not "first generated"
-    Board board = position;
+    Position pos = position;
 	MoveList root_moves;
-	MoveGenerator::generate_moves(board, root_moves);
+	MoveGenerator::generate_moves(pos, root_moves);
     if (root_moves.empty()) return Move();
     if (root_moves.size() == 1) {
         std::cout << "info depth " << 0;
@@ -1945,7 +1945,7 @@ Move Engine::search(const Board& position, const SearchLimits& limits) {
         std::cout.flush();
 		return root_moves[0];
     }
-	sort_moves(root_moves, board, 0, Move(), false, &tls_data);
+	sort_moves(root_moves, pos, 0, Move(), false, &tls_data);
     Move best_move_so_far = root_moves[0];
 	int best_score_so_far = -MATE_SCORE;
 
@@ -2020,9 +2020,9 @@ void Engine::resize_tt(size_t tt_size_mb) {
     start_thread_pool(saved_threads);
     stop_search.store(false, std::memory_order_relaxed);
 }
-std::string Engine::create_pv_string(const Board& board, const Move& best_move, int depth) {
+std::string Engine::create_pv_string(const Position& pos, const Move& best_move, int depth) {
     std::string pv = move_to_uci(best_move);
-    Board b = board;
+    Position b = pos;
     b.make_move(best_move);
 
     // Sammle bis zu depth-1 weitere Züge aus der TT

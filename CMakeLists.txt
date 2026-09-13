@@ -25,7 +25,7 @@ add_executable(Chess-Bot_Engine
     src/core/notation_utils.cpp
     src/core/zobrist.cpp
     src/uci/uci.cpp
- "src/core/types.h" "src/core/position.h" "src/core/position.cpp" "src/core/state.h" "src/core/fen.h" "src/core/fen.cpp" "src/core/bitboard.h" "src/core/Square.h")
+ "src/core/types.h" "src/core/position.h" "src/core/position.cpp" "src/core/state.h" "src/core/fen.h" "src/core/fen.cpp" "src/core/bitboard.h" "src/core/Square.h" "src/core/repetition.h" "src/core/phase.h" "src/generated/attacks.h")
 
 target_include_directories(Chess-Bot_Engine PRIVATE
     include

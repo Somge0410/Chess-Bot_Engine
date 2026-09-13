@@ -1,9 +1,9 @@
-#pragma once
-#include "board.h"
+﻿#pragma once
+#include "position.h"
 #include "see.h"
 #include "eval_params.h"
 struct EvalContext {
-	const Board& board;
+	const Position& pos;
 	uint64_t backward[2];
 	uint64_t isolated[2];
 	uint64_t passed[2];
@@ -11,8 +11,8 @@ struct EvalContext {
 	mutable uint64_t attacks[2];
 	mutable uint8_t attacks_initialized;
 
-	EvalContext(const Board& b)
-		: board(b),
+	EvalContext(const Position& b)
+		: pos(b),
 		backward{ 0,0 },
 		isolated{ 0,0 },
 		passed{ 0,0 },
@@ -23,8 +23,8 @@ struct EvalContext {
 	void init_file_info() {
 		for (size_t file = 0; file < 8; ++file) {
 			uint64_t file_mask = FILE_MASK[file];
-			bool white_has_pawns = (board.get_pieces(Color::WHITE, PieceType::PAWN) & file_mask) != 0;
-			bool black_has_pawns = (board.get_pieces(Color::BLACK, PieceType::PAWN) & file_mask) != 0;
+			bool white_has_pawns = (pos.get_pieces(Color::WHITE, PieceType::PAWN) & file_mask) != 0;
+			bool black_has_pawns = (pos.get_pieces(Color::BLACK, PieceType::PAWN) & file_mask) != 0;
 			if (!white_has_pawns)
 				files_with_no_color_pawns[0] |= bit8(file);
 			if (!black_has_pawns)
@@ -32,31 +32,31 @@ struct EvalContext {
 		}
 	}
 	uint64_t get_pieces(Color color, PieceType piece_type) const {
-		return board.get_pieces(color, piece_type);
+		return pos.get_pieces(color, piece_type);
 	}
 	uint64_t get_color_pieces(Color color) const {
-		return board.get_color_pieces(color);
+		return pos.get_color_pieces(color);
 	}
 	uint64_t get_pieces(int color, int piece_type) const {
-		return board.get_pieces(static_cast<Color>(color), static_cast<PieceType>(piece_type));
+		return pos.get_pieces(static_cast<Color>(color), static_cast<PieceType>(piece_type));
 	}
 	uint64_t get_color_pieces(int color) const {
-		return board.get_color_pieces(static_cast<Color>(color));
+		return pos.get_color_pieces(static_cast<Color>(color));
 	}
 	uint64_t get_pieces(int color, PieceType piece_type) const {
-		return board.get_pieces(static_cast<Color>(color), piece_type);
+		return pos.get_pieces(static_cast<Color>(color), piece_type);
 	}
 	uint8_t get_open_files() const {
 		return files_with_no_color_pawns[0] & files_with_no_color_pawns[1];
 	}
 	uint64_t get_all_pieces() const {
-		return board.get_all_pieces();
+		return pos.get_all_pieces();
 	}
 	uint64_t get_attacks(Color color) const {
 		const int color_index = to_int(color);
 		const uint8_t initialized_bit = bit8(color_index);
 		if ((attacks_initialized & initialized_bit) == 0) {
-			attacks[color_index] = board.get_attacks_for_color(color);
+			attacks[color_index] = pos.get_attacks_for_color(color);
 			attacks_initialized |= initialized_bit;
 		}
 		return attacks[color_index];
@@ -74,7 +74,7 @@ struct EvalContext {
 		return does_color_have_pawns_on_file(file, color) && !does_color_have_pawns_on_file(file - 1, flip_color(color)) && !does_color_have_pawns_on_file(file, flip_color(color)) && !does_color_have_pawns_on_file(file + 1, flip_color(color));
 	}
 	PieceType get_piece_on_square(int square) const {
-		return board.get_piece_on_square(square);
+		return pos.get_piece_on_square(square);
 	}
 };
 struct PawnEvalEntry {
@@ -121,7 +121,7 @@ static int get_trace_eval(Trace* trace, const EvaluationResult weights[PARAM_COU
 	return tapered(eval, game_phase);
 }
 
-bool trace_eval_agree(const Board& board, const EvaluationResult weights[PARAM_COUNT]);
+bool trace_eval_agree(const Position& pos, const EvaluationResult weights[PARAM_COUNT]);
 
 template <bool isTracing>
 void addTerm(EvaluationResult& score, EvalParam param, int count = 1, Trace* trace = nullptr) {
@@ -132,13 +132,13 @@ void addTerm(EvaluationResult& score, EvalParam param, int count = 1, Trace* tra
 }
 
 template <bool isTracing = false>
-int evaluate(const Board& board, Trace* trace = nullptr, uint8_t terms_mask = EvalAll);
+int evaluate(const Position& pos, Trace* trace = nullptr, uint8_t terms_mask = EvalAll);
 
 template <bool isTracing>
-void eval_material(EvaluationResult& score, const Board& board, Trace* trace);
+void eval_material(EvaluationResult& score, const Position& pos, Trace* trace);
 
 template <bool isTracing>
-void eval_positional(EvaluationResult& score, const Board& board, Trace* trace);
+void eval_positional(EvaluationResult& score, const Position& pos, Trace* trace);
 
 template <bool isTracing>
 void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace);

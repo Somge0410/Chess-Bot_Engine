@@ -1,10 +1,10 @@
-#pragma once
-#include "constants.h"
+﻿#pragma once
 #include <cmath>
 #include <string>
+#include "types.h"
 struct Move{
-    int8_t from_square;
-    int8_t to_square;
+    Square from_square;
+    Square to_square;
 
     PieceType piece_moved;
     PieceType piece_captured;
@@ -16,15 +16,15 @@ struct Move{
     Move()
         : from_square(NO_SQUARE),
           to_square(NO_SQUARE),
-          piece_moved(PieceType::NONE),
-          move_color(Color::WHITE),
-          piece_captured(PieceType::NONE),
-          promotion_piece(PieceType::NONE),
+          piece_moved(PieceType::None),
+          move_color(Color::White),
+          piece_captured(PieceType::None),
+          promotion_piece(PieceType::None),
           is_castle(false),
           is_en_passant(false)
     {
     }
-    Move(int from, int to, PieceType moved,Color color, PieceType captured=PieceType::NONE,PieceType promo=PieceType::NONE,bool castle=false, bool ente_passente=false):
+    Move(int from, int to, PieceType moved,Color color, PieceType captured=PieceType::None,PieceType promo=PieceType::None,bool castle=false, bool ente_passente=false):
          from_square(from),
          to_square(to),
          piece_moved(moved),
@@ -36,13 +36,13 @@ struct Move{
     {
          }
     bool is_double_pawn_move() const {
-        return piece_moved==PieceType::PAWN && std::abs(to_square-from_square)==16;
+        return piece_moved==PieceType::Pawn && std::abs(to_square-from_square)==16;
     }
     int get_capture_square() const {
         if (this->is_en_passant) {
             // For en passant, the captured pawn is on the same file as the 'to_square',
             // but on a different rank.
-            return (this->move_color == Color::WHITE)
+            return (this->move_color == Color::White)
                 ? this->to_square - 8  // White's pawn captures on rank 5
                 : this->to_square + 8; // Black's pawn captures on rank 4
         } else {
@@ -50,7 +50,7 @@ struct Move{
         }
     }
     Color get_capture_color() const {
-        return (move_color==Color::WHITE) ? Color::BLACK:Color::WHITE;
+        return (move_color==Color::White) ? Color::Black:Color::White;
     }
     bool operator==(const Move& other) const {
         return from_square==other.from_square &&
@@ -66,7 +66,7 @@ struct Move{
         return move;
     }
     bool is_quiet() const {
-        return piece_captured == PieceType::NONE && promotion_piece == PieceType::NONE;
+        return piece_captured == PieceType::None && promotion_piece == PieceType::None;
     }
 };
 struct MoveList {

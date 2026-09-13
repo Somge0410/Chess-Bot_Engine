@@ -7,54 +7,54 @@ PawnEvalEntry& get_pawn_entry(size_t idx) {
 	}
 	return (*pawn_evaluation_table)[idx];
 }
-bool trace_eval_agree(const Board& board, const EvaluationResult weights[PARAM_COUNT]) {
+bool trace_eval_agree(const Position& pos, const EvaluationResult weights[PARAM_COUNT]) {
 	Trace trace;
-	int eval = evaluate<true>(board, &trace);
-	int trace_eval = get_trace_eval(&trace, weights, board.get_game_phase());
+	int eval = evaluate<true>(pos, &trace);
+	int trace_eval = get_trace_eval(&trace, weights, pos.get_game_phase());
 	if (trace_eval != eval) {
 		std::cerr << "Trace evaluation" << trace_eval << " does not match actual evaluation " << eval << std::endl;
 	}
 	return trace_eval == eval;
 }
 template<bool isTracing>
-int evaluate(const Board& board, Trace* trace, uint8_t terms_mask) {
+int evaluate(const Position& pos, Trace* trace, uint8_t terms_mask) {
 	EvaluationResult score = { 0,0 };
-	EvalContext ctx(board);
+	EvalContext ctx(pos);
 
-	eval_material<isTracing>(score, board, trace);
-	eval_positional<isTracing>(score, board, trace);
+	eval_material<isTracing>(score, pos, trace);
+	eval_positional<isTracing>(score, pos, trace);
 	eval_pawns<isTracing>(score, ctx, trace);
-	if (terms_mask != EvalAll) return tapered(score, board.get_game_phase());
+	if (terms_mask != EvalAll) return tapered(score, pos.get_game_phase());
 	eval_king_safety<isTracing>(score, ctx, trace);
 
 	eval_mobility<isTracing>(score, ctx, trace);
 	eval_rook_activity<isTracing>(score, ctx, trace);
 	eval_minor_pieces<isTracing>(score, ctx, trace);
-	return tapered(score, board.get_game_phase());
+	return tapered(score, pos.get_game_phase());
 
 }
-template int evaluate<false>(const Board& board, Trace* trace, uint8_t terms_mask);
-template int evaluate<true>(const Board& board, Trace* trace, uint8_t terms_mask);
+template int evaluate<false>(const Position& pos, Trace* trace, uint8_t terms_mask);
+template int evaluate<true>(const Position& pos, Trace* trace, uint8_t terms_mask);
 
 template<bool isTracing>
-void eval_material(EvaluationResult& score, const Board& board, Trace* trace) {
-	score += board.get_material_score();
+void eval_material(EvaluationResult& score, const Position& pos, Trace* trace) {
+	score += pos.get_material_score();
 	if (isTracing && trace) {
-		trace->add(EvalParam::PAWN, popcount(board.get_pieces(Color::WHITE, PieceType::PAWN)) - popcount(board.get_pieces(Color::BLACK, PieceType::PAWN)));
-		trace->add(EvalParam::KNIGHT, popcount(board.get_pieces(Color::WHITE, PieceType::KNIGHT)) - popcount(board.get_pieces(Color::BLACK, PieceType::KNIGHT)));
-		trace->add(EvalParam::BISHOP, popcount(board.get_pieces(Color::WHITE, PieceType::BISHOP)) - popcount(board.get_pieces(Color::BLACK, PieceType::BISHOP)));
-		trace->add(EvalParam::ROOK, popcount(board.get_pieces(Color::WHITE, PieceType::ROOK)) - popcount(board.get_pieces(Color::BLACK, PieceType::ROOK)));
-		trace->add(EvalParam::QUEEN, popcount(board.get_pieces(Color::WHITE, PieceType::QUEEN)) - popcount(board.get_pieces(Color::BLACK, PieceType::QUEEN)));
+		trace->add(EvalParam::PAWN, popcount(pos.get_pieces(Color::WHITE, PieceType::PAWN)) - popcount(pos.get_pieces(Color::BLACK, PieceType::PAWN)));
+		trace->add(EvalParam::KNIGHT, popcount(pos.get_pieces(Color::WHITE, PieceType::KNIGHT)) - popcount(pos.get_pieces(Color::BLACK, PieceType::KNIGHT)));
+		trace->add(EvalParam::BISHOP, popcount(pos.get_pieces(Color::WHITE, PieceType::BISHOP)) - popcount(pos.get_pieces(Color::BLACK, PieceType::BISHOP)));
+		trace->add(EvalParam::ROOK, popcount(pos.get_pieces(Color::WHITE, PieceType::ROOK)) - popcount(pos.get_pieces(Color::BLACK, PieceType::ROOK)));
+		trace->add(EvalParam::QUEEN, popcount(pos.get_pieces(Color::WHITE, PieceType::QUEEN)) - popcount(pos.get_pieces(Color::BLACK, PieceType::QUEEN)));
 	}
 }
 template <bool isTracing>
-void eval_positional(EvaluationResult& score, const Board& board, Trace* trace) {
-	score += board.get_positional_score();
+void eval_positional(EvaluationResult& score, const Position& pos, Trace* trace) {
+	score += pos.get_positional_score();
 	// No tracing for positional score for now
 	if (isTracing && trace) {
 		for (int pieceType = 0; pieceType < 6; pieceType++) {
 			for (int color = 0; color < 2; color++) {
-				uint64_t pieces = board.get_pieces(static_cast<Color>(color), static_cast<PieceType>(pieceType));
+				uint64_t pieces = pos.get_pieces(static_cast<Color>(color), static_cast<PieceType>(pieceType));
 				while (pieces) {
 					int square = poplsb(pieces);
 					if (color == 1) square = flip_square(square);
@@ -114,7 +114,7 @@ void classify_pawns(EvalContext& ctx) {
 
 template <bool isTracing>
 void eval_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
-	uint64_t pawn_key = ctx.board.get_pawn_key();
+	uint64_t pawn_key = ctx.pos.get_pawn_key();
 	int idx = pawn_key & (PAWN_HASH_SIZE - 1);
 	PawnEvalEntry& entry = get_pawn_entry(idx);
 	if (!isTracing && entry.valid && entry.key == pawn_key) {
@@ -190,10 +190,10 @@ void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace)
 			if (block_count == 0) {
 				const int promo_square = get_promotion_square(pawn_square, pawn_color);
 				int enemy_king_distance = king_distance(
-					ctx.board.get_king_square(static_cast<Color>(enemy_color)), promo_square);
+					ctx.pos.get_king_square(static_cast<Color>(enemy_color)), promo_square);
 				const int pawn_distance = color == to_int(Color::WHITE)
 					? 7 - rank_index : rank_index;
-				if (ctx.board.get_turn() == static_cast<Color>(enemy_color)) {
+				if (ctx.pos.get_turn() == static_cast<Color>(enemy_color)) {
 					enemy_king_distance--;
 				}
 				if (enemy_king_distance > pawn_distance) {
@@ -204,7 +204,7 @@ void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace)
 			}
 
 			const int own_king_distance = king_distance(
-				ctx.board.get_king_square(pawn_color), pawn_square);
+				ctx.pos.get_king_square(pawn_color), pawn_square);
 			if (own_king_distance <= 2) {
 				addTerm<isTracing>(score,
 					static_cast<EvalParam>(EvalParam::OWN_KING_IS_CLOSE_START + bucket),
@@ -272,7 +272,7 @@ void eval_backward(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	int free_to_advance_backward_count = 0;
 	for (size_t color = 0; color < 2; color++) {
 		int ecolor = color == 0 ? 1 : 0;
-		uint64_t pawns = ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN) & ~ctx.passed[color] & ~ctx.isolated[color];
+		uint64_t pawns = ctx.pos.get_pieces(static_cast<Color>(color), PieceType::PAWN) & ~ctx.passed[color] & ~ctx.isolated[color];
 
 		while (pawns)
 		{
@@ -283,14 +283,14 @@ void eval_backward(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 			if (forward_square >= 0 && forward_square < 64) {
 				uint64_t forward_mask = bit64(forward_square);
 				uint64_t adjacent_backwards = PAWN_ATTACKS[ecolor][pawn_square];
-				bool has_adjacent_support = (ctx.board.get_pieces(static_cast<Color>(color), PieceType::PAWN) & adjacent_backwards) != 0;
-				bool forward_blocked = (ctx.board.get_all_pieces() & forward_mask) != 0;
+				bool has_adjacent_support = (ctx.pos.get_pieces(static_cast<Color>(color), PieceType::PAWN) & adjacent_backwards) != 0;
+				bool forward_blocked = (ctx.pos.get_all_pieces() & forward_mask) != 0;
 				if (!has_adjacent_support) {
 					if (forward_blocked) {
 						ctx.backward[color] |= (1ULL << pawn_square);
 						blocked_backward_count += color == 0 ? 1 : -1;
 					}
-					else if ((PAWN_ATTACKS[color][forward_square] & ctx.board.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN)) != 0)
+					else if ((PAWN_ATTACKS[color][forward_square] & ctx.pos.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN)) != 0)
 					{
 						ctx.backward[color] |= (1ULL << pawn_square);
 						forwad_controlled_backward_count += color == 0 ? 1 : -1;
@@ -317,14 +317,14 @@ void eval_double_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) 
 	{
 		doubled_count = 0;
 		uint64_t file_mask = FILE_MASK[file];
-		int white_doubled = popcount(ctx.board.get_pieces(static_cast<Color>(Color::WHITE), PieceType::PAWN) & file_mask);
+		int white_doubled = popcount(ctx.pos.get_pieces(static_cast<Color>(Color::WHITE), PieceType::PAWN) & file_mask);
 		if (white_doubled > 1)
 		{
 			doubled_count += white_doubled - 1;
 
 
 		}
-		int black_doubled = popcount(ctx.board.get_pieces(static_cast<Color>(Color::BLACK), PieceType::PAWN) & file_mask);
+		int black_doubled = popcount(ctx.pos.get_pieces(static_cast<Color>(Color::BLACK), PieceType::PAWN) & file_mask);
 		if (black_doubled > 1)
 		{
 			doubled_count -= black_doubled - 1;
@@ -336,7 +336,7 @@ void eval_double_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) 
 template<bool isTracing>
 void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
 	{
-		int king_squares[2] = { ctx.board.get_king_square(Color::WHITE), ctx.board.get_king_square(Color::BLACK) };
+		int king_squares[2] = { ctx.pos.get_king_square(Color::WHITE), ctx.pos.get_king_square(Color::BLACK) };
 		int pawn_shield_count = 0;
 		int directly_on_open_not_next_to_open_count = 0;
 		int directly_on_open_next_to_open_count = 0;
@@ -485,8 +485,8 @@ void eval_minor_pieces(EvaluationResult& score, const EvalContext& ctx, Trace* t
 template<bool isTracing>
 void eval_bishop_pair(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
 	int bishop_pair_count = 0;
-	if (popcount(ctx.board.get_pieces(Color::WHITE, PieceType::BISHOP)) >= 2) bishop_pair_count++;
-	if (popcount(ctx.board.get_pieces(Color::BLACK, PieceType::BISHOP)) >= 2) bishop_pair_count--;
+	if (popcount(ctx.pos.get_pieces(Color::WHITE, PieceType::BISHOP)) >= 2) bishop_pair_count++;
+	if (popcount(ctx.pos.get_pieces(Color::BLACK, PieceType::BISHOP)) >= 2) bishop_pair_count--;
 	addTerm<isTracing>(score, EvalParam::BISHOP_PAIR, bishop_pair_count, trace);
 }
 template<bool isTracing>
@@ -588,7 +588,7 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 					while (unoccupied_escapes) {
 						int escape_sq = get_lsb(unoccupied_escapes);
 						PieceType pt = ctx.get_piece_on_square(escape_sq);
-						if (see_capture_ge(ctx.board, sq, escape_sq, static_cast<Color>(color), PieceType::KNIGHT, pt, 0)) {
+						if (see_capture_ge(ctx.pos, sq, escape_sq, static_cast<Color>(color), PieceType::KNIGHT, pt, 0)) {
 							is_trapped = false;
 							break;
 						}
