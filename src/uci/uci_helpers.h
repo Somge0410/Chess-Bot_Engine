@@ -1,4 +1,4 @@
-#include <string>
+﻿#include <string>
 #include "Move.h"
 #include "constants.h"  // for PieceType
 
@@ -14,13 +14,13 @@ inline std::string move_to_uci(const Move& m) {
 
     std::string out = sq_to_str(m.from_square) + sq_to_str(m.to_square);
 
-    if (m.promotion_piece != PieceType::NONE) {
+    if (m.promotion_piece != PieceType::None) {
         char c = 'q'; // default
         switch (m.promotion_piece) {
-        case PieceType::QUEEN:  c = 'q'; break;
-        case PieceType::ROOK:   c = 'r'; break;
-        case PieceType::BISHOP: c = 'b'; break;
-        case PieceType::KNIGHT: c = 'n'; break;
+        case PieceType::Queen:  c = 'q'; break;
+        case PieceType::Rook:   c = 'r'; break;
+        case PieceType::Bishop: c = 'b'; break;
+        case PieceType::Knight: c = 'n'; break;
         default: break;
         }
         out += c;
@@ -49,14 +49,14 @@ inline Move parse_uci_move(const Position& position, const std::string& s) {
     int from_sq = from_rank * 8 + from_file;
     int to_sq = to_rank * 8 + to_file;
 
-    PieceType promo = PieceType::NONE;
+    PieceType promo = PieceType::None;
     if (s.size() == 5) {
         char pc = s[4];
         switch (pc) {
-        case 'q': promo = PieceType::QUEEN;  break;
-        case 'r': promo = PieceType::ROOK;   break;
-        case 'b': promo = PieceType::BISHOP; break;
-        case 'n': promo = PieceType::KNIGHT; break;
+        case 'q': promo = PieceType::Queen;  break;
+        case 'r': promo = PieceType::Rook;   break;
+        case 'b': promo = PieceType::Bishop; break;
+        case 'n': promo = PieceType::Knight; break;
         default:
             throw std::runtime_error("Invalid promotion piece in UCI move: " + s);
         }
@@ -68,7 +68,7 @@ inline Move parse_uci_move(const Position& position, const std::string& s) {
 
     for (const Move& m : moves) {
         if (m.from_square == from_sq && m.to_square == to_sq) {
-            if (promo == PieceType::NONE || m.promotion_piece == promo) {
+            if (promo == PieceType::None || m.promotion_piece == promo) {
                 return m;
             }
         }

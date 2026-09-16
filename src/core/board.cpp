@@ -25,7 +25,7 @@ Board::Board(const std:: string& fen){
     castling_rights = 0;
     en_passant_square = NO_SQUARE;
     game_phase = 0;
-    turn = to_int(Color::WHITE);
+    turn = to_int(Color::White);
     white_king_square = NO_SQUARE;
     black_king_square = NO_SQUARE;
     material_score = { 0,0 };
@@ -77,7 +77,7 @@ void Board::parse_fen_pieces(const std::string& piece_data){
             file+=(c-'0');
         }else {
             int square_index=rank*8+file;
-            int color_index=isupper(c) ? to_int(Color::WHITE):to_int(Color::BLACK);
+            int color_index=isupper(c) ? to_int(Color::White):to_int(Color::Black);
 
             int piece_type_index=to_int(PIECE_TYPE_MAP.at(toupper(c)));
 
@@ -98,7 +98,7 @@ void Board::parse_fen_pieces(const std::string& piece_data){
 }
 
 void Board::parse_fen_turn(const  std::string& turn_data){
-     turn= turn_data=="w" ? to_int(Color::WHITE):to_int(Color::BLACK); 
+     turn= turn_data=="w" ? to_int(Color::White):to_int(Color::Black); 
 }
 void Board::parse_fen_castling(const std::string& castling_data){
 	castling_rights = 0;
@@ -129,7 +129,7 @@ void Board::parse_fen_move(const std::string& move_data){
 }
 void Board::display() const{
     std::cout<<"\n--- Current Position---"<< std::endl;
-    std::cout<< "Turn: " <<(turn==to_int(Color::WHITE) ? "WHITE":"BLACK")<<std::endl;
+    std::cout<< "Turn: " <<(turn==to_int(Color::White) ? "WHITE":"BLACK")<<std::endl;
     std::cout <<"   a b c d e f g h" << std::endl;
     std::cout<< "-------------------"<< std::endl;
 
@@ -149,14 +149,14 @@ void Board::display() const{
 
 }
 void Board::initialize_board(){
-     color_pieces[to_int(Color::WHITE)]=0;
-     color_pieces[to_int(Color::BLACK)]=0;
-    for (int piece=to_int(PieceType::PAWN); piece<=to_int(PieceType::KING);++piece){
-        color_pieces[to_int(Color::WHITE)]|=pieces[to_int(Color::WHITE)][piece];
-         color_pieces[to_int(Color::BLACK)]|= pieces[to_int(Color::BLACK)][piece];
+     color_pieces[to_int(Color::White)]=0;
+     color_pieces[to_int(Color::Black)]=0;
+    for (int piece=to_int(PieceType::Pawn); piece<=to_int(PieceType::King);++piece){
+        color_pieces[to_int(Color::White)]|=pieces[to_int(Color::White)][piece];
+         color_pieces[to_int(Color::Black)]|= pieces[to_int(Color::Black)][piece];
 
     }
-    this -> all_pieces=color_pieces[to_int(Color::WHITE)]| color_pieces[to_int(Color::BLACK)];
+    this -> all_pieces=color_pieces[to_int(Color::White)]| color_pieces[to_int(Color::Black)];
 
 }
 void Board::initialize_game_phase() {
@@ -169,10 +169,10 @@ void Board::initialize_game_phase() {
     const int QUEEN_PHASE = 4;
 
     // Use popcount on the combined bitboard for each piece type
-    int knight_phase = popcount(pieces[to_int(Color::WHITE)][to_int(PieceType::KNIGHT)] | pieces[to_int(Color::BLACK)][to_int(PieceType::KNIGHT)]) * KNIGHT_PHASE;
-    int bishop_phase = popcount(pieces[to_int(Color::WHITE)][to_int(PieceType::BISHOP)] | pieces[to_int(Color::BLACK)][to_int(PieceType::BISHOP)]) * BISHOP_PHASE;
-    int rook_phase   = popcount(pieces[to_int(Color::WHITE)][to_int(PieceType::ROOK)]   | pieces[to_int(Color::BLACK)][to_int(PieceType::ROOK)])   * ROOK_PHASE;
-    int queen_phase  = popcount(pieces[to_int(Color::WHITE)][to_int(PieceType::QUEEN)]  | pieces[to_int(Color::BLACK)][to_int(PieceType::QUEEN)])  * QUEEN_PHASE;
+    int knight_phase = popcount(pieces[to_int(Color::White)][to_int(PieceType::Knight)] | pieces[to_int(Color::Black)][to_int(PieceType::Knight)]) * KNIGHT_PHASE;
+    int bishop_phase = popcount(pieces[to_int(Color::White)][to_int(PieceType::Bishop)] | pieces[to_int(Color::Black)][to_int(PieceType::Bishop)]) * BISHOP_PHASE;
+    int rook_phase   = popcount(pieces[to_int(Color::White)][to_int(PieceType::Rook)]   | pieces[to_int(Color::Black)][to_int(PieceType::Rook)])   * ROOK_PHASE;
+    int queen_phase  = popcount(pieces[to_int(Color::White)][to_int(PieceType::Queen)]  | pieces[to_int(Color::Black)][to_int(PieceType::Queen)])  * QUEEN_PHASE;
 
     game_phase = knight_phase + bishop_phase + rook_phase + queen_phase;
     
@@ -193,7 +193,7 @@ uint64_t Board::initialize_hash() const {
         }
     }
 
-    if (turn== to_int(Color::BLACK)){
+    if (turn== to_int(Color::Black)){
         h^=Zobrist::black_to_move_key;
     }
     h ^= Zobrist::castling_keys[this->castling_rights];
@@ -208,10 +208,10 @@ uint64_t Board::initialize_hash() const {
 uint64_t Board::initialize_pawn_key() const {
     uint64_t pawn_key = 0;
     for (int color = 0; color < 2; ++color) {
-        uint64_t pawn_bitboard = pieces[color][to_int(PieceType::PAWN)];
+        uint64_t pawn_bitboard = pieces[color][to_int(PieceType::Pawn)];
         while (pawn_bitboard) {
             int square_index = get_lsb(pawn_bitboard);
-            pawn_key ^= Zobrist::piece_keys[color][to_int(PieceType::PAWN)][square_index];
+            pawn_key ^= Zobrist::piece_keys[color][to_int(PieceType::Pawn)][square_index];
             pawn_bitboard &= pawn_bitboard - 1;
         }
     }
@@ -266,23 +266,23 @@ void Board::undo_move(const Move& move){
 	debug_check_pawn_key();
 }
 void Board::update_material_score(const Move& move){
-    if (move.piece_captured!=PieceType::NONE){
+    if (move.piece_captured!=PieceType::None){
         material_score-=get_piece_values(move.get_capture_color(),move.piece_captured);
     }
-    if (move.promotion_piece!=PieceType::NONE){
+    if (move.promotion_piece!=PieceType::None){
         material_score+=get_piece_values(move.move_color,move.promotion_piece);
-        material_score-=get_piece_values(move.move_color,PieceType::PAWN);
+        material_score-=get_piece_values(move.move_color,PieceType::Pawn);
     }
 }
 void Board::update_positional_score(const Move& move){
     PieceType piece_moved=move.piece_moved;
-    PieceType piece_reached=move.promotion_piece==PieceType::NONE ? move.piece_moved:move.promotion_piece;
+    PieceType piece_reached=move.promotion_piece==PieceType::None ? move.piece_moved:move.promotion_piece;
     positional_score.mg_score-=get_mg_pos_score(move.move_color,piece_moved,move.from_square);
     positional_score.mg_score+=get_mg_pos_score(move.move_color,piece_reached,move.to_square);
     
     positional_score.eg_score-=get_eg_pos_score(move.move_color,piece_moved,move.from_square);
     positional_score.eg_score+=get_eg_pos_score(move.move_color,piece_reached,move.to_square);
-    if (move.piece_captured!=PieceType::NONE){
+    if (move.piece_captured!=PieceType::None){
         positional_score.mg_score-=get_mg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
         positional_score.eg_score-=get_eg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
     }
@@ -292,12 +292,12 @@ void Board::update_positional_score(const Move& move){
         int old_rook_square=king_side ? move.to_square+1:move.to_square-2;
         int new_rook_square=king_side ? move.to_square-1:move.to_square+1;
 
-        positional_score.mg_score-=get_mg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
-        positional_score.mg_score+=get_mg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
+        positional_score.mg_score-=get_mg_pos_score(move.move_color,PieceType::Rook,old_rook_square);
+        positional_score.mg_score+=get_mg_pos_score(move.move_color,PieceType::Rook,new_rook_square);
 
         
-        positional_score.eg_score-=get_eg_pos_score(move.move_color,PieceType::ROOK,old_rook_square);
-        positional_score.eg_score+=get_eg_pos_score(move.move_color,PieceType::ROOK,new_rook_square);
+        positional_score.eg_score-=get_eg_pos_score(move.move_color,PieceType::Rook,old_rook_square);
+        positional_score.eg_score+=get_eg_pos_score(move.move_color,PieceType::Rook,new_rook_square);
 
     }
     
@@ -305,17 +305,17 @@ void Board::update_positional_score(const Move& move){
 void Board::update_turn_rights(const Move& move){
         turn=turn==0 ? 1:0;
         zobrist_hash^=Zobrist::black_to_move_key;
-        if (turn == to_int(Color::WHITE)) {
+        if (turn == to_int(Color::White)) {
             move_count++;
         }
 
 }
 void Board::update_game_phase(const Move& move){
-    if (move.piece_captured!=PieceType::NONE){
+    if (move.piece_captured!=PieceType::None){
         int piece_weight=PHASE_WEIGHTS[to_int(move.piece_captured)];
         game_phase-=piece_weight;
     }
-    if (move.promotion_piece!=PieceType::NONE){
+    if (move.promotion_piece!=PieceType::None){
         int piece_weight=PHASE_WEIGHTS[to_int(move.promotion_piece)];
         game_phase+=piece_weight;
     }
@@ -324,9 +324,9 @@ void Board::update_castle_rights(const Move& move){
     this->zobrist_hash ^= Zobrist::castling_keys[this->castling_rights]; // Remove old rights from hash
 
         // if King moves
-    if (move.piece_moved==PieceType::KING)
+    if (move.piece_moved==PieceType::King)
     {
-        if (move.move_color==Color::WHITE)
+        if (move.move_color==Color::White)
         {  
             castling_rights &= ~WHITE_KING_CASTLE;
 			castling_rights &= ~WHITE_QUEEN_CASTLE;
@@ -361,7 +361,7 @@ void Board::update_en_passsant_rights(const Move& move){
         en_passant_square=NO_SQUARE;
         if (move.is_double_pawn_move())
         {
-            en_passant_square=move.move_color==Color::WHITE ? move.to_square-8:move.to_square+8;
+            en_passant_square=move.move_color==Color::White ? move.to_square-8:move.to_square+8;
         }
         if (en_passant_square != NO_SQUARE) {
             zobrist_hash ^= Zobrist::en_passant_keys[en_passant_square % 8];
@@ -372,30 +372,30 @@ void Board::update_en_passsant_rights(const Move& move){
     
 }
 void Board::update_pieces_hash(const Move& move){
-    PieceType piece_reached= move.promotion_piece==PieceType::NONE? move.piece_moved:move.promotion_piece;
+    PieceType piece_reached= move.promotion_piece==PieceType::None? move.piece_moved:move.promotion_piece;
     int move_color=to_int(move.move_color);
     zobrist_hash^=Zobrist::piece_keys[move_color][to_int(move.piece_moved)][move.from_square];
     zobrist_hash^=Zobrist::piece_keys[move_color][to_int(piece_reached)][move.to_square];
-    if(move.piece_moved==PieceType::PAWN){
+    if(move.piece_moved==PieceType::Pawn){
         pawn_key^=Zobrist::piece_keys[move_color][to_int(move.piece_moved)][move.from_square];
 	}
-    if (piece_reached == PieceType::PAWN) {
+    if (piece_reached == PieceType::Pawn) {
         pawn_key ^= Zobrist::piece_keys[move_color][to_int(piece_reached)][move.to_square];
     }
 
-    if (move.piece_captured!=PieceType::NONE)
+    if (move.piece_captured!=PieceType::None)
     {
         int other_color=to_int(move.get_capture_color());
-        int capture_square=move.is_en_passant ? (move.move_color==Color::WHITE ? move.to_square-8:move.to_square+8):move.to_square;
+        int capture_square=move.is_en_passant ? (move.move_color==Color::White ? move.to_square-8:move.to_square+8):move.to_square;
         zobrist_hash^=Zobrist::piece_keys[other_color][to_int(move.piece_captured)][capture_square];
-        if (move.piece_captured==PieceType::PAWN){
+        if (move.piece_captured==PieceType::Pawn){
             pawn_key^=Zobrist::piece_keys[other_color][to_int(move.piece_captured)][capture_square];
 		}
     }
     if (move.is_castle)
     {
         bool king_side=move.to_square>move.from_square;
-        int rook=to_int(PieceType::ROOK);
+        int rook=to_int(PieceType::Rook);
         int old_rook_square=king_side ? move.to_square+1:move.to_square-2;
         int new_rook_square=king_side ? move.to_square-1:move.to_square+1;
         zobrist_hash^=Zobrist::piece_keys[move_color][rook][old_rook_square];
@@ -407,9 +407,9 @@ void Board::update_pieces_hash(const Move& move){
 }
 void Board::update_king_square(const Move& move){
     
-        if (move.piece_moved==PieceType::KING)
+        if (move.piece_moved==PieceType::King)
         {
-            if (move.move_color==Color::WHITE)
+            if (move.move_color==Color::White)
             {
                 white_king_square=move.to_square;
             }else
@@ -422,7 +422,7 @@ void Board::update_king_square(const Move& move){
     
 }
 void Board::update_pieces(const Move& move){
-    PieceType piece_reached= move.promotion_piece==PieceType::NONE ? move.piece_moved: move.promotion_piece;
+    PieceType piece_reached= move.promotion_piece==PieceType::None ? move.piece_moved: move.promotion_piece;
     pieces[to_int(move.move_color)][to_int(move.piece_moved)]^=1ULL<< move.from_square;
     color_pieces[to_int(move.move_color)]^=1ULL<<move.from_square;
     all_pieces^=1ULL<<move.from_square;
@@ -431,10 +431,10 @@ void Board::update_pieces(const Move& move){
     color_pieces[to_int(move.move_color)]^=1ULL<<move.to_square;
     all_pieces^=1ULL<<move.to_square;
     
-    if (move.piece_captured!=PieceType::NONE)
+    if (move.piece_captured!=PieceType::None)
     {   
         Color other_color=move.get_capture_color();
-        int capture_square=move.is_en_passant ? (move.move_color==Color::WHITE ? move.to_square-8:move.to_square+8):move.to_square;
+        int capture_square=move.is_en_passant ? (move.move_color==Color::White ? move.to_square-8:move.to_square+8):move.to_square;
         
         pieces[to_int(other_color)][to_int(move.piece_captured)]^=1ULL<< capture_square;
         color_pieces[to_int(other_color)]^=1ULL<<capture_square;
@@ -449,7 +449,7 @@ void Board::update_pieces(const Move& move){
         int new_rook_square= king_side ? move.to_square-1:move.to_square+1;
 
         
-        pieces[to_int(move.move_color)][to_int(PieceType::ROOK)]^=1ULL<<old_rook_square| 1ULL<<new_rook_square;
+        pieces[to_int(move.move_color)][to_int(PieceType::Rook)]^=1ULL<<old_rook_square| 1ULL<<new_rook_square;
         color_pieces[to_int(move.move_color)]^=1ULL<<old_rook_square| 1ULL<<new_rook_square;
         all_pieces^=1ULL<<old_rook_square|1ULL<<new_rook_square;
     }
@@ -462,10 +462,10 @@ void Board::update_pieces(const Move& move){
 
 }
 void Board::update_move_count(const Move& move){
-    if (turn==to_int(Color::BLACK)){
+    if (turn==to_int(Color::Black)){
         move_count++;
     }
-    if (move.piece_captured != PieceType::NONE || move.piece_moved == PieceType::PAWN || move.is_castle) {
+    if (move.piece_captured != PieceType::None || move.piece_moved == PieceType::Pawn || move.is_castle) {
         half_moves = 0;
     }
     else
@@ -484,9 +484,9 @@ void Board::update_repetition_tracker() {
 }
 CheckInfo Board::count_attacker_on_square(const int square, const Color attacker_color,const int bound,const bool need_square)const {
     CheckInfo info={0,NO_SQUARE};
-    int other_color=attacker_color==Color::BLACK ? to_int(Color::WHITE):to_int(Color::BLACK);
+    int other_color=attacker_color==Color::Black ? to_int(Color::White):to_int(Color::Black);
     // Check if PAWNS Attack the square
-    uint64_t pawns = pieces[to_int(attacker_color)][to_int(PieceType::PAWN)];
+    uint64_t pawns = pieces[to_int(attacker_color)][to_int(PieceType::Pawn)];
     uint64_t attack_squares = PAWN_ATTACKS[other_color][square];
     int number=popcount(pawns & attack_squares);
     if (number > 0) {
@@ -497,7 +497,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     if (info.count>=bound) return info;
 
 	// Check if KNIGHTS Attack the square
-    uint64_t knights=pieces[to_int(attacker_color)][to_int(PieceType::KNIGHT)];
+    uint64_t knights=pieces[to_int(attacker_color)][to_int(PieceType::Knight)];
     attack_squares=KNIGHT_ATTACKS[square];
     number=popcount(knights & attack_squares);
     if (number > 0) {
@@ -506,7 +506,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     }
     if (info.count >= bound) return info;
 	// Check if KING Attacks the square
-	uint64_t kings = pieces[to_int(attacker_color)][to_int(PieceType::KING)];
+	uint64_t kings = pieces[to_int(attacker_color)][to_int(PieceType::King)];
 	number = popcount(kings & KING_ATTACKS[square]);
     if (number > 0) {
         info.count += number;
@@ -514,10 +514,10 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     }
 	if (info.count>=bound) return info;
     
-	uint64_t occupancy = all_pieces ^ (pieces[other_color][to_int(PieceType::KING)]);
+	uint64_t occupancy = all_pieces ^ (pieces[other_color][to_int(PieceType::King)]);
     uint64_t attackers = 0;
     //Check for Bishop or Queen attack
-	uint64_t bishops_queens = pieces[to_int(attacker_color)][to_int(PieceType::BISHOP)] | pieces[to_int(attacker_color)][to_int(PieceType::QUEEN)];
+	uint64_t bishops_queens = pieces[to_int(attacker_color)][to_int(PieceType::Bishop)] | pieces[to_int(attacker_color)][to_int(PieceType::Queen)];
 	attack_squares = get_bishop_attacks(square, occupancy);
 	attackers = attack_squares & bishops_queens;
 	number = popcount(attackers);
@@ -527,7 +527,7 @@ CheckInfo Board::count_attacker_on_square(const int square, const Color attacker
     }
 	if (info.count >= bound) return info;
 	//Check for Rook or Queen attack
-	uint64_t rooks_queens = pieces[to_int(attacker_color)][to_int(PieceType::ROOK)] | pieces[to_int(attacker_color)][to_int(PieceType::QUEEN)];
+	uint64_t rooks_queens = pieces[to_int(attacker_color)][to_int(PieceType::Rook)] | pieces[to_int(attacker_color)][to_int(PieceType::Queen)];
 	attack_squares = get_rook_attacks(square, occupancy);
 	attackers = attack_squares & rooks_queens;
 	number = popcount(attackers);
@@ -544,13 +544,13 @@ Color Board::get_turn() const {
         return static_cast<Color>(this->turn);
 }
 PieceType Board::get_piece_on_square(int square) const {
-	PieceType piece_type = PieceType::NONE;
+	PieceType piece_type = PieceType::None;
     if ((all_pieces & (1ULL << square)) == 0) {
         return piece_type;
 	}
 	int piece_type_index = 0;
     uint64_t piece_mask = 0;
-    while (piece_type==PieceType::NONE && piece_type_index<6) {
+    while (piece_type==PieceType::None && piece_type_index<6) {
 		piece_mask = pieces[0][piece_type_index] | pieces[1][piece_type_index];
         if (piece_mask & (1ULL << square)) {
             piece_type = static_cast<PieceType>(piece_type_index);
@@ -567,7 +567,7 @@ Color Board::get_color_on_square(int square) const {
                 return static_cast<Color>(color);
             }
     }
-	return Color::NONE;
+	return Color::None;
 }
 char Board::get_char_on_square(int square) const {
 	char piece_char = PIECE_CHAR_LIST[to_int(get_piece_on_square(square))];
@@ -575,9 +575,9 @@ char Board::get_char_on_square(int square) const {
         return piece_char; // Empty square
 	}
     Color color = get_color_on_square(square);
-    if (color == Color::WHITE) {
+    if (color == Color::White) {
         return piece_char; // Uppercase for white pieces
-    } else if (color == Color::BLACK) {
+    } else if (color == Color::Black) {
         return std::tolower(piece_char); // Lowercase for black pieces
 	}
 }
@@ -600,7 +600,7 @@ int Board::get_game_phase() const{
     return game_phase;
 }
 int Board::get_king_square(Color color) const{
-    return color==Color::WHITE ? white_king_square:black_king_square;
+    return color==Color::White ? white_king_square:black_king_square;
 }
 BoardState Board::get_board_state() const {
     BoardState current_state;
@@ -646,10 +646,10 @@ void Board::push_current_state_to_history() {
 }
 bool Board::has_enough_material_for_nmp() const {
     // Get the bitboard of all non-pawn/king pieces for the current side to move
-    uint64_t pieces = this->pieces[this->turn][to_int(PieceType::KNIGHT)] |
-                      this->pieces[this->turn][to_int(PieceType::BISHOP)] |
-                      this->pieces[this->turn][to_int(PieceType::ROOK)]   |
-                      this->pieces[this->turn][to_int(PieceType::QUEEN)];
+    uint64_t pieces = this->pieces[this->turn][to_int(PieceType::Knight)] |
+                      this->pieces[this->turn][to_int(PieceType::Bishop)] |
+                      this->pieces[this->turn][to_int(PieceType::Rook)]   |
+                      this->pieces[this->turn][to_int(PieceType::Queen)];
     
     // NMP is generally safe if there is at least one piece other than pawns or the king
     return (pieces != 0);
@@ -663,13 +663,13 @@ uint64_t Board::get_checkers() const {
     const int attacker = to_int(attacker_color);
     const int king_sq = get_king_square(own_color);
 
-    uint64_t checkers = pieces[attacker][to_int(PieceType::PAWN)] & PAWN_ATTACKS[to_int(own_color)][king_sq];
-    checkers |= pieces[attacker][to_int(PieceType::KNIGHT)] & KNIGHT_ATTACKS[king_sq];
-    checkers |= pieces[attacker][to_int(PieceType::KING)] & KING_ATTACKS[king_sq];
-    checkers |= (pieces[attacker][to_int(PieceType::BISHOP)] |
-                 pieces[attacker][to_int(PieceType::QUEEN)]) & get_bishop_attacks(king_sq, all_pieces);
-    checkers |= (pieces[attacker][to_int(PieceType::ROOK)] |
-                 pieces[attacker][to_int(PieceType::QUEEN)]) & get_rook_attacks(king_sq, all_pieces);
+    uint64_t checkers = pieces[attacker][to_int(PieceType::Pawn)] & PAWN_ATTACKS[to_int(own_color)][king_sq];
+    checkers |= pieces[attacker][to_int(PieceType::Knight)] & KNIGHT_ATTACKS[king_sq];
+    checkers |= pieces[attacker][to_int(PieceType::King)] & KING_ATTACKS[king_sq];
+    checkers |= (pieces[attacker][to_int(PieceType::Bishop)] |
+                 pieces[attacker][to_int(PieceType::Queen)]) & get_bishop_attacks(king_sq, all_pieces);
+    checkers |= (pieces[attacker][to_int(PieceType::Rook)] |
+                 pieces[attacker][to_int(PieceType::Queen)]) & get_rook_attacks(king_sq, all_pieces);
     return checkers;
 }
 int Board::make_null_move(){
@@ -731,9 +731,9 @@ void Board::reserve_history(size_t size){
 }
 // In your board.cpp file
 uint64_t Board::get_pawn_attacks_for_color(Color color) const {
-    uint64_t pawns = pieces[to_int(color)][to_int(PieceType::PAWN)];
+    uint64_t pawns = pieces[to_int(color)][to_int(PieceType::Pawn)];
     uint64_t attacks = 0;
-    if(Color::WHITE == color) {
+    if(Color::White == color) {
         attacks |= (pawns << 7) & NOT_FILE_H; // Capture to the left
         attacks |= (pawns << 9) & NOT_FILE_A; // Capture to the right
     } else {
@@ -743,7 +743,7 @@ uint64_t Board::get_pawn_attacks_for_color(Color color) const {
     return attacks;
 }
 uint64_t Board::get_knight_attacks_for_color(Color color) const {
-    uint64_t knights = pieces[to_int(color)][to_int(PieceType::KNIGHT)];
+    uint64_t knights = pieces[to_int(color)][to_int(PieceType::Knight)];
     uint64_t attacks = 0;
     while (knights) {
         int square = get_lsb(knights);
@@ -753,7 +753,7 @@ uint64_t Board::get_knight_attacks_for_color(Color color) const {
     return attacks;
 }
 uint64_t Board::get_king_attacks_for_color(Color color) const {
-    uint64_t kings = pieces[to_int(color)][to_int(PieceType::KING)];
+    uint64_t kings = pieces[to_int(color)][to_int(PieceType::King)];
     uint64_t attacks = 0;
     while (kings) {
         int square = get_lsb(kings);
@@ -763,7 +763,7 @@ uint64_t Board::get_king_attacks_for_color(Color color) const {
     return attacks;
 }
 uint64_t Board::get_bishop_attacks_for_color(Color color) const {
-    uint64_t bishops = pieces[to_int(color)][to_int(PieceType::BISHOP)];
+    uint64_t bishops = pieces[to_int(color)][to_int(PieceType::Bishop)];
     uint64_t attacks = 0;
     while (bishops) {
         int square = get_lsb(bishops);
@@ -773,7 +773,7 @@ uint64_t Board::get_bishop_attacks_for_color(Color color) const {
     return attacks;
 }
 uint64_t Board::get_rook_attacks_for_color(Color color) const {
-    uint64_t rooks = pieces[to_int(color)][to_int(PieceType::ROOK)];
+    uint64_t rooks = pieces[to_int(color)][to_int(PieceType::Rook)];
     uint64_t attacks = 0;
     while (rooks) {
         int square = get_lsb(rooks);
@@ -783,7 +783,7 @@ uint64_t Board::get_rook_attacks_for_color(Color color) const {
     return attacks;
 }
 uint64_t Board::get_queen_attacks_for_color(Color color) const {
-    uint64_t queens = pieces[to_int(color)][to_int(PieceType::QUEEN)];
+    uint64_t queens = pieces[to_int(color)][to_int(PieceType::Queen)];
     uint64_t attacks = 0;
     while (queens) {
         int square = get_lsb(queens);
@@ -846,22 +846,22 @@ void Board::debug_check_pawn_key() const {
 #endif
 }
 bool Board::is_white_to_move() const {
-    return turn == to_int(Color::WHITE);
+    return turn == to_int(Color::White);
 }
 bool Board::is_free_file(const int square, const Color color) const {
-    uint64_t pawns = pieces[to_int(flip_color(color))][to_int(PieceType::PAWN)];
+    uint64_t pawns = pieces[to_int(flip_color(color))][to_int(PieceType::Pawn)];
 	return (pawns& PASSED_PAWN_MASK[to_int(color)][square])==0;
 }
 bool Board::is_passed_after(const Move& move) const {
-    if (move.piece_moved!= PieceType::PAWN) return false;
-	return (pieces[to_int(flip_color(move.move_color))][to_int(PieceType::PAWN)] & PASSED_PAWN_MASK[to_int(move.move_color)][move.to_square]) == 0;
+    if (move.piece_moved!= PieceType::Pawn) return false;
+	return (pieces[to_int(flip_color(move.move_color))][to_int(PieceType::Pawn)] & PASSED_PAWN_MASK[to_int(move.move_color)][move.to_square]) == 0;
 }
 bool Board::is_dangerous_passer_push(const Move& move) const {
-    if (move.piece_moved != PieceType::PAWN) return false;
-	if (move.piece_captured != PieceType::NONE) return false;
-	if (move.promotion_piece != PieceType::NONE) return true;
+    if (move.piece_moved != PieceType::Pawn) return false;
+	if (move.piece_captured != PieceType::None) return false;
+	if (move.promotion_piece != PieceType::None) return true;
 
-	int rr = move.move_color == Color::WHITE ? move.to_square/8 : 7-move.to_square/8;
+	int rr = move.move_color == Color::White ? move.to_square/8 : 7-move.to_square/8;
 
     if (rr < 6) return false;
 	if (!is_passed_after(move)) return false;

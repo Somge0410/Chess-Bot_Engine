@@ -21,7 +21,7 @@ template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_moves(const Position& pos, MoveList& move_list, uint64_t checkers){
 	//if (pos.is_fifty_move_rule_draw() || pos.is_repetition_draw()) return move_list;
     Color own_color=pos.get_turn();
-    Color opponent_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
+    Color opponent_color=own_color==Color::White ? Color::Black:Color::White;
     int king_square=pos.get_king_square(own_color);
 	uint64_t pinned_info = calculate_pinned_pieces(pos, own_color,opponent_color,king_square);
 	const int check_count = popcount(checkers);
@@ -36,7 +36,7 @@ void MoveGenerator::generate_moves(const Position& pos, MoveList& move_list, uin
         const int checker_square = get_lsb(checkers);
         PieceType checker=pos.get_piece_on_square(checker_square);
         uint64_t remedy_mask=(1ULL<< checker_square);
-        if (checker==PieceType::QUEEN || checker==PieceType::ROOK|| checker==PieceType::BISHOP) remedy_mask|=LINE_BETWEEN[king_square][checker_square];
+        if (checker==PieceType::Queen || checker==PieceType::Rook|| checker==PieceType::Bishop) remedy_mask|=LINE_BETWEEN[king_square][checker_square];
         
         generate_queen_moves<captures_only,with_checks>(move_list,pos, own_color, pinned_info, remedy_mask);
         
@@ -45,7 +45,7 @@ void MoveGenerator::generate_moves(const Position& pos, MoveList& move_list, uin
         generate_bishop_moves<captures_only,with_checks>(move_list,pos, own_color, pinned_info, remedy_mask);
         generate_knight_moves<captures_only,with_checks>(move_list,pos, own_color, pinned_info, remedy_mask);
         
-        if (pos.get_en_passant_rights() !=NO_SQUARE && checker == PieceType::PAWN) remedy_mask|=1ULL<<pos.get_en_passant_rights();
+        if (pos.get_en_passant_rights() !=NO_SQUARE && checker == PieceType::Pawn) remedy_mask|=1ULL<<pos.get_en_passant_rights();
         generate_pawn_moves<captures_only, with_checks>(move_list,pos, own_color,king_square, pinned_info, remedy_mask);
     }
     else
@@ -68,8 +68,8 @@ uint64_t MoveGenerator::calculate_pinned_pieces(const Position& pos, const Color
     uint64_t possible_rook_pinned = all_rook_bockers & pos.get_color_pieces(friendly_color) & ~FOUR_CORNER_MASK;
     uint64_t possible_bishop_pinned = all_bishop_blockers & pos.get_color_pieces(friendly_color) & ~FOUR_CORNER_MASK;
     uint64_t pinned_info=0;
-    uint64_t opponent_rooks_queens = pos.get_pieces(opponent_color, PieceType::ROOK) | pos.get_pieces(opponent_color, PieceType::QUEEN);
-    uint64_t opponent_bishops_queens = pos.get_pieces(opponent_color, PieceType::BISHOP) | pos.get_pieces(opponent_color, PieceType::QUEEN);
+    uint64_t opponent_rooks_queens = pos.get_pieces(opponent_color, PieceType::Rook) | pos.get_pieces(opponent_color, PieceType::Queen);
+    uint64_t opponent_bishops_queens = pos.get_pieces(opponent_color, PieceType::Bishop) | pos.get_pieces(opponent_color, PieceType::Queen);
     if (opponent_rooks_queens != 0) {
 		uint64_t second_blockers = get_rook_attacks(king_square, pos.get_all_pieces()^possible_rook_pinned) & opponent_rooks_queens&~all_rook_bockers;
         while (second_blockers) {
@@ -97,7 +97,7 @@ uint64_t MoveGenerator::calculate_pinned_pieces(const Position& pos, const Color
 template <bool captures_only>
 void MoveGenerator::generate_king_moves(MoveList& moves,const Position& pos,const Color own_color, const uint64_t& own_pieces, int king_square){
         uint64_t possible_moves=KING_ATTACKS[king_square]&~own_pieces;
-        Color other_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
+        Color other_color=own_color==Color::White ? Color::Black:Color::White;
         if (captures_only) possible_moves&=pos.get_color_pieces(other_color);
         while (possible_moves)
         {
@@ -107,13 +107,13 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Position& pos,cons
                 possible_moves&=possible_moves-1;
                 continue;
             }
-            moves.push_back(Move(king_square,to_square,PieceType::KING,own_color,
+            moves.push_back(Move(king_square,to_square,PieceType::King,own_color,
                 pos.get_piece_on_square(to_square)));
             possible_moves&=possible_moves-1;
         }
         if (pos.count_attacker_on_square(king_square,other_color,1,false).count>0) return;
-		uint8_t king_castle_mask = own_color == Color::WHITE ? WHITE_KING_CASTLE : BLACK_KING_CASTLE;
-		uint8_t queen_castle_mask = own_color == Color::WHITE ? WHITE_QUEEN_CASTLE : BLACK_QUEEN_CASTLE;
+		uint8_t king_castle_mask = own_color == Color::White ? WHITE_KING_CASTLE : BLACK_KING_CASTLE;
+		uint8_t queen_castle_mask = own_color == Color::White ? WHITE_QUEEN_CASTLE : BLACK_QUEEN_CASTLE;
         if ((pos.get_castle_rights() & king_castle_mask)!= 0)
         {   
             int rook_square=king_square+3;
@@ -124,8 +124,8 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Position& pos,cons
                 
                 if (pos.count_attacker_on_square(king_square+1,other_color,1,false).count==0 && pos.count_attacker_on_square(king_square+2,other_color,1,false).count==0)
                 {
-                    moves.push_back(Move(king_square,king_square+2,PieceType::KING,own_color,
-                        PieceType::NONE,PieceType::NONE,true));
+                    moves.push_back(Move(king_square,king_square+2,PieceType::King,own_color,
+                        PieceType::None,PieceType::None,true));
                 }
                 
             }
@@ -139,8 +139,8 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Position& pos,cons
                 {
                     if (pos.count_attacker_on_square(king_square - 1, other_color, 1, false).count == 0 && pos.count_attacker_on_square(king_square - 2, other_color, 1, false).count == 0)
                     {
-                        moves.push_back(Move(king_square, king_square - 2, PieceType::KING, own_color,
-                            PieceType::NONE, PieceType::NONE, true));
+                        moves.push_back(Move(king_square, king_square - 2, PieceType::King, own_color,
+                            PieceType::None, PieceType::None, true));
                     }
 
                 }
@@ -153,11 +153,11 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Position& pos,cons
 template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_queen_moves(MoveList& moves,const Position& pos, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask) {
     //return generate_sliding_moves(moves,PieceType::QUEEN,pos,own_color,pinned_info,remedy_mask,captures_only);
-    uint64_t queens = pos.get_pieces(own_color, PieceType::QUEEN);
+    uint64_t queens = pos.get_pieces(own_color, PieceType::Queen);
     uint64_t occupied = pos.get_all_pieces();
     uint64_t own_pieces = pos.get_color_pieces(own_color); 
     if constexpr (captures_only) {
-        Color other_color = own_color == Color::WHITE ? Color::BLACK : Color::WHITE;
+        Color other_color = own_color == Color::White ? Color::Black : Color::White;
         uint64_t mask_changer = pos.get_color_pieces(other_color);
         if constexpr (with_checks) {
             int op_king_square = pos.get_king_square(other_color);
@@ -182,7 +182,7 @@ void MoveGenerator::generate_queen_moves(MoveList& moves,const Position& pos, Co
         }
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.push_back(Move(from_square, to_square, PieceType::QUEEN, own_color, pos.get_piece_on_square(to_square)));
+            moves.push_back(Move(from_square, to_square, PieceType::Queen, own_color, pos.get_piece_on_square(to_square)));
             attacks &= attacks - 1;
 
         }
@@ -194,11 +194,11 @@ void MoveGenerator::generate_queen_moves(MoveList& moves,const Position& pos, Co
 template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_rook_moves(MoveList& moves,const Position& pos, Color own_color, const uint64_t& pinned_info,uint64_t remedy_mask) {
     //return generate_sliding_moves(moves,PieceType::ROOK,pos,own_color,pinned_info,remedy_mask,captures_only);
-    uint64_t rooks = pos.get_pieces(own_color, PieceType::ROOK);
+    uint64_t rooks = pos.get_pieces(own_color, PieceType::Rook);
     uint64_t occupied = pos.get_all_pieces();
     uint64_t own_pieces = pos.get_color_pieces(own_color); 
     if constexpr (captures_only) {
-        Color other_color = own_color == Color::WHITE ? Color::BLACK : Color::WHITE;
+        Color other_color = own_color == Color::White ? Color::Black : Color::White;
         uint64_t mask_changer = pos.get_color_pieces(other_color);
         if constexpr (with_checks) {
             int op_king_square = pos.get_king_square(other_color);
@@ -217,7 +217,7 @@ void MoveGenerator::generate_rook_moves(MoveList& moves,const Position& pos, Col
         }
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.push_back(Move(from_square, to_square, PieceType::ROOK, own_color, pos.get_piece_on_square(to_square)));
+            moves.push_back(Move(from_square, to_square, PieceType::Rook, own_color, pos.get_piece_on_square(to_square)));
             attacks &= attacks - 1;
 
         }
@@ -229,11 +229,11 @@ void MoveGenerator::generate_rook_moves(MoveList& moves,const Position& pos, Col
 template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_bishop_moves(MoveList& moves,const Position& pos, Color own_color, const uint64_t& pinned_info, uint64_t remedy_mask) {
     //return generate_sliding_moves(moves,PieceType::BISHOP,pos,own_color,pinned_info,remedy_mask,captures_only);
-    uint64_t bishops = pos.get_pieces(own_color, PieceType::BISHOP);
+    uint64_t bishops = pos.get_pieces(own_color, PieceType::Bishop);
     uint64_t occupied = pos.get_all_pieces();
     uint64_t own_pieces = pos.get_color_pieces(own_color); 
     if constexpr (captures_only) {
-        Color other_color = own_color == Color::WHITE ? Color::BLACK : Color::WHITE;
+        Color other_color = own_color == Color::White ? Color::Black : Color::White;
         uint64_t mask_changer = pos.get_color_pieces(other_color);
         if constexpr (with_checks) {
             int op_king_square = pos.get_king_square(other_color);
@@ -252,7 +252,7 @@ void MoveGenerator::generate_bishop_moves(MoveList& moves,const Position& pos, C
 		}
         while (attacks) {
             int to_square = get_lsb(attacks);
-            moves.push_back(Move(from_square, to_square, PieceType::BISHOP, own_color, pos.get_piece_on_square(to_square)));
+            moves.push_back(Move(from_square, to_square, PieceType::Bishop, own_color, pos.get_piece_on_square(to_square)));
             attacks &= attacks - 1;
 
         }
@@ -263,10 +263,10 @@ void MoveGenerator::generate_bishop_moves(MoveList& moves,const Position& pos, C
 }
 template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_knight_moves(MoveList& moves,const Position& pos, Color own_color, const uint64_t& pinned_info, uint64_t remedy_mask) {
-    uint64_t knight_bitpos=pos.get_pieces(own_color,PieceType::KNIGHT);
+    uint64_t knight_bitpos=pos.get_pieces(own_color,PieceType::Knight);
     uint64_t own_pieces = pos.get_color_pieces(own_color);
     if constexpr (captures_only) {
-         Color other_color = own_color == Color::WHITE ? Color::BLACK : Color::WHITE;
+         Color other_color = own_color == Color::White ? Color::Black : Color::White;
         uint64_t mask_changer= pos.get_color_pieces(other_color);
         if constexpr (with_checks) {
                         int op_king_square = pos.get_king_square(other_color);
@@ -286,7 +286,7 @@ void MoveGenerator::generate_knight_moves(MoveList& moves,const Position& pos, C
         while (possible_moves)
         {
             int to_square=get_lsb(possible_moves);
-            moves.push_back(Move(from_square,to_square,PieceType::KNIGHT,own_color,pos.get_piece_on_square(to_square)));
+            moves.push_back(Move(from_square,to_square,PieceType::Knight,own_color,pos.get_piece_on_square(to_square)));
             possible_moves&=possible_moves-1;
         }
         knight_bitpos&=knight_bitpos-1; 
@@ -318,7 +318,7 @@ void MoveGenerator::generate_sliding_moves(
     {
         int from_square=get_lsb(piece_bitpos);
         uint64_t possible_moves=0;
-        std::vector<int> direction=piece==PieceType::QUEEN ? QUEEN_DIR_IND:(piece==PieceType::ROOK ? ROOK_DIR_IND:BISHOP_DIR_IND);
+        std::vector<int> direction=piece==PieceType::Queen ? QUEEN_DIR_IND:(piece==PieceType::Rook ? ROOK_DIR_IND:BISHOP_DIR_IND);
         
         for (int  dir_index : direction)
         {   
@@ -341,7 +341,7 @@ void MoveGenerator::generate_sliding_moves(
             possible_moves &= COMPLETE_LINE[from_square][pos.get_king_square(own_color)];
         }
         if constexpr (captures_only){
-            Color other_color=own_color==Color::WHITE ? Color::BLACK:Color::WHITE;
+            Color other_color=own_color==Color::White ? Color::Black:Color::White;
             possible_moves &= pos.get_color_pieces(other_color);
         }
         while (possible_moves)
@@ -357,15 +357,15 @@ void MoveGenerator::generate_sliding_moves(
 template <bool with_checks>
 void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Position& pos,Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask){
 
-        uint64_t own_pawns=pos.get_pieces(own_color,PieceType::PAWN);
+        uint64_t own_pawns=pos.get_pieces(own_color,PieceType::Pawn);
         uint64_t all_pieces=pos.get_all_pieces();
-        int push_step=(own_color==Color::WHITE) ? 8:-8;
-        int start_rank=(own_color==Color::WHITE) ? 1:6;
-        int promotion_rank=(own_color==Color::WHITE) ? 6:1;
+        int push_step=(own_color==Color::White) ? 8:-8;
+        int start_rank=(own_color==Color::White) ? 1:6;
+        int promotion_rank=(own_color==Color::White) ? 6:1;
 		uint8_t castle_rights = pos.get_castle_rights();
 		int en_passant_square = pos.get_en_passant_rights();
         if constexpr (with_checks) {
-			Color other_color = own_color == Color::WHITE ? Color::BLACK : Color::WHITE;
+			Color other_color = own_color == Color::White ? Color::Black : Color::White;
             int op_king_square = pos.get_king_square(other_color);
             remedy_mask &= PAWN_ATTACKS[to_int(other_color)][op_king_square];
         }
@@ -388,13 +388,13 @@ void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Position& pos,Col
                         if (is_promotion)
                         {
                             
-                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::QUEEN));
-                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::ROOK));
-                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::BISHOP));
-                        moves.push_back(Move(from_square, to_square, PieceType::PAWN, own_color, PieceType::NONE,PieceType::KNIGHT));
+                        moves.push_back(Move(from_square, to_square, PieceType::Pawn, own_color, PieceType::None,PieceType::Queen));
+                        moves.push_back(Move(from_square, to_square, PieceType::Pawn, own_color, PieceType::None,PieceType::Rook));
+                        moves.push_back(Move(from_square, to_square, PieceType::Pawn, own_color, PieceType::None,PieceType::Bishop));
+                        moves.push_back(Move(from_square, to_square, PieceType::Pawn, own_color, PieceType::None,PieceType::Knight));
                         }else
                         {
-                            moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,PieceType::NONE));
+                            moves.push_back(Move(from_square,to_square,PieceType::Pawn,own_color,PieceType::None));
                         }
                     }
 
@@ -405,7 +405,7 @@ void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Position& pos,Col
                         {
                             if (pinned_mask & (1ULL<<to_square2) & remedy_mask)
                             {
-                                moves.push_back(Move(from_square,to_square2,PieceType::PAWN,own_color,PieceType::NONE));
+                                moves.push_back(Move(from_square,to_square2,PieceType::Pawn,own_color,PieceType::None));
                             }
                             
                         }
@@ -423,8 +423,8 @@ void MoveGenerator::generate_pawn_pushes(MoveList& moves,const Position& pos,Col
 template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_pawn_captures(MoveList& moves,const Position& pos, Color own_color,const int king_square,const uint64_t& pinned_info,const uint64_t& remedy_mask){
 
-        uint64_t own_pawns=pos.get_pieces(own_color,PieceType::PAWN);
-        Color opponent_color =(own_color==Color::WHITE) ? Color::BLACK:Color::WHITE;
+        uint64_t own_pawns=pos.get_pieces(own_color,PieceType::Pawn);
+        Color opponent_color =(own_color==Color::White) ? Color::Black:Color::White;
         uint64_t enemy_pieces=pos.get_color_pieces(opponent_color);
         uint64_t new_remedy=remedy_mask;
         if (pos.get_en_passant_rights()!=NO_SQUARE) new_remedy |=(1ULL<<pos.get_en_passant_rights());
@@ -446,17 +446,17 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Position& pos, 
                 int to_square=get_lsb(capture_bb);
                 PieceType captured_piece=pos.get_piece_on_square(to_square);
 
-                bool is_promotion =(own_color==Color::WHITE && to_square>=56) || (own_color==Color::BLACK && to_square<=7);
+                bool is_promotion =(own_color==Color::White && to_square>=56) || (own_color==Color::Black && to_square<=7);
 
                 if (is_promotion
                 )
                 {
-                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::QUEEN));
-                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::ROOK));
-                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::BISHOP));
-                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece,PieceType::KNIGHT));
+                    moves.push_back(Move(from_square,to_square,PieceType::Pawn,own_color,captured_piece,PieceType::Queen));
+                    moves.push_back(Move(from_square,to_square,PieceType::Pawn,own_color,captured_piece,PieceType::Rook));
+                    moves.push_back(Move(from_square,to_square,PieceType::Pawn,own_color,captured_piece,PieceType::Bishop));
+                    moves.push_back(Move(from_square,to_square,PieceType::Pawn,own_color,captured_piece,PieceType::Knight));
                 }else{
-                    moves.push_back(Move(from_square,to_square,PieceType::PAWN,own_color,captured_piece));
+                    moves.push_back(Move(from_square,to_square,PieceType::Pawn,own_color,captured_piece));
                 }
                 capture_bb&=capture_bb-1;
             }
@@ -472,20 +472,20 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Position& pos, 
                 {       
                     if (king_square /8 != from_square /8)
                     {
-                        moves.push_back(Move(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true));
+                        moves.push_back(Move(from_square,ep_square,PieceType::Pawn,own_color,PieceType::Pawn,PieceType::None,false,true));
                     }else
                     {   
                         int dir_index= (king_square>from_square) ? 7:3;
-                        int capture_square= (own_color==Color::WHITE) ? ep_square-8:ep_square+8;
+                        int capture_square= (own_color==Color::White) ? ep_square-8:ep_square+8;
                         uint64_t two_pawns_mask=(1ULL<<from_square) | (1ULL<<capture_square);
-                        uint64_t opponent_rook_queen=pos.get_pieces(opponent_color,PieceType::ROOK) | pos.get_pieces(opponent_color,PieceType::QUEEN);
+                        uint64_t opponent_rook_queen=pos.get_pieces(opponent_color,PieceType::Rook) | pos.get_pieces(opponent_color,PieceType::Queen);
                         uint64_t ray=RAY_MASK[dir_index][king_square]^two_pawns_mask;
                         ray&= pos.get_all_pieces();
                         int next_piece_square= (dir_index==7) ? get_msb(ray) : get_lsb(ray);
                         
                         if ((next_piece_square==NO_SQUARE) || (opponent_rook_queen & (1ULL<<next_piece_square)) == 0)
                         {
-                            moves.push_back(Move(from_square,ep_square,PieceType::PAWN,own_color,PieceType::PAWN,PieceType::NONE,false,true));
+                            moves.push_back(Move(from_square,ep_square,PieceType::Pawn,own_color,PieceType::Pawn,PieceType::None,false,true));
                         }else{
                             own_pawns&=own_pawns-1;
                             continue;

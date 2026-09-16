@@ -3,11 +3,11 @@
 #include <cstdint>
 
 enum EvalParam {
-	PAWN,
-	KNIGHT,
-	BISHOP,
-	ROOK,
-	QUEEN,
+	Pawn,
+	Knight,
+	Bishop,
+	Rook,
+	Queen,
 	PAWN_PST_START,
 	PAWN_PST_END = PAWN_PST_START + 63,
 	KNIGHT_PST_START,
@@ -79,19 +79,19 @@ extern EvaluationResult EvalWeights[PARAM_COUNT];
 inline EvaluationResult get_piece_values(const Color& color, const PieceType& piece) {
 	EvaluationResult result = { 0,0 };
 	if (piece==PieceType::Pawn) {
-		return color == Color::White ? EvalWeights[EvalParam::PAWN] : EvalWeights[EvalParam::PAWN] * -1;
+		return color == Color::White ? EvalWeights[EvalParam::Pawn] : EvalWeights[EvalParam::Pawn] * -1;
 	}
 	else if (piece == PieceType::Knight) {
-		return color == Color::White ? EvalWeights[EvalParam::KNIGHT] : EvalWeights[EvalParam::KNIGHT] * -1;
+		return color == Color::White ? EvalWeights[EvalParam::Knight] : EvalWeights[EvalParam::Knight] * -1;
 	}
 	else if (piece == PieceType::Bishop) {
-		return color == Color::White ? EvalWeights[EvalParam::BISHOP] : EvalWeights[EvalParam::BISHOP] * -1;
+		return color == Color::White ? EvalWeights[EvalParam::Bishop] : EvalWeights[EvalParam::Bishop] * -1;
 	}
 	else if (piece == PieceType::Rook) {
-		return color == Color::White ? EvalWeights[EvalParam::ROOK] : EvalWeights[EvalParam::ROOK] * -1;
+		return color == Color::White ? EvalWeights[EvalParam::Rook] : EvalWeights[EvalParam::Rook] * -1;
 	}
 	else if (piece == PieceType::Queen) {
-		return color == Color::White ? EvalWeights[EvalParam::QUEEN] : EvalWeights[EvalParam::QUEEN] * -1;
+		return color == Color::White ? EvalWeights[EvalParam::Queen] : EvalWeights[EvalParam::Queen] * -1;
 	}
 	else if (piece == PieceType::King) {
 		return { 0,0 };
@@ -120,22 +120,22 @@ inline int get_mg_pos_score(const Color& color, const PieceType& piece, const in
 	}
 }
 inline int get_eg_pos_score(const Color& color, const PieceType& piece, const int& square) {
-	if (color == Color::WHITE) {
-		if (piece == PieceType::PAWN) return EvalWeights[PAWN_PST_START + square].eg_score;
-		else if (piece == PieceType::KNIGHT) return EvalWeights[KNIGHT_PST_START + square].eg_score;
-		else if (piece == PieceType::BISHOP) return EvalWeights[BISHOP_PST_START + square].eg_score;
-		else if (piece == PieceType::ROOK) return EvalWeights[ROOK_PST_START + square].eg_score;
-		else if (piece == PieceType::QUEEN) return EvalWeights[QUEEN_PST_START + square].eg_score;
-		else if (piece == PieceType::KING) return EvalWeights[KING_PST_START + square].eg_score;
+	if (color == Color::White) {
+		if (piece == PieceType::Pawn) return EvalWeights[PAWN_PST_START + square].eg_score;
+		else if (piece == PieceType::Knight) return EvalWeights[KNIGHT_PST_START + square].eg_score;
+		else if (piece == PieceType::Bishop) return EvalWeights[BISHOP_PST_START + square].eg_score;
+		else if (piece == PieceType::Rook) return EvalWeights[ROOK_PST_START + square].eg_score;
+		else if (piece == PieceType::Queen) return EvalWeights[QUEEN_PST_START + square].eg_score;
+		else if (piece == PieceType::King) return EvalWeights[KING_PST_START + square].eg_score;
 		else return 0;
 	}
 	else {
-		if (piece == PieceType::PAWN) return -EvalWeights[PAWN_PST_START + flip_square(square)].eg_score;
-		else if (piece == PieceType::KNIGHT) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].eg_score;
-		else if (piece == PieceType::BISHOP) return -EvalWeights[BISHOP_PST_START + flip_square(square)].eg_score;
-		else if (piece == PieceType::ROOK) return -EvalWeights[ROOK_PST_START + flip_square(square)].eg_score;
-		else if (piece == PieceType::QUEEN) return -EvalWeights[QUEEN_PST_START + flip_square(square)].eg_score;
-		else if (piece == PieceType::KING) return -EvalWeights[KING_PST_START + flip_square(square)].eg_score;
+		if (piece == PieceType::Pawn) return -EvalWeights[PAWN_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::Knight) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::Bishop) return -EvalWeights[BISHOP_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::Rook) return -EvalWeights[ROOK_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::Queen) return -EvalWeights[QUEEN_PST_START + flip_square(square)].eg_score;
+		else if (piece == PieceType::King) return -EvalWeights[KING_PST_START + flip_square(square)].eg_score;
 		else return 0;
 	}
 }

@@ -1,4 +1,4 @@
-#include "notation_utils.h"
+﻿#include "notation_utils.h"
 #include "constants.h"
 #include <vector>
 #include "utils.h"
@@ -18,16 +18,16 @@ std::string to_san(const Move& move,const MoveList& all_legal_moves){
 
     std::string piece_symbol={PIECE_CHAR_LIST[to_int(move.piece_moved)]};
     std::string dest_square = square_to_algebraic(move.to_square);
-    std::string capture_symbol=(move.piece_captured!= PieceType::NONE) ? "x" : "";
+    std::string capture_symbol=(move.piece_captured!= PieceType::None) ? "x" : "";
 
-    if (move.piece_moved == PieceType::PAWN){
+    if (move.piece_moved == PieceType::Pawn){
         std::string notation;
         if (!capture_symbol.empty()){
             notation=std::string(1,square_to_algebraic(move.from_square)[0])+capture_symbol+dest_square;
         } else {
             notation=dest_square;
         }
-        if (move.promotion_piece !=PieceType::NONE){
+        if (move.promotion_piece !=PieceType::None){
             notation+="="+std::string(1,PIECE_CHAR_LIST[to_int(move.promotion_piece)]);
         }
         return notation;

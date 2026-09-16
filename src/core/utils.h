@@ -70,7 +70,7 @@ static inline uint64_t bit64(int sq) { return 1ULL << sq; }
 static inline uint8_t bit8(int sq) { return static_cast<uint8_t>(1u << sq); }
 
 static inline Color flip_color(Color color) {
-    return (color == Color::WHITE) ? Color::BLACK : Color::WHITE;
+    return (color == Color::White) ? Color::Black : Color::White;
 }
 
 inline int popcount(uint64_t bitboard) {
@@ -96,47 +96,47 @@ inline void remove_castling_right(std::string& rights, char right_to_remove) {
 }
 
 inline char get_piece_char(const PieceType& piece, const Color& color) {
-    return color == Color::WHITE ? PIECE_CHAR_LIST[to_int(piece)] : tolower(PIECE_CHAR_LIST[to_int(piece)]);
+    return color == Color::White ? PIECE_CHAR_LIST[to_int(piece)] : tolower(PIECE_CHAR_LIST[to_int(piece)]);
 }
 
 
 inline int get_mg_pos_score(const Color& color, const PieceType& piece, const int& square) {
-    if (color == Color::WHITE) {
-        if (piece == PieceType::PAWN) return EvalWeights[PAWN_PST_START + square].mg_score;
-        else if (piece == PieceType::KNIGHT) return EvalWeights[KNIGHT_PST_START + square].mg_score;
-        else if (piece == PieceType::BISHOP) return EvalWeights[BISHOP_PST_START + square].mg_score;
-        else if (piece == PieceType::ROOK) return EvalWeights[ROOK_PST_START + square].mg_score;
-        else if (piece == PieceType::QUEEN) return EvalWeights[QUEEN_PST_START + square].mg_score;
-        else if (piece == PieceType::KING) return EvalWeights[KING_PST_START + square].mg_score;
+    if (color == Color::White) {
+        if (piece == PieceType::Pawn) return EvalWeights[PAWN_PST_START + square].mg_score;
+        else if (piece == PieceType::Knight) return EvalWeights[KNIGHT_PST_START + square].mg_score;
+        else if (piece == PieceType::Bishop) return EvalWeights[BISHOP_PST_START + square].mg_score;
+        else if (piece == PieceType::Rook) return EvalWeights[ROOK_PST_START + square].mg_score;
+        else if (piece == PieceType::Queen) return EvalWeights[QUEEN_PST_START + square].mg_score;
+        else if (piece == PieceType::King) return EvalWeights[KING_PST_START + square].mg_score;
         else return 0;
     }
     else {
-        if (piece == PieceType::PAWN) return -EvalWeights[PAWN_PST_START + flip_square(square)].mg_score;
-        else if (piece == PieceType::KNIGHT) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].mg_score;
-        else if (piece == PieceType::BISHOP) return -EvalWeights[BISHOP_PST_START + flip_square(square)].mg_score;
-        else if (piece == PieceType::ROOK) return -EvalWeights[ROOK_PST_START + flip_square(square)].mg_score;
-        else if (piece == PieceType::QUEEN) return -EvalWeights[QUEEN_PST_START + flip_square(square)].mg_score;
-        else if (piece == PieceType::KING) return -EvalWeights[KING_PST_START + flip_square(square)].mg_score;
+        if (piece == PieceType::Pawn) return -EvalWeights[PAWN_PST_START + flip_square(square)].mg_score;
+        else if (piece == PieceType::Knight) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].mg_score;
+        else if (piece == PieceType::Bishop) return -EvalWeights[BISHOP_PST_START + flip_square(square)].mg_score;
+        else if (piece == PieceType::Rook) return -EvalWeights[ROOK_PST_START + flip_square(square)].mg_score;
+        else if (piece == PieceType::Queen) return -EvalWeights[QUEEN_PST_START + flip_square(square)].mg_score;
+        else if (piece == PieceType::King) return -EvalWeights[KING_PST_START + flip_square(square)].mg_score;
         else return 0;
     }
 }
 inline int get_eg_pos_score(const Color& color, const PieceType& piece, const int& square) {
-    if (color == Color::WHITE) {
-        if (piece == PieceType::PAWN) return EvalWeights[PAWN_PST_START + square].eg_score;
-        else if (piece == PieceType::KNIGHT) return EvalWeights[KNIGHT_PST_START + square].eg_score;
-        else if (piece == PieceType::BISHOP) return EvalWeights[BISHOP_PST_START + square].eg_score;
-        else if (piece == PieceType::ROOK) return EvalWeights[ROOK_PST_START + square].eg_score;
-        else if (piece == PieceType::QUEEN) return EvalWeights[QUEEN_PST_START + square].eg_score;
-        else if (piece == PieceType::KING) return EvalWeights[KING_PST_START + square].eg_score;
+    if (color == Color::White) {
+        if (piece == PieceType::Pawn) return EvalWeights[PAWN_PST_START + square].eg_score;
+        else if (piece == PieceType::Knight) return EvalWeights[KNIGHT_PST_START + square].eg_score;
+        else if (piece == PieceType::Bishop) return EvalWeights[BISHOP_PST_START + square].eg_score;
+        else if (piece == PieceType::Rook) return EvalWeights[ROOK_PST_START + square].eg_score;
+        else if (piece == PieceType::Queen) return EvalWeights[QUEEN_PST_START + square].eg_score;
+        else if (piece == PieceType::King) return EvalWeights[KING_PST_START + square].eg_score;
         else return 0;
     }
     else {
-        if (piece == PieceType::PAWN) return -EvalWeights[PAWN_PST_START + flip_square(square)].eg_score;
-        else if (piece == PieceType::KNIGHT) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].eg_score;
-        else if (piece == PieceType::BISHOP) return -EvalWeights[BISHOP_PST_START + flip_square(square)].eg_score;
-        else if (piece == PieceType::ROOK) return -EvalWeights[ROOK_PST_START + flip_square(square)].eg_score;
-        else if (piece == PieceType::QUEEN) return -EvalWeights[QUEEN_PST_START + flip_square(square)].eg_score;
-        else if (piece == PieceType::KING) return -EvalWeights[KING_PST_START + flip_square(square)].eg_score;
+        if (piece == PieceType::Pawn) return -EvalWeights[PAWN_PST_START + flip_square(square)].eg_score;
+        else if (piece == PieceType::Knight) return -EvalWeights[KNIGHT_PST_START + flip_square(square)].eg_score;
+        else if (piece == PieceType::Bishop) return -EvalWeights[BISHOP_PST_START + flip_square(square)].eg_score;
+        else if (piece == PieceType::Rook) return -EvalWeights[ROOK_PST_START + flip_square(square)].eg_score;
+        else if (piece == PieceType::Queen) return -EvalWeights[QUEEN_PST_START + flip_square(square)].eg_score;
+        else if (piece == PieceType::King) return -EvalWeights[KING_PST_START + flip_square(square)].eg_score;
         else return 0;
     }
 }
@@ -154,7 +154,7 @@ inline Move recover_move_from_int(uint16_t m_int) {
     int from_square = m_int & 0x3F;
     int to_square = (m_int >> 6) & 0x3F;
     int promo_int = (m_int >> 12) & 0x0F;
-    return Move(from_square, to_square, PieceType::NONE, Color::WHITE, PieceType::NONE, static_cast<PieceType>(promo_int));
+    return Move(from_square, to_square, PieceType::None, Color::White, PieceType::None, static_cast<PieceType>(promo_int));
 }
 static inline int pick_best(MoveList& moves, int* scores, int start) {
     int best = start;
@@ -192,35 +192,35 @@ static inline uint64_t splitmix64(uint64_t& seed) {
     return z ^ (z >> 31);
 }
 static inline bool pick_least_attacker(int tosq, Color side, int& outFromSq, PieceType& outPT, uint64_t occ, uint64_t piecesLocal[2][6]) {
-    uint64_t bb = get_pawn_attackers(tosq, side, piecesLocal[to_int(side)][to_int(PieceType::PAWN)]);
-    if (bb) { outPT = PieceType::PAWN; outFromSq = get_lsb(bb); return true; }
-    bb = get_knight_attacks(tosq) & piecesLocal[to_int(side)][to_int(PieceType::KNIGHT)];
-    if (bb) { outPT = PieceType::KNIGHT; outFromSq = get_lsb(bb); return true; }
-    bb = get_bishop_attacks(tosq, occ) & piecesLocal[to_int(side)][to_int(PieceType::BISHOP)];
-    if (bb) { outPT = PieceType::BISHOP; outFromSq = get_lsb(bb); return true; }
-    bb = get_rook_attacks(tosq, occ) & piecesLocal[to_int(side)][to_int(PieceType::ROOK)];
-    if (bb) { outPT = PieceType::ROOK; outFromSq = get_lsb(bb); return true; }
-    bb = get_queen_attacks(tosq, occ) & piecesLocal[to_int(side)][to_int(PieceType::QUEEN)];
-    if (bb) { outPT = PieceType::QUEEN; outFromSq = get_lsb(bb); return true; }
-    bb = get_king_attacks(tosq) & piecesLocal[to_int(side)][to_int(PieceType::KING)];
-    if (bb) { outPT = PieceType::KING; outFromSq = get_lsb(bb); return true; }
+    uint64_t bb = get_pawn_attackers(tosq, side, piecesLocal[to_int(side)][to_int(PieceType::Pawn)]);
+    if (bb) { outPT = PieceType::Pawn; outFromSq = get_lsb(bb); return true; }
+    bb = get_knight_attacks(tosq) & piecesLocal[to_int(side)][to_int(PieceType::Knight)];
+    if (bb) { outPT = PieceType::Knight; outFromSq = get_lsb(bb); return true; }
+    bb = get_bishop_attacks(tosq, occ) & piecesLocal[to_int(side)][to_int(PieceType::Bishop)];
+    if (bb) { outPT = PieceType::Bishop; outFromSq = get_lsb(bb); return true; }
+    bb = get_rook_attacks(tosq, occ) & piecesLocal[to_int(side)][to_int(PieceType::Rook)];
+    if (bb) { outPT = PieceType::Rook; outFromSq = get_lsb(bb); return true; }
+    bb = get_queen_attacks(tosq, occ) & piecesLocal[to_int(side)][to_int(PieceType::Queen)];
+    if (bb) { outPT = PieceType::Queen; outFromSq = get_lsb(bb); return true; }
+    bb = get_king_attacks(tosq) & piecesLocal[to_int(side)][to_int(PieceType::King)];
+    if (bb) { outPT = PieceType::King; outFromSq = get_lsb(bb); return true; }
 
     return false;
 }
 inline bool has_castling_rights(Color color, uint8_t castle_rights) {
-    if (color == Color::WHITE) {
+    if (color == Color::White) {
         return (castle_rights & (WHITE_KING_CASTLE | WHITE_QUEEN_CASTLE)) != 0;
     }
-    if (color == Color::BLACK) {
+    if (color == Color::Black) {
         return (castle_rights & (BLACK_KING_CASTLE | BLACK_QUEEN_CASTLE)) != 0;
     }
     return false;
 }
 inline bool has_castling_rights(int color, uint8_t castle_rights) {
-    if (color == to_int(Color::WHITE)) {
+    if (color == to_int(Color::White)) {
         return (castle_rights & (WHITE_KING_CASTLE | WHITE_QUEEN_CASTLE)) != 0;
     }
-    if (color == to_int(Color::BLACK)) {
+    if (color == to_int(Color::Black)) {
         return (castle_rights & (BLACK_KING_CASTLE | BLACK_QUEEN_CASTLE)) != 0;
     }
     return false;
@@ -251,7 +251,7 @@ inline void gravity_update(int& h, int bonus) {
     h = std::clamp(h, -HISTORY_MAX, HISTORY_MAX);
 }
 inline int get_forward_square(int square, Color color) {
-    if (color == Color::WHITE) {
+    if (color == Color::White) {
         return square + 8;
     }
     else {
@@ -262,7 +262,7 @@ inline bool is_occupied(int square, uint64_t occupied) {
     return (occupied & bit64(square)) != 0;
 }
 inline int get_promotion_square(int square, Color color) {
-    if (color == Color::WHITE) {
+    if (color == Color::White) {
         return square + 8 * (7 - rank(square));
     }
     else {

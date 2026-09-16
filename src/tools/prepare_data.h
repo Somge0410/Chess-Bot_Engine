@@ -49,7 +49,7 @@ std::vector<float> pos_to_tensor_with_history(const Position& pos) {
     // --- Now, add the state planes for the CURRENT position only ---
     int state_offset = HISTORY_FRAMES * PIECE_CHANNELS_PER_FRAME*64;
 
-	float turn_val = (pos.get_turn() == Color::WHITE) ? 1.0f : 0.0f;  
+	float turn_val = (pos.get_turn() == Color::White) ? 1.0f : 0.0f;  
 
     std::fill(tensor.begin() + state_offset, tensor.begin() + state_offset + 64, turn_val);
 	state_offset += 64;

@@ -28,8 +28,8 @@ struct EvalContext {
 	void init_file_info() {
 		for (size_t file = 0; file < 8; ++file) {
 			uint64_t file_mask = FILE_MASK[file];
-			bool white_has_pawns = (pos.get_pieces(Color::WHITE, PieceType::PAWN) & file_mask) != 0;
-			bool black_has_pawns = (pos.get_pieces(Color::BLACK, PieceType::PAWN) & file_mask) != 0;
+			bool white_has_pawns = (pos.get_pieces(Color::White, PieceType::Pawn) & file_mask) != 0;
+			bool black_has_pawns = (pos.get_pieces(Color::Black, PieceType::Pawn) & file_mask) != 0;
 			if (!white_has_pawns)
 				files_with_no_color_pawns[0] |= bit8(file);
 			if (!black_has_pawns)

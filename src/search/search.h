@@ -1,12 +1,4 @@
-#pragma once
-
-#include <array>
-#include <cstdint>
-#include <cstring>
-
-#include "Move.h"
-#include "constants.h"
-#include "search_diagnostics.h"
+﻿#pragma once
 
 struct SearchLimits {
     int depth = -1;
@@ -19,15 +11,6 @@ struct SearchLimits {
     int mate = -1;
     bool infinite = false;
 };
-
-struct SearchResult {
-    int score;
-    Move best_move;
-    bool is_tempered = false;
-};
-
-class Engine;
-
 struct ThreadLocalData {
     static constexpr uint32_t TIME_CHECK_INTERVAL = 1024;
     static constexpr int QSEARCH_PLY_CAPACITY = 25;
@@ -72,7 +55,7 @@ struct ThreadLocalData {
 
     MoveList move_lists[MAX_PLY];
     MoveList qmove_lists[QSEARCH_PLY_CAPACITY];
-	uint64_t qsearch_hashes[QSEARCH_PLY_CAPACITY] = {};
+    uint64_t qsearch_hashes[QSEARCH_PLY_CAPACITY] = {};
     int move_scores[MAX_PLY][256] = {};
     Move killer_moves[128][2] = {};
     MoveList searched_quiets[MAX_PLY];
@@ -101,7 +84,6 @@ struct ThreadLocalData {
     bool current_tt_probe_in_check{ false };
 #endif
     uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
-    void flush_counters(Engine* engine,bool force=false);
+    void flush_counters(Engine* engine, bool force = false);
 };
-
-extern thread_local ThreadLocalData tls_data;
+SearchLimits job_limits;

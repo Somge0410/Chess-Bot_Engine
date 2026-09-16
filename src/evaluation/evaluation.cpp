@@ -40,11 +40,11 @@ template<bool isTracing>
 void eval_material(EvaluationResult& score, const Position& pos, Trace* trace) {
 	score += pos.get_material_score();
 	if (isTracing && trace) {
-		trace->add(EvalParam::PAWN, popcount(pos.get_pieces(Color::WHITE, PieceType::PAWN)) - popcount(pos.get_pieces(Color::BLACK, PieceType::PAWN)));
-		trace->add(EvalParam::KNIGHT, popcount(pos.get_pieces(Color::WHITE, PieceType::KNIGHT)) - popcount(pos.get_pieces(Color::BLACK, PieceType::KNIGHT)));
-		trace->add(EvalParam::BISHOP, popcount(pos.get_pieces(Color::WHITE, PieceType::BISHOP)) - popcount(pos.get_pieces(Color::BLACK, PieceType::BISHOP)));
-		trace->add(EvalParam::ROOK, popcount(pos.get_pieces(Color::WHITE, PieceType::ROOK)) - popcount(pos.get_pieces(Color::BLACK, PieceType::ROOK)));
-		trace->add(EvalParam::QUEEN, popcount(pos.get_pieces(Color::WHITE, PieceType::QUEEN)) - popcount(pos.get_pieces(Color::BLACK, PieceType::QUEEN)));
+		trace->add(EvalParam::Pawn, popcount(pos.get_pieces(Color::White, PieceType::Pawn)) - popcount(pos.get_pieces(Color::Black, PieceType::Pawn)));
+		trace->add(EvalParam::Knight, popcount(pos.get_pieces(Color::White, PieceType::Knight)) - popcount(pos.get_pieces(Color::Black, PieceType::Knight)));
+		trace->add(EvalParam::Bishop, popcount(pos.get_pieces(Color::White, PieceType::Bishop)) - popcount(pos.get_pieces(Color::Black, PieceType::Bishop)));
+		trace->add(EvalParam::Rook, popcount(pos.get_pieces(Color::White, PieceType::Rook)) - popcount(pos.get_pieces(Color::Black, PieceType::Rook)));
+		trace->add(EvalParam::Queen, popcount(pos.get_pieces(Color::White, PieceType::Queen)) - popcount(pos.get_pieces(Color::Black, PieceType::Queen)));
 	}
 }
 template <bool isTracing>
@@ -72,8 +72,8 @@ uint64_t expand_file_mask(uint8_t file_mask) {
 }
 
 void classify_pawns(EvalContext& ctx) {
-	const uint64_t white_pawns = ctx.get_pieces(Color::WHITE, PieceType::PAWN);
-	const uint64_t black_pawns = ctx.get_pieces(Color::BLACK, PieceType::PAWN);
+	const uint64_t white_pawns = ctx.get_pieces(Color::White, PieceType::Pawn);
+	const uint64_t black_pawns = ctx.get_pieces(Color::Black, PieceType::Pawn);
 
 	uint64_t black_front_span = black_pawns >> 8;
 	black_front_span |= black_front_span >> 8;
@@ -82,7 +82,7 @@ void classify_pawns(EvalContext& ctx) {
 	const uint64_t white_passer_blockers = black_front_span
 		| ((black_front_span & NOT_FILE_H) << 1)
 		| ((black_front_span & NOT_FILE_A) >> 1);
-	ctx.passed[to_int(Color::WHITE)] = white_pawns & ~white_passer_blockers;
+	ctx.passed[to_int(Color::White)] = white_pawns & ~white_passer_blockers;
 
 	uint64_t white_front_span = white_pawns << 8;
 	white_front_span |= white_front_span << 8;
@@ -91,10 +91,10 @@ void classify_pawns(EvalContext& ctx) {
 	const uint64_t black_passer_blockers = white_front_span
 		| ((white_front_span & NOT_FILE_H) << 1)
 		| ((white_front_span & NOT_FILE_A) >> 1);
-	ctx.passed[to_int(Color::BLACK)] = black_pawns & ~black_passer_blockers;
+	ctx.passed[to_int(Color::Black)] = black_pawns & ~black_passer_blockers;
 
 	for (int color = 0; color < 2; ++color) {
-		const uint64_t own_pawns = color == to_int(Color::WHITE)
+		const uint64_t own_pawns = color == to_int(Color::White)
 			? white_pawns : black_pawns;
 		uint64_t folded_files = own_pawns;
 		folded_files |= folded_files >> 32;
@@ -148,12 +148,12 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	classify_pawns(ctx);
 	for (int color = 0; color < 2; ++color) {
 		const int enemy_color = 1 - color;
-		const int sign = color == to_int(Color::WHITE) ? 1 : -1;
+		const int sign = color == to_int(Color::White) ? 1 : -1;
 		uint64_t passed = ctx.passed[color];
 		while (passed) {
 			const int pawn_square = poplsb(passed);
 			const int bucket = PASSED_PAWN_BUCKET[
-				color == to_int(Color::WHITE) ? pawn_square : flip_square(pawn_square)];
+				color == to_int(Color::White) ? pawn_square : flip_square(pawn_square)];
 			addTerm<isTracing>(score,
 				static_cast<EvalParam>(EvalParam::PASSED_PAWNS_START + bucket),
 				sign, trace);
@@ -161,7 +161,7 @@ void eval_iso_passed(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 			const uint64_t defenders = get_pawn_attacks(
 				bit64(pawn_square), static_cast<Color>(enemy_color));
 			const int defender_count = popcount(
-				defenders & ctx.get_pieces(color, PieceType::PAWN));
+				defenders & ctx.get_pieces(color, PieceType::Pawn));
 			addTerm<isTracing>(score,
 				static_cast<EvalParam>(EvalParam::PROTECTED_PASSED_PAWNS_START + bucket),
 				sign * defender_count, trace);
@@ -173,14 +173,14 @@ template <bool isTracing>
 void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	for (int color = 0; color < 2; ++color) {
 		const int enemy_color = 1 - color;
-		const int sign = color == to_int(Color::WHITE) ? 1 : -1;
+		const int sign = color == to_int(Color::White) ? 1 : -1;
 		const Color pawn_color = static_cast<Color>(color);
 		uint64_t passed = ctx.passed[color];
 		while (passed) {
 			const int pawn_square = poplsb(passed);
 			const int rank_index = rank(pawn_square);
 			const int bucket = PASSED_PAWN_BUCKET[
-				color == to_int(Color::WHITE) ? pawn_square : flip_square(pawn_square)];
+				color == to_int(Color::White) ? pawn_square : flip_square(pawn_square)];
 			const int block_count = is_occupied(
 				get_forward_square(pawn_square, pawn_color), ctx.get_all_pieces()) ? 1 : 0;
 			addTerm<isTracing>(score,
@@ -191,7 +191,7 @@ void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace)
 				const int promo_square = get_promotion_square(pawn_square, pawn_color);
 				int enemy_king_distance = king_distance(
 					ctx.pos.get_king_square(static_cast<Color>(enemy_color)), promo_square);
-				const int pawn_distance = color == to_int(Color::WHITE)
+				const int pawn_distance = color == to_int(Color::White)
 					? 7 - rank_index : rank_index;
 				if (ctx.pos.get_turn() == static_cast<Color>(enemy_color)) {
 					enemy_king_distance--;
@@ -216,7 +216,7 @@ void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace)
 					sign, trace);
 			}
 
-			uint64_t rooks = ctx.get_pieces(color, PieceType::ROOK)
+			uint64_t rooks = ctx.get_pieces(color, PieceType::Rook)
 				& FORWARD_WAY_MASK[enemy_color][pawn_square];
 			while (rooks) {
 				const int rook_square = poplsb(rooks);
@@ -228,7 +228,7 @@ void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace)
 				}
 			}
 
-			uint64_t enemy_rooks = ctx.get_pieces(enemy_color, PieceType::ROOK)
+			uint64_t enemy_rooks = ctx.get_pieces(enemy_color, PieceType::Rook)
 				& FORWARD_WAY_MASK[enemy_color][pawn_square];
 			while (enemy_rooks) {
 				const int rook_square = poplsb(enemy_rooks);
@@ -245,7 +245,7 @@ void eval_dynamic_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace)
 		while (isolated) {
 			const int pawn_square = poplsb(isolated);
 			const int bucket = ISOLATED_PAWN_BUCKET[
-				color == to_int(Color::WHITE) ? pawn_square : flip_square(pawn_square)];
+				color == to_int(Color::White) ? pawn_square : flip_square(pawn_square)];
 			if (is_occupied(get_forward_square(pawn_square, pawn_color), ctx.get_all_pieces())) {
 				addTerm<isTracing>(score,
 					static_cast<EvalParam>(EvalParam::BLOCKED_ISOLANI_START + bucket),
@@ -272,25 +272,25 @@ void eval_backward(EvaluationResult& score, EvalContext& ctx, Trace* trace) {
 	int free_to_advance_backward_count = 0;
 	for (size_t color = 0; color < 2; color++) {
 		int ecolor = color == 0 ? 1 : 0;
-		uint64_t pawns = ctx.pos.get_pieces(static_cast<Color>(color), PieceType::PAWN) & ~ctx.passed[color] & ~ctx.isolated[color];
+		uint64_t pawns = ctx.pos.get_pieces(static_cast<Color>(color), PieceType::Pawn) & ~ctx.passed[color] & ~ctx.isolated[color];
 
 		while (pawns)
 		{
 			int pawn_square = get_lsb(pawns);
 			int file_index = pawn_square % 8;
-			int forward_square = color == to_int(Color::WHITE) ? pawn_square + 8 : pawn_square - 8;
+			int forward_square = color == to_int(Color::White) ? pawn_square + 8 : pawn_square - 8;
 
 			if (forward_square >= 0 && forward_square < 64) {
 				uint64_t forward_mask = bit64(forward_square);
 				uint64_t adjacent_backwards = PAWN_ATTACKS[ecolor][pawn_square];
-				bool has_adjacent_support = (ctx.pos.get_pieces(static_cast<Color>(color), PieceType::PAWN) & adjacent_backwards) != 0;
+				bool has_adjacent_support = (ctx.pos.get_pieces(static_cast<Color>(color), PieceType::Pawn) & adjacent_backwards) != 0;
 				bool forward_blocked = (ctx.pos.get_all_pieces() & forward_mask) != 0;
 				if (!has_adjacent_support) {
 					if (forward_blocked) {
 						ctx.backward[color] |= (1ULL << pawn_square);
 						blocked_backward_count += color == 0 ? 1 : -1;
 					}
-					else if ((PAWN_ATTACKS[color][forward_square] & ctx.pos.get_pieces(static_cast<Color>(ecolor), PieceType::PAWN)) != 0)
+					else if ((PAWN_ATTACKS[color][forward_square] & ctx.pos.get_pieces(static_cast<Color>(ecolor), PieceType::Pawn)) != 0)
 					{
 						ctx.backward[color] |= (1ULL << pawn_square);
 						forwad_controlled_backward_count += color == 0 ? 1 : -1;
@@ -317,14 +317,14 @@ void eval_double_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) 
 	{
 		doubled_count = 0;
 		uint64_t file_mask = FILE_MASK[file];
-		int white_doubled = popcount(ctx.pos.get_pieces(static_cast<Color>(Color::WHITE), PieceType::PAWN) & file_mask);
+		int white_doubled = popcount(ctx.pos.get_pieces(static_cast<Color>(Color::White), PieceType::Pawn) & file_mask);
 		if (white_doubled > 1)
 		{
 			doubled_count += white_doubled - 1;
 
 
 		}
-		int black_doubled = popcount(ctx.pos.get_pieces(static_cast<Color>(Color::BLACK), PieceType::PAWN) & file_mask);
+		int black_doubled = popcount(ctx.pos.get_pieces(static_cast<Color>(Color::Black), PieceType::Pawn) & file_mask);
 		if (black_doubled > 1)
 		{
 			doubled_count -= black_doubled - 1;
@@ -336,7 +336,7 @@ void eval_double_pawns(EvaluationResult& score, EvalContext& ctx, Trace* trace) 
 template<bool isTracing>
 void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
 	{
-		int king_squares[2] = { ctx.pos.get_king_square(Color::WHITE), ctx.pos.get_king_square(Color::BLACK) };
+		int king_squares[2] = { ctx.pos.get_king_square(Color::White), ctx.pos.get_king_square(Color::Black) };
 		int pawn_shield_count = 0;
 		int directly_on_open_not_next_to_open_count = 0;
 		int directly_on_open_next_to_open_count = 0;
@@ -359,7 +359,7 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 
 			//1. Pawn Shield Bonus
 			if (!is_on_center_files(king_squares[color])) {
-				int shield_pawns_count = popcount(ctx.get_pieces(color, PieceType::PAWN) & shield_mask);
+				int shield_pawns_count = popcount(ctx.get_pieces(color, PieceType::Pawn) & shield_mask);
 				pawn_shield_count += color == 0 ? shield_pawns_count : -shield_pawns_count;
 			}
 			// 2 Next to Open File Penalty
@@ -402,11 +402,11 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 
 			//5. Open Diagonal Penalty
 			uint64_t bishop_attack_mask = get_bishop_attacks(king_squares[color], ctx.get_color_pieces(ecolor));
-			uint64_t op_bishop_queen_on_mask = bishop_attack_mask & (ctx.get_pieces(ecolor, PieceType::BISHOP) | ctx.get_pieces(ecolor, PieceType::QUEEN));
+			uint64_t op_bishop_queen_on_mask = bishop_attack_mask & (ctx.get_pieces(ecolor, PieceType::Bishop) | ctx.get_pieces(ecolor, PieceType::Queen));
 			while (op_bishop_queen_on_mask) {
 				int sq = get_lsb(op_bishop_queen_on_mask);
 				uint64_t line_between = LINE_BETWEEN[sq][king_squares[color]];
-				int count = popcount(line_between & ctx.get_pieces(color, PieceType::PAWN));
+				int count = popcount(line_between & ctx.get_pieces(color, PieceType::Pawn));
 				if (count > 6) count = 6;
 				next_to_open_diagonal_count[count] += color == 0 ? 1 : -1;
 
@@ -430,7 +430,7 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 }
 template<bool isTracing>
 void eval_mobility(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
-	for (PieceType pt : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
+	for (PieceType pt : {PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen}) {
 		int mob_count = 0;
 		for (int color = 0; color < 2; color++) {
 			int ecolor = color == 0 ? 1 : 0;
@@ -456,17 +456,17 @@ void eval_rook_activity(EvaluationResult& score, const EvalContext& ctx, Trace* 
 	uint64_t no_white_pawns_files = 0;
 	uint64_t no_black_pawns_files = 0;
 	for (size_t file = 0; file < 8; file++) {
-		if (!ctx.does_color_have_pawns_on_file(file, Color::WHITE)) no_white_pawns_files |= FILE_MASK[file];
-		if (!ctx.does_color_have_pawns_on_file(file, Color::BLACK)) no_black_pawns_files |= FILE_MASK[file];
+		if (!ctx.does_color_have_pawns_on_file(file, Color::White)) no_white_pawns_files |= FILE_MASK[file];
+		if (!ctx.does_color_have_pawns_on_file(file, Color::Black)) no_black_pawns_files |= FILE_MASK[file];
 
 	}
-	semi_open_count += popcount(ctx.get_pieces(0, PieceType::ROOK) & ~no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::ROOK) & ~no_white_pawns_files & no_black_pawns_files);
-	open_count += popcount(ctx.get_pieces(0, PieceType::ROOK) & no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::ROOK) & no_white_pawns_files & no_black_pawns_files);
+	semi_open_count += popcount(ctx.get_pieces(0, PieceType::Rook) & ~no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::Rook) & ~no_white_pawns_files & no_black_pawns_files);
+	open_count += popcount(ctx.get_pieces(0, PieceType::Rook) & no_black_pawns_files & no_white_pawns_files) - popcount(ctx.get_pieces(1, PieceType::Rook) & no_white_pawns_files & no_black_pawns_files);
 
-	int white_rook_square = get_lsb(ctx.get_pieces(0, PieceType::ROOK));
-	int black_rook_square = get_lsb(ctx.get_pieces(1, PieceType::ROOK));
-	uint64_t white_connected = get_rook_attacks(white_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(0, PieceType::ROOK);
-	uint64_t black_connected = get_rook_attacks(black_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(1, PieceType::ROOK);
+	int white_rook_square = get_lsb(ctx.get_pieces(0, PieceType::Rook));
+	int black_rook_square = get_lsb(ctx.get_pieces(1, PieceType::Rook));
+	uint64_t white_connected = get_rook_attacks(white_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(0, PieceType::Rook);
+	uint64_t black_connected = get_rook_attacks(black_rook_square, ctx.get_all_pieces()) & ctx.get_pieces(1, PieceType::Rook);
 	connected_rooks += popcount(white_connected) - popcount(black_connected);
 	addTerm<isTracing>(score, EvalParam::CONNECTED_ROOKS, connected_rooks, trace);
 	addTerm<isTracing>(score, EvalParam::ROOK_ON_SEMI_OPEN_FILE, semi_open_count, trace);
@@ -485,8 +485,8 @@ void eval_minor_pieces(EvaluationResult& score, const EvalContext& ctx, Trace* t
 template<bool isTracing>
 void eval_bishop_pair(EvaluationResult& score, const EvalContext& ctx, Trace* trace) {
 	int bishop_pair_count = 0;
-	if (popcount(ctx.pos.get_pieces(Color::WHITE, PieceType::BISHOP)) >= 2) bishop_pair_count++;
-	if (popcount(ctx.pos.get_pieces(Color::BLACK, PieceType::BISHOP)) >= 2) bishop_pair_count--;
+	if (popcount(ctx.pos.get_pieces(Color::White, PieceType::Bishop)) >= 2) bishop_pair_count++;
+	if (popcount(ctx.pos.get_pieces(Color::Black, PieceType::Bishop)) >= 2) bishop_pair_count--;
 	addTerm<isTracing>(score, EvalParam::BISHOP_PAIR, bishop_pair_count, trace);
 }
 template<bool isTracing>
@@ -494,7 +494,7 @@ void eval_bad_bishop(EvaluationResult& score, const EvalContext& ctx, Trace* tra
 	int blocked_penalty_count = 0;
 	int unblocked_penalty_count = 0;
 	for (int color = 0; color < 2; color++) {
-		uint64_t bishops = ctx.get_pieces(color, PieceType::BISHOP);
+		uint64_t bishops = ctx.get_pieces(color, PieceType::Bishop);
 
 		while (bishops) {
 			int sq = get_lsb(bishops);
@@ -503,7 +503,7 @@ void eval_bad_bishop(EvaluationResult& score, const EvalContext& ctx, Trace* tra
 
 			// Zähle blockierte eigene Bauern auf der gleichen Farbe
 			int blocked_pawns = 0;
-			uint64_t pawns_to_check = ctx.get_pieces(color, PieceType::PAWN) & bishop_color_mask;
+			uint64_t pawns_to_check = ctx.get_pieces(color, PieceType::Pawn) & bishop_color_mask;
 
 			while (pawns_to_check) {
 				int pawn_sq = get_lsb(pawns_to_check);
@@ -540,7 +540,7 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 		int ecolor = 1 - color;
 
 		// Läufer-Fallen
-		uint64_t bishops = ctx.get_pieces(color, PieceType::BISHOP);
+		uint64_t bishops = ctx.get_pieces(color, PieceType::Bishop);
 		while (bishops) {
 			int sq = get_lsb(bishops);
 
@@ -549,15 +549,15 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 
 			if (color == 0) {
 				// a7-Falle: Läufer auf a7, Bauer auf b6
-				if (sq == 48 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 41))) is_trapped = true;
+				if (sq == 48 && (ctx.get_pieces(ecolor, PieceType::Pawn) & (1ULL << 41))) is_trapped = true;
 				// h7-Falle: Läufer auf h7, Bauer auf g6
-				if (sq == 55 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 46))) is_trapped = true;
+				if (sq == 55 && (ctx.get_pieces(ecolor, PieceType::Pawn) & (1ULL << 46))) is_trapped = true;
 			}
 			else {
 				// a2-Falle: Läufer auf a2, Bauer auf b3
-				if (sq == 8 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 17))) is_trapped = true;
+				if (sq == 8 && (ctx.get_pieces(ecolor, PieceType::Pawn) & (1ULL << 17))) is_trapped = true;
 				// h2-Falle: Läufer auf h2, Bauer auf g3
-				if (sq == 15 && (ctx.get_pieces(ecolor, PieceType::PAWN) & (1ULL << 22))) is_trapped = true;
+				if (sq == 15 && (ctx.get_pieces(ecolor, PieceType::Pawn) & (1ULL << 22))) is_trapped = true;
 			}
 
 			if (is_trapped) {
@@ -568,7 +568,7 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 		}
 
 		// Springer-Fallen (Ecken mit blockierten Fluchtfeldern)
-		uint64_t knights = ctx.get_pieces(color, PieceType::KNIGHT);
+		uint64_t knights = ctx.get_pieces(color, PieceType::Knight);
 		while (knights) {
 			int sq = get_lsb(knights);
 			int file = sq % 8;
@@ -588,7 +588,7 @@ void eval_trapped_minor(EvaluationResult& score, const EvalContext& ctx, Trace* 
 					while (unoccupied_escapes) {
 						int escape_sq = get_lsb(unoccupied_escapes);
 						PieceType pt = ctx.get_piece_on_square(escape_sq);
-						if (see_capture_ge(ctx.pos, sq, escape_sq, static_cast<Color>(color), PieceType::KNIGHT, pt, 0)) {
+						if (see_capture_ge(ctx.pos, sq, escape_sq, static_cast<Color>(color), PieceType::Knight, pt, 0)) {
 							is_trapped = false;
 							break;
 						}
@@ -618,14 +618,14 @@ void eval_fianchetto_bishop(EvaluationResult& score, const EvalContext& ctx, Tra
 
 	for (int color = 0; color < 2; color++) {
 		uint64_t fianchetto_mask = (color == 0) ? WHITE_FIANCHETTO : BLACK_FIANCHETTO;
-		uint64_t bishops_fianchetto = ctx.get_pieces(color, PieceType::BISHOP) & fianchetto_mask;
+		uint64_t bishops_fianchetto = ctx.get_pieces(color, PieceType::Bishop) & fianchetto_mask;
 
 		while (bishops_fianchetto) {
 			int sq = get_lsb(bishops_fianchetto);
 
 			// Prüfe ob Bauernstruktur intakt ist (Bauer auf b3/g3 oder b6/g6)
 			int pawn_sq = (color == 0) ? sq + 8 : sq - 8;
-			bool pawn_structure_intact = (ctx.get_pieces(color, PieceType::PAWN) & (1ULL << pawn_sq)) != 0;
+			bool pawn_structure_intact = (ctx.get_pieces(color, PieceType::Pawn) & (1ULL << pawn_sq)) != 0;
 
 			if (pawn_structure_intact) {
 				intact_count += (color == 0) ? 1 : -1;
@@ -650,20 +650,20 @@ void eval_outpost(EvaluationResult& score, const EvalContext& ctx, Trace* trace)
 	int knight_outpost_count_with_op_bishop = 0;
 	for (int color = 0; color < 2; color++) {
 		int ecolor = color == 0 ? 1 : 0;
-		uint64_t defended_by_own_pawn = get_pawn_attacks(ctx.get_pieces(color, PieceType::PAWN), static_cast<Color>(color));
+		uint64_t defended_by_own_pawn = get_pawn_attacks(ctx.get_pieces(color, PieceType::Pawn), static_cast<Color>(color));
 		uint64_t out_post_mask = color == 0 ? WHITE_OUTPOST_MASK : BLACK_OUTPOST_MASK;
 		uint64_t possible_bishop_outposts[2];
 		uint64_t possible_knight_outposts[2];
-		possible_bishop_outposts[0] = defended_by_own_pawn & out_post_mask & LIGHT_SQUARES & (ctx.get_pieces(color, PieceType::BISHOP));
-		possible_bishop_outposts[1] = defended_by_own_pawn & out_post_mask & DARK_SQUARES & (ctx.get_pieces(color, PieceType::BISHOP));
-		possible_knight_outposts[0] = defended_by_own_pawn & out_post_mask & LIGHT_SQUARES & (ctx.get_pieces(color, PieceType::KNIGHT));
-		possible_knight_outposts[1] = defended_by_own_pawn & out_post_mask & DARK_SQUARES & (ctx.get_pieces(color, PieceType::KNIGHT));
-		bool light_square_bishop_exists = (ctx.get_pieces(ecolor, PieceType::BISHOP) & LIGHT_SQUARES) != 0;
-		bool dark_square_bishop_exists = (ctx.get_pieces(ecolor, PieceType::BISHOP) & DARK_SQUARES) != 0;
+		possible_bishop_outposts[0] = defended_by_own_pawn & out_post_mask & LIGHT_SQUARES & (ctx.get_pieces(color, PieceType::Bishop));
+		possible_bishop_outposts[1] = defended_by_own_pawn & out_post_mask & DARK_SQUARES & (ctx.get_pieces(color, PieceType::Bishop));
+		possible_knight_outposts[0] = defended_by_own_pawn & out_post_mask & LIGHT_SQUARES & (ctx.get_pieces(color, PieceType::Knight));
+		possible_knight_outposts[1] = defended_by_own_pawn & out_post_mask & DARK_SQUARES & (ctx.get_pieces(color, PieceType::Knight));
+		bool light_square_bishop_exists = (ctx.get_pieces(ecolor, PieceType::Bishop) & LIGHT_SQUARES) != 0;
+		bool dark_square_bishop_exists = (ctx.get_pieces(ecolor, PieceType::Bishop) & DARK_SQUARES) != 0;
 		auto count_outposts = [&](uint64_t outposts, bool enemy_bishop_exists, int& counter_no_op_bishop, int& counter_with_op_bishop) {
 			while (outposts) {
 				int square = get_lsb(outposts);
-				if ((ctx.get_pieces(ecolor, PieceType::PAWN) & OUTPOST_MASK[color][square]) == 0) {
+				if ((ctx.get_pieces(ecolor, PieceType::Pawn) & OUTPOST_MASK[color][square]) == 0) {
 					if (enemy_bishop_exists) {
 						counter_with_op_bishop += color == 0 ? 1 : -1;
 					}
