@@ -2,6 +2,7 @@
 
 #include <bit>
 
+#include "Square.h"
 #include "types.h"
 
 constexpr int popcount(Bitboard board) noexcept{
@@ -22,6 +23,9 @@ constexpr Square pop_lsb(Bitboard& board) noexcept{
 
 constexpr Bitboard bit64(Square square) noexcept{
     return Bitboard{ 1 } << square_index(square);
+}
+constexpr Bitboard bit64(int square) noexcept {
+    return Bitboard{ 1 } << square;
 }
 constexpr bool contains(Bitboard bitboard, Square square) noexcept {
     return (bitboard & bit64(square)) != 0;

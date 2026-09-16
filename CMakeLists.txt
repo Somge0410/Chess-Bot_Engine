@@ -16,16 +16,25 @@ set(TT_SIZE_MB ${DEFAULT_TT_MB} CACHE STRING "Transposition table size in MB")
 # 3. Define the Executable
 add_executable(Chess-Bot_Engine
     src/app/main.cpp
-    src/tools/benchmark.cpp
     src/core/board.cpp
-    src/search/engine.cpp
+    src/core/fen.cpp
+    src/core/notation_utils.cpp
+    src/core/position.cpp
+    src/core/zobrist.cpp
     src/evaluation/evaluation.cpp
     src/evaluation/weights.cpp
     src/movegen/MoveGenerator.cpp
-    src/core/notation_utils.cpp
-    src/core/zobrist.cpp
+    src/search/engine.cpp
+    src/search/move_ordering.cpp
+    src/search/quiescence.cpp
+    src/search/search.cpp
+    src/search/search_diagnostics.cpp
+    src/search/thread_pool.cpp
+    src/search/time_manager.cpp
+    src/search/transposition_table.cpp
+    src/tools/benchmark.cpp
     src/uci/uci.cpp
- "src/core/types.h" "src/core/position.h" "src/core/position.cpp" "src/core/state.h" "src/core/fen.h" "src/core/fen.cpp" "src/core/bitboard.h" "src/core/Square.h" "src/core/repetition.h" "src/core/phase.h" "src/generated/attacks.h")
+)
 
 target_include_directories(Chess-Bot_Engine PRIVATE
     include

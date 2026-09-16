@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <array>
+#include <stdexcept>
 
 struct RepetitionTracker {
     static constexpr int CAP = 600;

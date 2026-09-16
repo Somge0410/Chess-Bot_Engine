@@ -1,10 +1,10 @@
 ﻿#include <chrono>
 #include <iostream>
 #include <vector>
+#include "position.h"
 
 #include "Squares.h"
 #include "benchmark.h"
-#include "board.h"
 #include "constants.h"
 #include "evaluation.h"
 #include "prepare_data.h"
@@ -57,9 +57,9 @@ int main(int argc, char* argv[]) {
         return run_benchmark_game();
     }
 
-    Board board("k7/8/4P3/8/8/8/8/K3b3 w - - 0 1");
-    std::cout << "Evaluating board: " << evaluate(board) << std::endl;
-    trace_eval_agree(board, EvalWeights);
+    Position pos("k7/8/4P3/8/8/8/8/K3b3 w - - 0 1");
+    std::cout << "Evaluating board: " << evaluate(pos) << std::endl;
+    trace_eval_agree(pos, EvalWeights);
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
     uci_loop();

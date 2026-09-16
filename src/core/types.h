@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <array>
 #include <cstdint>
 
 using Bitboard = std::uint64_t;
@@ -8,6 +9,9 @@ enum class Color : std::uint8_t {
 	White,
 	Black,
 	None,
+	WHITE = White,
+	BLACK = Black,
+	NONE = None,
 };
 constexpr Color flip_color(Color color) {
 	return (color == Color::White) ? Color::Black : Color::White;
@@ -20,6 +24,13 @@ enum class PieceType : std::uint8_t {
 	Queen,
 	King,
 	None,
+	PAWN = Pawn,
+	KNIGHT = Knight,
+	BISHOP = Bishop,
+	ROOK = Rook,
+	QUEEN = Queen,
+	KING = King,
+	NONE = None,
 };
 enum CastlingRights : std::uint8_t {
 	None = 0,
@@ -69,6 +80,12 @@ constexpr int piece_index(PieceType pt) {
 }
 constexpr int color_index(Color color) {
 	return static_cast<int>(color);
+}
+constexpr int to_int(Color color) {
+	return color_index(color);
+}
+constexpr int to_int(PieceType piece_type) {
+	return piece_index(piece_type);
 }
 
 struct PieceBoards {

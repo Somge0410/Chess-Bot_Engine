@@ -13,10 +13,10 @@ struct StateInfo {
     EvaluationResult positional_score{};             // 4 bytes
     EvaluationResult material_score{};               // 4 bytes
     // 3. Bit-Fields (All 10 variables packed into a single 8-byte memory block)
-    Color side_to_move : 1;
+    Color side_to_move : 2;
     uint64_t game_phase : 5;
-    Square white_king_square : 6;
-    Square black_king_square : 6;
+    Square white_king_square : 7;
+    Square black_king_square : 7;
     EnPassantRights en_passant_square : 7;
     CastlingRights castling_rights : 4;
     uint64_t current_twofold_count : 6;

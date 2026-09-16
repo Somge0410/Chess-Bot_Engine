@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "types.h"
+#include <string_view>
 #include <vector>
 #include "state.h"
 #include "repetition.h"
@@ -62,7 +63,7 @@ public:
 		return castling_rights;
 	}
 	uint64_t get_hash() const {
-		return zobrist_hash
+		return zobrist_hash;
 	}
 	EvaluationResult get_material_score() const {
 		return material_score;

@@ -34,10 +34,10 @@ inline std::string move_to_uci(const Move& m) {
 
 #include "Move.h"
 #include "MoveGenerator.h"
-#include "board.h"
+#include "position.h"
 #include "constants.h"
 
-inline Move parse_uci_move(const Board& board, const std::string& s) {
+inline Move parse_uci_move(const Position& position, const std::string& s) {
     if (s.size() < 4)
         throw std::runtime_error("Invalid UCI move: " + s);
 
@@ -64,7 +64,7 @@ inline Move parse_uci_move(const Board& board, const std::string& s) {
 
     MoveList moves;
     MoveGenerator gen;
-    gen.generate_moves(board,moves);   // use your legal move gen here
+    gen.generate_moves(position, moves);
 
     for (const Move& m : moves) {
         if (m.from_square == from_sq && m.to_square == to_sq) {

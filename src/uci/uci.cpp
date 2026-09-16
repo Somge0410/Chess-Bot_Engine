@@ -8,14 +8,14 @@
 #include <vector>
 
 #include "benchmark.h"
-#include "board.h"
+#include "position.h"
 #include "engine.h"
 #include "Move.h"
 #include "MoveGenerator.h"
 #include "constants.h"
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
-#include "SPSA_parameters.h"
+#include "search_parameters.h"
 
 #ifndef GIT_COMMIT
 #define GIT_COMMIT "unknown"
@@ -178,9 +178,9 @@ static void print_search_diagnostics(Engine& engine) {
 }
 #endif
 
-static void print_legal_moves(const Board& board) {
+static void print_legal_moves(const Position& pos) {
     MoveList moves;
-    MoveGenerator::generate_moves(board, moves);
+    MoveGenerator::generate_moves(pos, moves);
 
     std::cout << "info string legalmoves";
     for (const Move& move : moves) {
@@ -193,7 +193,7 @@ static void print_legal_moves(const Board& board) {
 MoveList perft_lists[64];
 
 // Add a 'ply' parameter to track how deep in the tree we are
-static uint64_t perft(Board& board, int depth, int ply = 0) {
+static uint64_t perft(Position& pos, int depth, int ply = 0) {
     if (depth == 0) {
         return 1;
     }
@@ -202,7 +202,7 @@ static uint64_t perft(Board& board, int depth, int ply = 0) {
     MoveList& moves = perft_lists[ply];
     moves.clear(); // Simply sets count = 0, virtually zero cost
 
-    MoveGenerator::generate_moves(board, moves);
+    MoveGenerator::generate_moves(pos, moves);
 
     if (depth == 1) {
         return static_cast<uint64_t>(moves.size());
@@ -210,17 +210,17 @@ static uint64_t perft(Board& board, int depth, int ply = 0) {
 
     uint64_t nodes = 0;
     for (const Move& move : moves) {
-        board.make_move(move);
+        pos.make_move(move);
         // Pass ply + 1 to use the next pre-allocated list
-        nodes += perft(board, depth - 1, ply + 1);
-        board.undo_move(move);
+        nodes += perft(pos, depth - 1, ply + 1);
+        pos.undo_move();
     }
 
     return nodes;
 }
 
-static void run_perft(const Board& root_board, int depth) {
-    Board board = root_board;
+static void run_perft(const Position& root_pos, int depth) {
+    Position pos = root_pos;
     auto start = std::chrono::steady_clock::now();
 
     if (depth < 0) {
@@ -234,13 +234,13 @@ static void run_perft(const Board& root_board, int depth) {
     }
 
     MoveList moves;
-    MoveGenerator::generate_moves(board, moves);
+    MoveGenerator::generate_moves(pos, moves);
 
     uint64_t total_nodes = 0;
     for (const Move& move : moves) {
-        board.make_move(move);
-        uint64_t move_nodes = perft(board, depth - 1);
-        board.undo_move(move);
+        pos.make_move(move);
+        uint64_t move_nodes = perft(pos, depth - 1);
+        pos.undo_move();
 
         total_nodes += move_nodes;
         std::cout << move_to_uci(move) << ": " << move_nodes << "\n";
@@ -360,7 +360,7 @@ static bool try_set_spsa_option(const std::string& opt_name, const std::string& 
 }
 
 void uci_loop() {
-    Board board;     // starts in startpos, thanks to default ctor
+    Position pos;     // starts in startpos, thanks to default ctor
     Engine engine;
     std::thread search_thread;
 
@@ -383,11 +383,11 @@ void uci_loop() {
         }
         else if (line == "ucinewgame") {
             wait_for_search(engine, search_thread);
-            board = Board();  // reset to startpos
+            pos = Position();  // reset to startpos
         }
         else if (line == "legalmoves") {
             wait_for_search(engine, search_thread);
-            print_legal_moves(board);
+            print_legal_moves(pos);
         }
         else if (line == "presets") {
             wait_for_search(engine, search_thread);
@@ -451,7 +451,7 @@ void uci_loop() {
             iss >> type;
 
             if (type == "startpos") {
-                board = Board();  // start position
+                pos = Position();  // start position
             }
             else if (type == "fen") {
                 std::string fen, part;
@@ -459,7 +459,7 @@ void uci_loop() {
                     if (!fen.empty()) fen += ' ';
                     fen += part;
                 }
-                board = Board(fen);
+                pos = Position(fen);
             }
             else if (type == "preset") {
                 std::string preset_name;
@@ -467,7 +467,7 @@ void uci_loop() {
                 iss >> preset_name;
 
                 if (try_get_default_position(preset_name, fen)) {
-                    board = Board(fen);
+                    pos = Position(fen);
                     std::cout << "info string loaded preset " << preset_name << "\n";
                     std::cout << "info string fen " << fen << "\n";
                     std::cout.flush();
@@ -483,8 +483,8 @@ void uci_loop() {
             if (iss >> token && token == "moves") {
                 std::string move_str;
                 while (iss >> move_str) {
-                    Move m = parse_uci_move(board, move_str);
-                    board.make_move(m);
+                    Move m = parse_uci_move(pos, move_str);
+                    pos.make_move(m);
                 }
             }
         }
@@ -583,7 +583,7 @@ void uci_loop() {
 				continue;
             }
             if (legalmoves_only) {
-                print_legal_moves(board);
+                print_legal_moves(pos);
                 continue;
             }
 
@@ -592,7 +592,7 @@ void uci_loop() {
                     perft_depth = 1;
                 }
 
-                run_perft(board, perft_depth);
+                run_perft(pos, perft_depth);
                 continue;
             }
 
@@ -603,8 +603,8 @@ void uci_loop() {
             }
 
             // Launch search on a joinable thread (not detached!)
-            search_thread = std::thread([&engine, board, limits]() mutable {
-                Move best = engine.search(board, limits);
+            search_thread = std::thread([&engine, pos, limits]() mutable {
+                Move best = engine.search(pos, limits);
 #if ENABLE_QSEARCH_DIAGNOSTICS
                 print_search_diagnostics(engine);
 #endif

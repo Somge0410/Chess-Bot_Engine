@@ -2,6 +2,11 @@
 #include "position.h"
 #include "see.h"
 #include "eval_params.h"
+#include "bitboard_masks.h"
+
+constexpr uint8_t bit8(int square) {
+	return static_cast<uint8_t>(1U << square);
+}
 struct EvalContext {
 	const Position& pos;
 	uint64_t backward[2];
@@ -74,7 +79,7 @@ struct EvalContext {
 		return does_color_have_pawns_on_file(file, color) && !does_color_have_pawns_on_file(file - 1, flip_color(color)) && !does_color_have_pawns_on_file(file, flip_color(color)) && !does_color_have_pawns_on_file(file + 1, flip_color(color));
 	}
 	PieceType get_piece_on_square(int square) const {
-		return pos.get_piece_on_square(square);
+		return pos.get_piece_on_square(static_cast<Square>(square));
 	}
 };
 struct PawnEvalEntry {

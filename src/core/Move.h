@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <cstddef>
 #include <cmath>
 #include <string>
 #include "types.h"
@@ -25,8 +26,8 @@ struct Move{
     {
     }
     Move(int from, int to, PieceType moved,Color color, PieceType captured=PieceType::None,PieceType promo=PieceType::None,bool castle=false, bool ente_passente=false):
-         from_square(from),
-         to_square(to),
+         from_square(static_cast<Square>(from)),
+         to_square(static_cast<Square>(to)),
          piece_moved(moved),
          move_color(color),
          piece_captured(captured),

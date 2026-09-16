@@ -3,6 +3,7 @@
 #include <map>
 #include <cstdint>
 #include <vector>
+#include "types.h"
 
 //Adjustable parameters for engine:
 #ifndef DEFAULT_TT_MB
@@ -15,9 +16,6 @@ inline const uint8_t WHITE_KING_CASTLE = 1U << 3;
 inline const uint8_t WHITE_QUEEN_CASTLE = 1U << 2;
 inline const uint8_t BLACK_KING_CASTLE = 1U << 1;
 inline const uint8_t BLACK_QUEEN_CASTLE = 1U << 0;
-inline const uint8_t NO_SQUARE = 64;
-
-
 //FEN-constants
 const std::string STARTING_FEN="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const std::map<char, PieceType> PIECE_TYPE_MAP = {
@@ -47,8 +45,6 @@ const std::vector<int> QUEEN_DIR_IND={0,1,2,3,4,5,6,7};
 const std::vector<int> ROOK_DIR_IND={1,3,5,7};
 const std::vector<int> BISHOP_DIR_IND={0,2,4,6};
 const uint64_t BOARD_ALL_SET=0xFFFFFFFFFFFFFFFFULL;
-constexpr uint64_t NOT_FILE_A=0xfefefefefefefefe;
-constexpr uint64_t NOT_FILE_H=0x7f7f7f7f7f7f7f7f;
 constexpr uint64_t LIGHT_SQUARES = 0x55aa55aa55aa55aa;
 constexpr uint64_t DARK_SQUARES = 0xaa55aa55aa55aa55;
 constexpr uint64_t CENTER_MASK = 1ULL << 27 | 1ULL << 28 | 1ULL << 35 | 1ULL << 36;

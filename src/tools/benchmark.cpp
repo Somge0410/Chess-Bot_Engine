@@ -8,7 +8,7 @@
 #include <memory>
 #include <sstream>
 
-#include "board.h"
+#include "position.h"
 #include "engine.h"
 #include "MoveGenerator.h"
 #include "uci_helpers.h"
@@ -440,7 +440,7 @@ int run_benchmark(
     }
 
     for (const auto& [name, fen] : positions) {
-        Board board(fen);
+        Position pos(fen);
         std::unique_ptr<Engine> isolated_engine;
         Engine* engine = persistent_engine.get();
         if (!engine) {
@@ -449,7 +449,7 @@ int run_benchmark(
         }
 
         const auto start = std::chrono::steady_clock::now();
-        const Move best = engine->search(board, limits);
+        const Move best = engine->search(pos, limits);
         const auto end = std::chrono::steady_clock::now();
 
         const uint64_t elapsed_ms = static_cast<uint64_t>(
@@ -556,7 +556,7 @@ int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
     SearchLimits limits;
     limits.movetime = std::max(1, movetime_ms);
 
-    Board board;
+    Position pos;
     Engine white(tt_size_mb);
     Engine black(tt_size_mb);
     uint64_t total_nodes = 0;
@@ -573,26 +573,26 @@ int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
     std::cout.flush();
 
     for (int ply = 1; ply <= 2 * max_moves; ++ply) {
-        if (board.is_fifty_move_rule_draw()) {
+        if (pos.is_fifty_move_rule_draw()) {
             termination = "fifty-move";
             break;
         }
-        if (board.is_repetition_draw(3)) {
+        if (pos.is_repetition_draw(3)) {
             termination = "repetition";
             break;
         }
 
         MoveList legal_moves;
-        MoveGenerator::generate_moves(board, legal_moves);
+        MoveGenerator::generate_moves(pos, legal_moves);
         if (legal_moves.empty()) {
-            termination = board.get_checkers() != 0 ? "checkmate" : "stalemate";
+            termination = pos.get_checkers() != 0 ? "checkmate" : "stalemate";
             break;
         }
 
-        const bool white_to_move = board.is_white_to_move();
+        const bool white_to_move = pos.is_white_to_move();
         Engine& engine = white_to_move ? white : black;
         const auto start = std::chrono::steady_clock::now();
-        const Move best = engine.search(board, limits);
+        const Move best = engine.search(pos, limits);
         const auto end = std::chrono::steady_clock::now();
         const uint64_t elapsed_ms = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
@@ -666,7 +666,7 @@ int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
         std::cout << '\n';
         std::cout.flush();
 
-        board.make_move(best);
+        pos.make_move(best);
     }
 
 #if ENABLE_QSEARCH_DIAGNOSTICS
