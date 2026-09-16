@@ -1,12 +1,15 @@
 ﻿#pragma once
+#include "bitboard.h"
 #include "position.h"
 #include "see.h"
 #include "eval_params.h"
 #include "bitboard_masks.h"
 
-constexpr uint8_t bit8(int square) {
-	return static_cast<uint8_t>(1U << square);
+inline bool is_on_center_files(int king_square) {
+	uint64_t center_file_mask = FILE_MASK[3] | FILE_MASK[4] | FILE_MASK[5];
+	return (bit64(king_square) & center_file_mask) != 0;
 }
+
 struct EvalContext {
 	const Position& pos;
 	uint64_t backward[2];

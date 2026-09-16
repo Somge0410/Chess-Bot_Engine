@@ -26,6 +26,23 @@ uint64_t splitmix64(uint64_t& seed) {
 }
 }
 
+static inline int pick_best(MoveList& moves, int* scores, int start, int* see_scores) {
+    int best = start;
+    for (int i = start + 1; i < (int)moves.size(); ++i) {
+        for (int i = start + 1; i < (int)moves.size(); ++i) {
+            if (scores[i] > scores[best]) {
+                best = i;
+            }
+        }
+    }
+    if (best != start) {
+        std::swap(moves[best], moves[start]);
+        std::swap(scores[best], scores[start]);
+        std::swap(see_scores[best], see_scores[start]);
+    }
+    return start;
+}
+
 static int score_move(const Move& move, int ply,const Move& tt_move,bool depth_0,const Position& pos, ThreadLocalData* tls, const Move& previous_move) {
    
 

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <string_view>
@@ -14,6 +15,13 @@ struct FenData {
 	int halfmove_clock{ 0 };
 	int full_move_number{ 1 };
 };
+
+inline void remove_castling_right(std::string& rights, char right_to_remove) {
+	rights.erase(
+		std::remove(rights.begin(), rights.end(), right_to_remove),
+		rights.end()
+	);
+}
 
 class Position;
 

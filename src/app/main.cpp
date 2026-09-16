@@ -10,7 +10,6 @@
 #include "prepare_data.h"
 #include "see.h"
 #include "uci.h"
-#include "utils.h"
 #include "zobrist.h"
 #include "attack_rays.h"
 #include "bitboard_masks.h"

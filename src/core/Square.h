@@ -1,4 +1,7 @@
 ﻿#pragma once
+#include <algorithm>
+#include <cstdlib>
+
 #include "types.h"
 
 constexpr int square_index(Square square) noexcept {
@@ -35,6 +38,44 @@ constexpr inline Square operator+(Square square, int offset) noexcept {
 }
 constexpr inline Square operator-(Square square, int offset) noexcept {
 	return to_square(square_index(square) - offset);
+}
+
+inline int king_distance(int sq1, int sq2) {
+    int file1 = sq1 % 8;
+    int rank1 = sq1 / 8;
+    int file2 = sq2 % 8;
+    int rank2 = sq2 / 8;
+    return std::max(std::abs(file1 - file2), std::abs(rank1 - rank2));
+}
+
+inline int rank(int square) {
+    return square / 8;
+}
+
+inline int file(int square) {
+    return square % 8;
+}
+
+inline int flip_rank(int square) {
+    return 7 - rank(square);
+}
+
+inline int get_forward_square(int square, Color color) {
+    if (color == Color::White) {
+        return square + 8;
+    }
+    else {
+        return square - 8;
+    }
+}
+
+inline int get_promotion_square(int square, Color color) {
+    if (color == Color::White) {
+        return square + 8 * (7 - rank(square));
+    }
+    else {
+        return square - 8 * rank(square);
+    }
 }
 
 constexpr Bitboard NOT_FILE_A = 0xfefefefefefefefe;

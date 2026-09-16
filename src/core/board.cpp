@@ -4,7 +4,8 @@
 #include <iostream>
 #include "board.h"
 #include <stdexcept>
-#include "utils.h"
+#include "bitboard.h"
+#include "eval_params.h"
 #include "zobrist.h"
 #include "constants.h"
 #include <algorithm>

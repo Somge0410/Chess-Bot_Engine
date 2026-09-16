@@ -70,6 +70,14 @@ struct Move{
         return piece_captured == PieceType::None && promotion_piece == PieceType::None;
     }
 };
+inline Move recover_move_from_int(uint16_t m_int) {
+    if (m_int == 1u << 15) return Move();
+    int from_square = m_int & 0x3F;
+    int to_square = (m_int >> 6) & 0x3F;
+    int promo_int = (m_int >> 12) & 0x0F;
+    return Move(from_square, to_square, PieceType::None, Color::White, PieceType::None, static_cast<PieceType>(promo_int));
+}
+
 struct MoveList {
     Move moves[256]; int count = 0;
     void push_back(const Move& m) { moves[count++] = m; }

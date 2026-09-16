@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "Move.h"
 #include <array>
-#include "utils.h"
+#include <stdexcept>
 
 //helper Structs
 struct PositionalScore {
@@ -20,6 +20,26 @@ struct CheckInfo{
     int count;
     int attacker_square;
 };
+
+inline bool has_castling_rights(Color color, uint8_t castle_rights) {
+    if (color == Color::White) {
+        return (castle_rights & (WHITE_KING_CASTLE | WHITE_QUEEN_CASTLE)) != 0;
+    }
+    if (color == Color::Black) {
+        return (castle_rights & (BLACK_KING_CASTLE | BLACK_QUEEN_CASTLE)) != 0;
+    }
+    return false;
+}
+
+inline bool has_castling_rights(int color, uint8_t castle_rights) {
+    if (color == to_int(Color::White)) {
+        return (castle_rights & (WHITE_KING_CASTLE | WHITE_QUEEN_CASTLE)) != 0;
+    }
+    if (color == to_int(Color::Black)) {
+        return (castle_rights & (BLACK_KING_CASTLE | BLACK_QUEEN_CASTLE)) != 0;
+    }
+    return false;
+}
 
 #include <unordered_map>
 #include <cstdint>

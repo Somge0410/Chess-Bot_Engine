@@ -1,7 +1,7 @@
 ﻿
 #include "MoveGenerator.h"
 #include <cstdint>
-#include "utils.h"
+#include "bitboard.h"
 #include "bitpos_masks.h"
 #include <array>
 #include "attack_rays.h"

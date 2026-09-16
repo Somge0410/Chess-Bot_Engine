@@ -52,16 +52,16 @@ std::uint64_t Position::calculate_zobrist_hash() const noexcept
 {
     std::uint64_t hash = 0;
 
-    for (int color = 0; color < 2; ++color) {
-        for (int piece = 0; piece < 6; ++piece) {
-            Bitboard remaining = pieces[color][piece];
+    for (Color color : {Color::White,Color::Black}) {
+        for (PieceType piece :{PieceType::Pawn,PieceType::Knight,PieceType::Bishop,PieceType::Rook,PieceType::Queen,PieceType::King}) {
+            Bitboard remaining = pieces(color,piece);
 
             while (remaining) {
                 const Square square = pop_lsb(remaining);
 
                 hash ^= Zobrist::piece_keys
-                    [color]
-                    [piece]
+                    [color_index(color)]
+                    [piece_index(piece)]
                     [square_index(square)];
             }
         }
@@ -77,7 +77,7 @@ std::uint64_t Position::calculate_zobrist_hash() const noexcept
 
     if (en_passant_square != NO_SQUARE) {
         hash ^= Zobrist::en_passant_keys[
-            file_of(en_passant_square)
+            get_file(en_passant_square)
         ];
     }
 
@@ -86,7 +86,7 @@ std::uint64_t Position::calculate_zobrist_hash() const noexcept
 std::uint64_t Position::calculate_pawn_hash() const noexcept {
     uint64_t pawn_key = 0;
     for (Color color : {Color::White, Color::Black}) {
-        Bitboard pawn_bitboard = pieces[color_index(color)][piece_index(PieceType::Pawn)];
+        Bitboard pawn_bitboard = pieces(color,PieceType::Pawn);
         while (pawn_bitboard) {
             int square_index = lsb(pawn_bitboard);
             pawn_key ^= Zobrist::piece_keys[color_index(color)][piece_index(PieceType::Pawn)][square_index];
@@ -109,7 +109,7 @@ void Position::rebuild_occupancy() {
 }
 void Position::find_king_squares() {
     for (Color color : {Color::White, Color::Black}) {
-        Bitboard king_bitboard = pieces[color_index(color)][piece_index(PieceType::King)];
+        Bitboard king_bitboard = pieces(color,PieceType::King);
         if (king_bitboard) {
             king_squares[color_index(color)] = lsb(king_bitboard);
         } else {
