@@ -17,16 +17,7 @@ struct FenData {
 	int full_move_number{ 1 };
 };
 
-inline const std::string STARTING_FEN =
-	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-inline const std::map<char, PieceType> PIECE_TYPE_MAP = {
-	{'P', PieceType::Pawn}, {'N', PieceType::Knight}, {'B', PieceType::Bishop},
-	{'R', PieceType::Rook}, {'Q', PieceType::Queen}, {'K', PieceType::King},
-	{'.', PieceType::None}, {'p', PieceType::Pawn}, {'n', PieceType::Knight},
-	{'b', PieceType::Bishop}, {'r', PieceType::Rook}, {'q', PieceType::Queen},
-	{'k', PieceType::King},
-};
 
 inline void remove_castling_right(std::string& rights, char right_to_remove) {
 	rights.erase(
