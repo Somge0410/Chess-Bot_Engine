@@ -5,9 +5,14 @@
 #include "bitpos_masks.h"
 #include <array>
 #include "attack_rays.h"
-#include "constants.h"
+#include "bitboard_masks.h"
 #include "rook_tables.h"
 #include "bishop_tables.h"
+
+const int DIRECTIONS[]={7,8,9,1,-7,-8,-9,-1};
+const std::vector<int> QUEEN_DIR_IND={0,1,2,3,4,5,6,7};
+const std::vector<int> ROOK_DIR_IND={1,3,5,7};
+const std::vector<int> BISHOP_DIR_IND={0,2,4,6};
 MoveGenerator::MoveGenerator()
 {
     

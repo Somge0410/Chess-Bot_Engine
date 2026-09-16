@@ -5,6 +5,8 @@
 #include "position.h"
 #include "search.h"
 
+inline constexpr int HISTORY_MAX = 16384;
+
 void sort_moves(MoveList& moves, const Position& pos, int ply, const Move& tt_move,
     bool tt_depth_0 = false, ThreadLocalData* tls = nullptr,
     const Move& previous_move = Move());

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "constants.h"
+#include "fen.h"
 #include <cstdint>
 #include "Move.h"
 #include <array>

@@ -5,7 +5,6 @@
 
 #include "Squares.h"
 #include "benchmark.h"
-#include "constants.h"
 #include "evaluation.h"
 #include "see.h"
 #include "uci.h"

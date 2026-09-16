@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <chrono>
 
-#include "constants.h"
 #include "position.h"
 #include "search_parameters.h"
 

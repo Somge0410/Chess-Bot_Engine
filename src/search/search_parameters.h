@@ -1,5 +1,9 @@
 #pragma once
 
+inline constexpr int MATE_SCORE = 32000;
+inline constexpr int MAX_PLY = 128;
+inline constexpr int MATE_THRESHOLD = MATE_SCORE - MAX_PLY;
+
 // For Pruning and search
 inline int FUTILITY_MARGIN_D1 = 244;
 inline int FUTILITY_MARGIN_D2 = 460;

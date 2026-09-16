@@ -29,6 +29,11 @@ enum CastlingRights : std::uint8_t {
 	WhiteQueenside = 1U << 2,
 	WhiteKingside = 1U << 3
 };
+
+inline constexpr std::uint8_t WHITE_KING_CASTLE = 1U << 3;
+inline constexpr std::uint8_t WHITE_QUEEN_CASTLE = 1U << 2;
+inline constexpr std::uint8_t BLACK_KING_CASTLE = 1U << 1;
+inline constexpr std::uint8_t BLACK_QUEEN_CASTLE = 1U << 0;
 constexpr CastlingRights operator|(CastlingRights a, CastlingRights b) {
 	return static_cast<CastlingRights>(static_cast<std::uint8_t>(a) | static_cast<std::uint8_t>(b));
 }

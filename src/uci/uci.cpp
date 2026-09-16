@@ -12,7 +12,6 @@
 #include "engine.h"
 #include "Move.h"
 #include "MoveGenerator.h"
-#include "constants.h"
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
 #include "search_parameters.h"

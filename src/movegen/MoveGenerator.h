@@ -2,7 +2,7 @@
 #include "position.h"
 #include <vector>
 #include <cstdint>
-#include "constants.h"
+#include "bitboard.h"
 
 class MoveGenerator
 {

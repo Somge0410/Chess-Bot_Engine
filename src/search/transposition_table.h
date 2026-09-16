@@ -7,7 +7,13 @@
 #include <vector>
 
 #include "Move.h"
-#include "constants.h"
+#include "search_parameters.h"
+
+#ifndef DEFAULT_TT_MB
+#define DEFAULT_TT_MB 128
+#endif
+
+inline constexpr size_t MAX_MEMORY_TT_MB = DEFAULT_TT_MB;
 
 enum TTFlag { EXACT, LOWERBOUND, UPPERBOUND, TEMPERED };
 

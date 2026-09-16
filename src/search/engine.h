@@ -6,7 +6,6 @@
 #include <limits>
 #include <string>
 
-#include "constants.h"
 #include "position.h"
 #include "search.h"
 #include "search_diagnostics.h"

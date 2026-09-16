@@ -1,5 +1,4 @@
 ﻿#include "notation_utils.h"
-#include "constants.h"
 #include <vector>
 #include "MoveGenerator.h"
 // Helper function

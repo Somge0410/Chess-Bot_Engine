@@ -7,7 +7,8 @@
 #include "bitboard.h"
 #include "eval_params.h"
 #include "zobrist.h"
-#include "constants.h"
+#include "notation_utils.h"
+#include "phase.h"
 #include <algorithm>
 #include <cctype>
 #include <array>

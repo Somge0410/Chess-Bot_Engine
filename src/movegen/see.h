@@ -2,6 +2,8 @@
 #include "position.h"
 #include "bitboard.h"
 #include "attacks.h"
+
+inline constexpr int NEG_SEE_SCORE = -100000;
 inline constexpr int PIECE_VALUES[7] = { 100,320,330,500,900,10000,0 };
 
 static inline bool find_least_see_attacker(

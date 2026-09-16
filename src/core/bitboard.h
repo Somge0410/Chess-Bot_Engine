@@ -11,6 +11,8 @@
 #include <intrin.h>
 #endif
 
+inline constexpr Bitboard BOARD_ALL_SET = 0xFFFFFFFFFFFFFFFFULL;
+
 inline int get_lsb(uint64_t bitboard) {
     if (bitboard == 0) return NO_SQUARE;
 #if defined(_MSC_VER)

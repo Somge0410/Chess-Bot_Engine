@@ -1,7 +1,6 @@
 ﻿#include <vector>
 #include "position.h"
 #include "bitboard.h"
-#include "constants.h"
 const int HISTORY_FRAMES = 8;
 const int PIECE_CHANNELS_PER_FRAME = 12;
 const int STATE_CHANNELS = 9; // Example number of state channels

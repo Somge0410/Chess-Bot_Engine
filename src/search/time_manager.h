@@ -7,6 +7,10 @@
 
 #include "search.h"
 
+inline constexpr int INFINITE_DEPTH = 64;
+inline constexpr int INFINITE_TIME_MS = 3600000;
+inline constexpr int DEFAULT_TIME_MS = 20000;
+
 class Position;
 
 struct TimeControlDecision {

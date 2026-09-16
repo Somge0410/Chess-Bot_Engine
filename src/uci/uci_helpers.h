@@ -1,6 +1,5 @@
 ﻿#include <string>
 #include "Move.h"
-#include "constants.h"  // for PieceType
 
 inline std::string move_to_uci(const Move& m) {
     auto sq_to_str = [](int sq) -> std::string {
@@ -35,7 +34,6 @@ inline std::string move_to_uci(const Move& m) {
 #include "Move.h"
 #include "MoveGenerator.h"
 #include "position.h"
-#include "constants.h"
 
 inline Move parse_uci_move(const Position& position, const std::string& s) {
     if (s.size() < 4)

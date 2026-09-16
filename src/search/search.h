@@ -1,5 +1,15 @@
 ﻿#pragma once
 
+#include <array>
+#include <cstdint>
+#include <cstring>
+
+#include "Move.h"
+#include "search_diagnostics.h"
+#include "search_parameters.h"
+
+class Engine;
+
 struct SearchLimits {
     int depth = -1;
     int movetime = -1;

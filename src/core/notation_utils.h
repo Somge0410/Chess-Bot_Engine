@@ -3,7 +3,8 @@
 #include <string>
 #include <vector>
 #include "Move.h"
-#include "constants.h"
+
+inline const std::string PIECE_CHAR_LIST = "PNBRQK.";
 
 std::string to_san(const Move & move,const MoveList& all_legal_moves);
 

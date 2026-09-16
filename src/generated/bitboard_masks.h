@@ -2,6 +2,18 @@
 
 #include <cstdint>
 
+inline constexpr uint64_t LIGHT_SQUARES = 0x55aa55aa55aa55aa;
+inline constexpr uint64_t DARK_SQUARES = 0xaa55aa55aa55aa55;
+inline constexpr uint64_t CENTER_MASK =
+    1ULL << 27 | 1ULL << 28 | 1ULL << 35 | 1ULL << 36;
+inline constexpr uint64_t EXTENDED_CENTER_MASK =
+    1ULL << 26 | 1ULL << 29 |
+    1ULL << 34 | 1ULL << 37 |
+    1ULL << 42 | 1ULL << 43 | 1ULL << 44 | 1ULL << 45 |
+    1ULL << 18 | 1ULL << 19 | 1ULL << 20 | 1ULL << 21;
+inline constexpr uint64_t FOUR_CORNER_MASK =
+    (1ULL << 0) | (1ULL << 7) | (1ULL << 56) | (1ULL << 63);
+
 const uint64_t LINE_BETWEEN[64][64] = {
     { 0x1ULL, 0x3ULL, 0x7ULL, 0xfULL, 0x1fULL, 0x3fULL, 0x7fULL, 0xffULL,
       0x101ULL, 0x201ULL, 0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL,
