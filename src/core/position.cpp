@@ -545,3 +545,66 @@ bool Position::has_enough_material_for_nmp() const {
 	}
     return false;
 }
+PieceType Position::get_piece_type_on_square(Square square) const {
+    if (square == Square::NO_SQUARE) return PieceType::None;
+    for (Color color : {Color::White, Color::Black}) {
+        for (PieceType piece : {PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King}) {
+            if (is_occupied(square, pieces(color, piece))) return piece;
+        }
+    }
+    return PieceType::None;
+}
+Color Position::get_color_on_square(Square square) const {
+    if (is_occupied(square, color_pieces[color_index(Color::White)])) return Color::White;
+    if (is_occupied(square, color_pieces[color_index(Color::Black)])) return Color::Black;
+    return Color::None;
+}
+void Position::display() const{
+    std::cout << "\n--- Current Position---" << std::endl;
+    std::cout << "Turn: " << (side_to_move == Color::White ? "WHITE" : "BLACK") << std::endl;
+    std::cout << "   a b c d e f g h" << std::endl;
+    std::cout << "-------------------" << std::endl;
+
+    for (int rank = 7; rank >= 0; --rank) {
+        std::cout << rank + 1ULL << "  ";
+
+        for (int file = 0; file < 8; ++file) {
+            Square square_index =to_square(file,rank);
+
+            char piece = get_char_on_square(square_index);
+            std::cout << piece << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "-------------------" << std::endl;
+    std::cout << "   a b c d e f g h\n" << std::endl;
+
+}
+char Position::get_char_on_square(Square square) const {
+    char c = '.';
+    PieceType piece = get_piece_on_square(square);
+    if (piece == PieceType::None) return c;
+    switch (piece) {
+    case PieceType::Pawn:
+        c = 'p';
+    case PieceType::Knight:
+        c = 'n';
+    case PieceType::Bishop:
+        c = 'b';
+    case PieceType::Rook:
+        c = 'r';
+    case PieceType::Queen:
+        c = 'q';
+    case PieceType::King:
+        c = 'k';
+    }
+    Color color = get_color_on_square(square);
+    switch (color) {
+    case Color::White:
+        return std::toupper(c);
+    case Color::Black:
+        return c;
+    }
+    return c;
+
+}

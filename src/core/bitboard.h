@@ -95,28 +95,25 @@ constexpr bool has_multiple_bits(Bitboard bitboard) noexcept{
     return (bitboard & (bitboard - 1)) != 0;
 }
 
-inline bool is_occupied(int square, uint64_t occupied) {
+inline bool is_occupied(Square square, Bitboard occupied) {
     return (occupied & bit64(square)) != 0;
 }
 
-void display(Bitboard board,int turn=0) {
-    std::cout << "\n--- Current Position---" << std::endl;
-    std::cout << "Turn: " << (turn == to_int(Color::White) ? "WHITE" : "BLACK") << std::endl;
-    std::cout << "   a b c d e f g h" << std::endl;
-    std::cout << "-------------------" << std::endl;
-
+inline void display_bitboard(Bitboard bitboard) {
+    std::cout << std::unitbuf << "\n"
+        << "--------------------" << std::endl;
     for (int rank = 7; rank >= 0; --rank) {
-        std::cout << rank + 1ULL << "  ";
-
         for (int file = 0; file < 8; ++file) {
             int square_index = rank * 8 + file;
-
-            char piece = get_char_on_square(square_index);
-            std::cout << piece << " ";
+            if ((bitboard >> square_index) & 1) {
+                std::cout << "1 ";
+            }
+            else {
+                std::cout << ". ";
+            }
         }
-        std::cout << std::endl;
+        std::cout << "  " << rank + 1 << std::endl;
     }
-    std::cout << "-------------------" << std::endl;
-    std::cout << "   a b c d e f g h\n" << std::endl;
-
+    std::cout << "\na b c d e f g h" << std::endl;
+    std::cout << "--------------------" << std::endl;
 }

@@ -99,6 +99,10 @@ public:
 	uint64_t get_pawn_key() const {
 		return pawn_hash;
 	}
+	void display() const;
+	char get_char_on_square(Square square) const;
+	PieceType get_piece_type_on_square(Square square) const;
+	Color get_color_on_square(Square square) const;
 	// Advanced Search Helpers
 	template <const bool need_sq=true>
 	AttackerInfo attackers_more_than(const int square, const Color attacker_color, const int bound = 2) const;
