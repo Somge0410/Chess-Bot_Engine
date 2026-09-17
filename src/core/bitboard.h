@@ -65,7 +65,6 @@ inline void display_bitboard(uint64_t bitboard) {
 constexpr uint8_t bit8(int square) {
     return static_cast<uint8_t>(1U << square);
 }
-
 constexpr int popcount(Bitboard board) noexcept{
 	return std::popcount(board);
 }

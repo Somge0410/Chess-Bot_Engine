@@ -15,70 +15,8 @@
 #include <intrin.h>
 #endif
 
-inline int get_lsb(uint64_t bitboard) {
-    if (bitboard == 0) return NO_SQUARE;
-#if defined(_MSC_VER)
-    unsigned long index;
-    _BitScanForward64(&index, bitboard);
-    return index;
-#else // For GCC/Clang
-    return __builtin_ctzll(bitboard);
-#endif
-}
 
-inline int get_msb(uint64_t bitboard) {
-    if (bitboard == 0) return NO_SQUARE;
-#if defined(_MSC_VER)
-    unsigned long index;
-    _BitScanReverse64(&index, bitboard);
-    return index;
-#else // For GCC/Clang
-    return 63 - __builtin_clzll(bitboard);
-#endif
-}
-static constexpr int flip_square(int sq) {
-    return sq ^ 56;
-}
-inline int poplsb(uint64_t& bitboard) {
-    int lsb_index = get_lsb(bitboard);
-    if (lsb_index != NO_SQUARE) {
-        bitboard &= bitboard - 1; // Clear the least significant bit
-    }
-    return lsb_index;
-}
 
-static inline uint64_t bit64(int sq) { return 1ULL << sq; }
-static inline uint8_t bit8(int sq) { return static_cast<uint8_t>(1u << sq); }
-
-static inline Color flip_color(Color color) {
-    return (color == Color::White) ? Color::Black : Color::White;
-}
-
-inline int popcount(uint64_t bitboard) {
-#ifdef _MSC_VER
-    return __popcnt64(bitboard);
-#else 
-    return __builtin_popcountll(bitboard);
-#endif // _MSC_VER
-}
-
-inline int to_int(Color color) {
-    return static_cast<int>(color);
-}
-inline int to_int(PieceType piece_type) {
-    return static_cast<int8_t>(piece_type);
-}
-
-inline void remove_castling_right(std::string& rights, char right_to_remove) {
-    rights.erase(
-        std::remove(rights.begin(), rights.end(), right_to_remove),
-        rights.end()
-    );
-}
-
-inline char get_piece_char(const PieceType& piece, const Color& color) {
-    return color == Color::White ? PIECE_CHAR_LIST[to_int(piece)] : tolower(PIECE_CHAR_LIST[to_int(piece)]);
-}
 
 
 inline int get_mg_pos_score(const Color& color, const PieceType& piece, const int& square) {
