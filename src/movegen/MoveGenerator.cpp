@@ -103,21 +103,35 @@ Bitboard MoveGenerator::calculate_pinned_pieces(const Position& pos, const Color
 template <bool captures_only>
 void MoveGenerator::generate_king_moves(MoveList& moves,const Position& pos,const Color own_color, const Bitboard& own_pieces, Square king_square){
         Bitboard possible_moves=KING_ATTACKS[king_square]&~own_pieces;
-        Color other_color=own_color==Color::White ? Color::Black:Color::White;
-        if (captures_only) possible_moves&=pos.get_color_pieces(other_color);
-        while (possible_moves)
+		Color other_color = flip_color(own_color);
+		Bitboard enemy_pieces = pos.get_color_pieces(other_color);
+		Bitboard quiet = possible_moves & ~enemy_pieces;
+		Bitboard captures = possible_moves & enemy_pieces;
+       
+        while (captures)
         {
-            Square destination_square = lsb(possible_moves);
+            Square destination_square = pop_lsb(captures);
             if (pos.attackers_more_than<false>(destination_square, other_color, 1).count > 0)
             {
-                possible_moves&=possible_moves-1;
                 continue;
             }
             moves.push_back(Move(king_square, destination_square, PieceType::King, own_color,
-                pos.get_piece_type_on_square(destination_square)));
-            possible_moves&=possible_moves-1;
+                pos.get_piece_type_on_square(other_color,destination_square)));
         }
+		if (captures_only) return;
+        
+        while (quiet) {
+
+            Square destination_square = pop_lsb(quiet);
+            if (pos.attackers_more_than<false>(destination_square, other_color, 1).count > 0)
+            {
+                continue;
+            }
+            moves.push_back(Move(king_square, destination_square, PieceType::King, own_color,PieceType::None));
+        }
+
         if (pos.attackers_more_than<false>(to_square(king_square),other_color,1).count>0) return;
+
         CastlingRights king_castle_mask = own_color == Color::White ? CastlingRights::WhiteKingside : CastlingRights::BlackKingside;
 		CastlingRights queen_castle_mask = own_color == Color::White ? CastlingRights::WhiteQueenside : CastlingRights::BlackQueenside;
         if ((pos.get_castle_rights() & king_castle_mask)!= 0)
@@ -137,66 +151,63 @@ void MoveGenerator::generate_king_moves(MoveList& moves,const Position& pos,cons
             }
             
         }
-        if (!captures_only) {
-            if ((pos.get_castle_rights() & queen_castle_mask) != 0)
+        if ((pos.get_castle_rights() & queen_castle_mask) != 0)
+        {
+            Bitboard line_between = LINE_BETWEEN(to_square(king_square - 1), to_square(king_square - 3));
+            if ((line_between & pos.get_all_pieces()) == 0)
             {
-                Bitboard line_between = LINE_BETWEEN(to_square(king_square - 1), to_square(king_square - 3));
-                if ((line_between & pos.get_all_pieces()) == 0)
+                if (pos.attackers_more_than<false>(to_square(king_square - 1), other_color, 1).count == 0 && pos.attackers_more_than<false>(to_square(king_square - 2), other_color, 1).count == 0)
                 {
-                     if (pos.attackers_more_than<false>(to_square(king_square - 1), other_color, 1).count == 0 && pos.attackers_more_than<false>(to_square(king_square - 2), other_color, 1).count == 0)
-                    {
-                        moves.push_back(Move(king_square, king_square - 2, PieceType::King, own_color,
-                            PieceType::None, PieceType::None, true));
-                    }
-
+                    moves.push_back(Move(king_square, king_square - 2, PieceType::King, own_color,
+                        PieceType::None, PieceType::None, true));
                 }
 
             }
+
         }
     return;
 }
-
 template <bool captures_only, bool with_checks>
-void MoveGenerator::generate_queen_moves(MoveList& moves,const Position& pos, Color own_color,const Bitboard& pinned_info,Bitboard remedy_mask) {
-    //return generate_sliding_moves(moves,PieceType::QUEEN,pos,own_color,pinned_info,remedy_mask,captures_only);
-    Bitboard queens = pos.get_pieces(own_color, PieceType::Queen);
-    Bitboard occupied = pos.get_all_pieces();
-    Bitboard own_pieces = pos.get_color_pieces(own_color); 
-    if constexpr (captures_only) {
-        Color other_color = own_color == Color::White ? Color::Black : Color::White;
-        Bitboard mask_changer = pos.get_color_pieces(other_color);
-        if constexpr (with_checks) {
-            int op_king_square = pos.get_king_square(other_color);
-            mask_changer |= queen_attacks(to_square(op_king_square), occupied);
-        }
-        remedy_mask &= mask_changer;
-    }
+void MoveGenerator::generate_queen_moves(MoveList& moves, const Position& pos, Color own_color, const Bitboard& pinned_info, Bitboard remedy_mask) {
+    Color other_color = flip_color(own_color);
+	Bitboard own_pieces = pos.get_color_pieces(own_color);
+	Bitboard enemy_pieces = pos.get_color_pieces(other_color);
+	Bitboard occupied = pos.get_all_pieces();
+	Bitboard king_checking_squares = queen_attacks(pos.get_king_square(other_color),occupied) &~own_pieces;
+	Bitboard queens = pos.get_pieces(own_color, PieceType::Queen);
     while (queens) {
-        Square from_square = lsb(queens);
-        Bitboard bishop_attacks = 0;
-        Bitboard bishop_blockers = BISHOP_BLOCKER_MASK[from_square] & occupied;
-        Bitboard index = (bishop_blockers * MAGIC_BISHOP_NUMBER[from_square]) >> BISHOP_SHIFT_NUMBERS[from_square];
-        bishop_attacks = BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[from_square] + index];
-        Bitboard rook_attacks = 0;
-        Bitboard rook_blockers = ROOK_BLOCKER_MASK[from_square] & occupied;
-        index = (rook_blockers * MAGIC_ROOK_NUMBER[from_square]) >> ROOK_SHIFT_NUMBERS[from_square];
-        rook_attacks = ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[from_square] + index];
-        Bitboard attacks = bishop_attacks | rook_attacks;
-        attacks&= ~own_pieces & remedy_mask;
-        if (bit64(from_square) & pinned_info) {
-           attacks &= Complete_Line(to_square(from_square), pos.get_king_square(own_color));
+        Square queen_sq = pop_lsb(queens);
+        Bitboard possible_queen_moves = queen_attacks(queen_sq, occupied) & remedy_mask& pinned_info & ~own_pieces;
+        Bitboard captures = possible_queen_moves & enemy_pieces & ~king_checking_squares;
+        Bitboard quiets = possible_queen_moves & ~enemy_pieces & ~king_checking_squares;
+        Bitboard checks = possible_queen_moves & king_checking_squares & ~enemy_pieces;
+        Bitboard capture_checks = possible_queen_moves & king_checking_squares & enemy_pieces;
+        while (captures) {
+            Square to_sq = pop_lsb(captures);
+            moves.push_back(Move(queen_sq, to_sq, PieceType::Queen, own_color, pos.get_piece_type_on_square(other_color, to_sq)));
         }
-        while (attacks) {
-            Square to_square = lsb(attacks);
-            moves.push_back(Move(from_square, to_square, PieceType::Queen, own_color, pos.get_piece_type_on_square(to_square)));
-            attacks &= attacks - 1;
-
+        if constexpr (captures_only) {
+            if constexpr (!with_checks) continue;
+            while (capture_checks) {
+                Square to_sq = pop_lsb(capture_checks);
+                moves.push_back(Move(queen_sq, to_sq, PieceType::Queen, own_color, pos.get_piece_type_on_square(other_color, to_sq)));
+            }
         }
-        queens &= queens - 1;
-
+        while (capture_checks) {
+            Square to_sq = pop_lsb(capture_checks);
+            moves.push_back(Move(queen_sq, to_sq, PieceType::Queen, own_color, pos.get_piece_type_on_square(other_color, to_sq)));
+        }
+        while (checks) {
+            Square to_sq = pop_lsb(checks);
+            moves.push_back(Move(queen_sq, to_sq, PieceType::Queen, own_color, PieceType::None));
+        }
+        while (quiets) {
+            Square to_sq = pop_lsb(quiets);
+			moves.push_back(Move(queen_sq, to_sq, PieceType::Queen, own_color, PieceType::None));
+        }
     }
+    
 }
-
 template <bool captures_only, bool with_checks>
 void MoveGenerator::generate_rook_moves(MoveList& moves,const Position& pos, Color own_color, const Bitboard& pinned_info,Bitboard remedy_mask) {
     //return generate_sliding_moves(moves,PieceType::ROOK,pos,own_color,pinned_info,remedy_mask,captures_only);
