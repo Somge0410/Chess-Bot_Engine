@@ -452,12 +452,17 @@ bool Position::is_square_attacked(Square square, Color attacker_color) const {
     return false;
 }
 Bitboard Position::get_square_attackers(Square square, Color attacker_color) const {
-    Bitboard attackers = 0;
-    for(PieceType piece : {PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King}) {
-        attackers |= pieces(attacker_color, piece) & piece_attacks(square, flip_color(attacker_color), all_pieces, piece);
-    }
+    Bitboard attackers = pieces(attacker_color, PieceType::Pawn)
+        & pawn_attacks(square, flip_color(attacker_color));
+    attackers |= pieces(attacker_color, PieceType::Knight) & knight_attacks(square);
+    attackers |= pieces(attacker_color, PieceType::King) & king_attacks(square);
+    attackers |= (pieces(attacker_color, PieceType::Bishop)
+        | pieces(attacker_color, PieceType::Queen)) & bishop_attacks(square, all_pieces);
+    attackers |= (pieces(attacker_color, PieceType::Rook)
+        | pieces(attacker_color, PieceType::Queen)) & rook_attacks(square, all_pieces);
     return attackers;
 }
+
 StateInfo Position::get_state_info() const {
     StateInfo state{};
     state.zobrist_hash = zobrist_hash;
@@ -492,28 +497,42 @@ bool Position::any_appeared_more_than(int count) const {
 template <const bool need_sq>
 AttackerInfo Position::attackers_more_than(const Square square, const Color attacker_color, const int bound) const {
     AttackerInfo info{};
-    int sq = square_index(square);
     Bitboard attackers = 0;
     int count = 0;
-    for (PieceType piece : {PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King}) {
-		Bitboard occupancy = all_pieces & ~pieces(flip_color(attacker_color), PieceType::King);
-        Bitboard piece_attackers = pieces(attacker_color, piece) & piece_attacks(square, flip_color(attacker_color), occupancy, piece);
-        count+=popcount(piece_attackers);
-		attackers |= piece_attackers;
-        if (count >= bound) {
-			info.count = count;
-            if constexpr (need_sq) {
-                info.first_attacker_square = lsb(attackers);
-            }
-			return info;
-        }
 
-    }
-    info.count = count;
-    if constexpr (need_sq) {
-        info.first_attacker_square = lsb(attackers);
-	}
-    return info;
+    const auto add_attackers = [&](Bitboard piece_attackers) {
+        count += popcount(piece_attackers);
+        attackers |= piece_attackers;
+        if (count >= bound) {
+            return true;
+        }
+        return false;
+        };
+
+    const auto finish = [&]() {
+        info.count = count;
+        if constexpr (need_sq) {
+            info.first_attacker_square = attackers ? lsb(attackers) : NO_SQUARE;
+        }
+        return info;
+        };
+
+    if (add_attackers(pieces(attacker_color, PieceType::Pawn)
+        & pawn_attacks(square, flip_color(attacker_color)))) return finish();
+    if (add_attackers(pieces(attacker_color, PieceType::Knight)
+        & knight_attacks(square))) return finish();
+    if (add_attackers(pieces(attacker_color, PieceType::King)
+        & king_attacks(square))) return finish();
+
+    const Bitboard occupancy = all_pieces
+        & ~pieces(flip_color(attacker_color), PieceType::King);
+    if (add_attackers((pieces(attacker_color, PieceType::Bishop)
+        | pieces(attacker_color, PieceType::Queen))
+        & bishop_attacks(square, occupancy))) return finish();
+    add_attackers((pieces(attacker_color, PieceType::Rook)
+        | pieces(attacker_color, PieceType::Queen))
+        & rook_attacks(square, occupancy));
+    return finish();
 }
 template AttackerInfo Position::attackers_more_than<false>(Square, Color, int) const;
 
