@@ -40,7 +40,7 @@ void MoveGenerator::generate_moves(const Position& pos, MoveList& move_list, Bit
         generate_king_moves<captures_only>(move_list,pos, own_color,own_pieces ,king_square);
         
         const Square checker_square = lsb(checkers);
-        PieceType checker=pos.get_piece_type_on_square(checker_square);
+        PieceType checker=pos.get_piece_type_on_square(opponent_color,checker_square);
         Bitboard remedy_mask=bit64(checker_square);
         if (checker==PieceType::Queen || checker==PieceType::Rook|| checker==PieceType::Bishop) remedy_mask |= LINE_BETWEEN(king_square, checker_square);
         
@@ -447,7 +447,7 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves,const Position& pos, 
             while (capture_bb)
             {
                 Square to_square=lsb(capture_bb);
-                PieceType captured_piece=pos.get_piece_type_on_square(to_square);
+                PieceType captured_piece=pos.get_piece_type_on_square(opponent_color,to_square);
 
                 bool is_promotion =(own_color==Color::White && square_index(to_square)>=56) || (own_color==Color::Black && square_index(to_square)<=7);
 
