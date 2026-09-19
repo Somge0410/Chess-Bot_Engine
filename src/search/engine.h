@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <array>
 #include <atomic>
@@ -70,6 +70,7 @@ private:
     SearchThreadPool thread_pool;
     TranspositionTable tt;
     TimeManager time_manager;
+    ThreadLocalData tls_data;
     std::atomic<uint64_t> nodes{ 0 };
     std::atomic<uint64_t> qnodes{ 0 };
 #if ENABLE_QSEARCH_DIAGNOSTICS

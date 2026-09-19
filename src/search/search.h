@@ -21,6 +21,11 @@ struct SearchLimits {
     int mate = -1;
     bool infinite = false;
 };
+struct SearchResult {
+    int score;
+    Move best_move;
+    bool is_tempered=false;
+};
 struct ThreadLocalData {
     static constexpr uint32_t TIME_CHECK_INTERVAL = 1024;
     static constexpr int QSEARCH_PLY_CAPACITY = 25;
@@ -96,4 +101,3 @@ struct ThreadLocalData {
     uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
     void flush_counters(Engine* engine, bool force = false);
 };
-SearchLimits job_limits;

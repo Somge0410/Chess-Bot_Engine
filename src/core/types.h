@@ -88,8 +88,24 @@ struct PieceBoards {
 		return data[color_index(color)][piece_index(piece_type)];
 	}
 };
-
-
+struct ColorBoards {
+	std::array<Bitboard, 2> data{}; // [color]
+	constexpr Bitboard& operator()(Color color) {
+		return data[color_index(color)];
+	}
+	constexpr const Bitboard& operator()(Color color) const {
+		return data[color_index(color)];
+	}
+};
+struct KingSquares {
+	std::array<Square, 2> data{}; // [color]
+	constexpr Square& operator()(Color color) {
+		return data[color_index(color)];
+	}
+	constexpr const Square& operator()(Color color) const {
+		return data[color_index(color)];
+	}
+};
 struct EvaluationResult {
 	int16_t mg_score;
 	int16_t eg_score;

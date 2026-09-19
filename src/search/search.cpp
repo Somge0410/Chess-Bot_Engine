@@ -1,4 +1,4 @@
-#include "engine.h"
+﻿#include "engine.h"
 
 #include <algorithm>
 #include <atomic>
@@ -470,8 +470,8 @@ bool Engine::move_could_result_in_repetition(Position& pos, Move& move, int coun
 }
 void Engine::recover_move_fully(Move& move,const Position& pos) {
     move.move_color = pos.get_turn();
-    move.piece_moved = pos.get_piece_on_square(move.from_square);
-    move.piece_captured = pos.get_piece_on_square(move.to_square);
+    move.piece_moved = pos.get_piece_type_on_square(move.from_square);
+    move.piece_captured = pos.get_piece_type_on_square(move.to_square);
 	int abs = std::abs(move.to_square - move.from_square);
 	move.is_castle = move.piece_moved == PieceType::King && abs == 2;
     move.is_en_passant = move.piece_moved == PieceType::Pawn && move.to_square==pos.get_en_passant_rights();

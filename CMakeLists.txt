@@ -16,7 +16,6 @@ set(TT_SIZE_MB ${DEFAULT_TT_MB} CACHE STRING "Transposition table size in MB")
 # 3. Define the Executable
 add_executable(Chess-Bot_Engine
     src/app/main.cpp
-    src/core/board.cpp
     src/core/fen.cpp
     src/core/notation_utils.cpp
     src/core/position.cpp

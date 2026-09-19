@@ -7,9 +7,9 @@
 class MoveGenerator
 {
 private:
-    static uint64_t calculate_pinned_pieces(const Position& pos,const Color friendly_color,const Color opponent_color, int king_square);
+    static uint64_t calculate_pinned_pieces(const Position& pos,const Color friendly_color,const Color opponent_color, Square king_square);
 	template <bool captures_only = false>
-    static void generate_king_moves(MoveList& moves,const Position& pos, Color own_color,const uint64_t& own_pieces, const int king_square);
+    static void generate_king_moves(MoveList& moves,const Position& pos, Color own_color,const uint64_t& own_pieces, const Square king_square);
 
     template <bool captures_only = false, bool with_checks = false>
     static void generate_queen_moves(MoveList& moves, const Position& pos, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask=BOARD_ALL_SET);
@@ -24,7 +24,7 @@ private:
     static void generate_knight_moves(MoveList& moves, const Position& pos, Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask=BOARD_ALL_SET);
 
     template <bool captures_only = false, bool with_checks = false>
-    static void generate_pawn_moves(MoveList& moves, const Position& pos, Color own_color,const int king_square,const uint64_t& pinned_info,const uint64_t& remedy_mask=BOARD_ALL_SET);
+    static void generate_pawn_moves(MoveList& moves, const Position& pos, Color own_color,const Square king_square,const uint64_t& pinned_info,const uint64_t& remedy_mask=BOARD_ALL_SET);
 
     template <bool captures_only = false, bool with_checks = false>
     static void generate_sliding_moves(MoveList& moves, PieceType piece,const Position& pos, Color own_color, const uint64_t& pinned_info, const uint64_t& remedy_mask=BOARD_ALL_SET);
@@ -33,7 +33,7 @@ private:
     static void generate_pawn_pushes(MoveList& moves,const Position& pos,Color own_color,const uint64_t& pinned_info,uint64_t remedy_mask=BOARD_ALL_SET);
 
     template <bool captures_only = false, bool with_checks = false>
-    static void generate_pawn_captures(MoveList& moves, const Position& pos, Color own_color,const int king_square,const uint64_t& pinned_info,const uint64_t& remedy_mask);
+    static void generate_pawn_captures(MoveList& moves, const Position& pos, Color own_color,const Square king_square,const uint64_t& pinned_info,const uint64_t& remedy_mask);
 public:
     MoveGenerator();
 

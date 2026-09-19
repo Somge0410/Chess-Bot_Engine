@@ -82,7 +82,7 @@ struct EvalContext {
 		return does_color_have_pawns_on_file(file, color) && !does_color_have_pawns_on_file(file - 1, flip_color(color)) && !does_color_have_pawns_on_file(file, flip_color(color)) && !does_color_have_pawns_on_file(file + 1, flip_color(color));
 	}
 	PieceType get_piece_on_square(int square) const {
-		return pos.get_piece_on_square(static_cast<Square>(square));
+		return pos.get_piece_type_on_square(static_cast<Square>(square));
 	}
 };
 struct PawnEvalEntry {

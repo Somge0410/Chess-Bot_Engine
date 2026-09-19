@@ -18,7 +18,6 @@ public:
 	void undo_move();
 	Square make_null_move();
 	void undo_null_move(Square en_passant_square);
-	PieceType get_piece_on_square(Square square) const;
 	Color get_color_on_square(Square square) const;
 	Bitboard get_attacks_for_color_piece(Color color, PieceType piece_type) const;
 	Bitboard get_attacks_for_color(Color color) const;
@@ -26,7 +25,7 @@ public:
 		return pieces(color,piece_type);
 	}
 	Bitboard get_color_pieces(Color color) const {
-		return color_pieces[color_index(color)];
+        return color_pieces(color);
 	}
 	Bitboard get_all_pieces() const {
 		return all_pieces;
@@ -75,7 +74,7 @@ public:
 		return game_phase;
 	}
 	Square get_king_square(Color color) const {
-		return king_squares[color_index(color)];
+		return king_squares(color);
 	}
 	bool is_square_attacked(Square square, Color attacker_color) const;
 	Bitboard get_square_attackers(Square square, Color attacker_color) const;
@@ -101,11 +100,11 @@ public:
 	}
 	void display() const;
 	char get_char_on_square(Square square) const;
-	PieceType get_piece_type_on_square(Square square) const;
-	Color get_color_on_square(Square square) const;
+	PieceType get_piece_type_on_square(Square square) const noexcept;
+	PieceType get_piece_type_on_square(Color color, Square square) const noexcept;
 	// Advanced Search Helpers
 	template <const bool need_sq=true>
-	AttackerInfo attackers_more_than(const int square, const Color attacker_color, const int bound = 2) const;
+	AttackerInfo attackers_more_than(const Square square, const Color attacker_color, const int bound = 2) const;
 	bool has_enough_material_for_nmp() const;
 	//other
 
@@ -134,7 +133,7 @@ private:
 	bool is_square_attacked_by_pawn(Square square, Color attacker_color) const;
 
 	PieceBoards pieces{};
-	Bitboard color_pieces[2]{};
+	ColorBoards color_pieces{};
 	Bitboard all_pieces{};
 
 	Color side_to_move{ Color::White };
@@ -143,7 +142,7 @@ private:
 	int halfmove_clock{ 0 };
 	int full_move_number{ 1 };
 	int game_phase{ 24 };
-	Square king_squares[2]{ Square::NO_SQUARE, Square::NO_SQUARE };
+	KingSquares king_squares{ Square::NO_SQUARE, Square::NO_SQUARE };
 	std::vector<StateInfo> history;
 	RepetitionTracker repetition_tracker;
 

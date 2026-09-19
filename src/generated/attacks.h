@@ -10,13 +10,16 @@ inline Bitboard knight_attacks(Square from) noexcept {
 	return KNIGHT_ATTACKS[square_index(from)];
 }
 inline Bitboard bishop_attacks(Square from, Bitboard occupied) noexcept {
+	if (from == NO_SQUARE) return 0;
 	const int sq = square_index(from);
 	const Bitboard blockers = BISHOP_BLOCKER_MASK[sq] & occupied;
 	const auto index = (blockers * MAGIC_BISHOP_NUMBER[sq]) >> BISHOP_SHIFT_NUMBERS[sq];
 	return BISHOP_ATTACK_TABLE[BISHOP_ATTACK_OFFSET[sq] + index];
 }
 inline Bitboard rook_attacks(Square from, Bitboard occupied) 
-{	const int sq = square_index(from);
+{
+	if (from == NO_SQUARE) return 0;
+	const int sq = square_index(from);
 	uint64_t rook_blockers = ROOK_BLOCKER_MASK[sq] & occupied;
 	uint64_t index = (rook_blockers * MAGIC_ROOK_NUMBER[sq]) >> ROOK_SHIFT_NUMBERS[sq];
 	return ROOK_ATTACK_TABLE[ROOK_ATTACK_OFFSET[sq] + index];
@@ -52,9 +55,8 @@ inline Bitboard piece_attacks(Square from, Color attacker_color, Bitboard occupi
 inline Bitboard pawn_attacks(Bitboard pawns,Color color) {
 	Bitboard attacks = 0ULL;
 	while (pawns) {
-		Square from = static_cast<Square>(__builtin_ctzll(pawns));
+		Square from = pop_lsb(pawns);
 		attacks |= pawn_attacks(from, color);
-		pawns &= pawns - 1; // Clear the least significant bit
 	}
 	return attacks;
 }

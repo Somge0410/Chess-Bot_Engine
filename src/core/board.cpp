@@ -2,7 +2,6 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
-#include "board.h"
 #include <stdexcept>
 #include "bitboard.h"
 #include "eval_params.h"

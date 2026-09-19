@@ -1,4 +1,4 @@
-#include "thread_pool.h"
+﻿#include "thread_pool.h"
 
 #include <algorithm>
 
@@ -24,7 +24,7 @@ void SearchThreadPool::start(int count) {
         initial_job_id = job_id_;
     }
 
-    tls_data.clear_counters();
+    engine_.tls_data.clear_counters();
     workers_.clear();
     workers_.reserve(static_cast<size_t>(thread_count_ - 1));
     for (int thread_id = 1; thread_id < thread_count_; ++thread_id) {
@@ -53,7 +53,7 @@ void SearchThreadPool::stop() {
         active_workers_ = 0;
         job_.thread_count = 1;
     }
-    tls_data.clear_counters();
+    engine_.tls_data.clear_counters();
 }
 
 void SearchThreadPool::execute(const Position& position, const SearchLimits& limits,
@@ -84,6 +84,7 @@ void SearchThreadPool::worker_loop(int thread_id, uint64_t initial_job_id) {
     uint64_t seen_job = initial_job_id;
     Move local_best;
     int local_score = 0;
+    ThreadLocalData tls_data;
 
     while (true) {
         Position position;
