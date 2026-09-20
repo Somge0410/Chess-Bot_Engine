@@ -186,7 +186,7 @@ static void print_legal_moves(const Position& pos) {
         std::cout << ' ' << move_to_uci(move);
     }
     std::cout << "\n";
-    std::cout.flush();
+    std::cout.flush(); 
 }
 // 64 is the maximum depth perft will ever reach
 MoveList perft_lists[64];
