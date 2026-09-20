@@ -10,7 +10,7 @@ std::string square_to_algebraic(int square){
 }
 
 std::string to_san(const Move& move,const MoveList& all_legal_moves){
-    if (move.is_castle){
+    if (move.is_castle()){
         return (move.to_square%8 ==6) ? "O-O" : "O-O-O";
     }
 

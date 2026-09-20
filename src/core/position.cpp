@@ -6,6 +6,7 @@
 #include "phase.h"
 #include "eval_params.h"
 #include "attacks.h"
+#include <cassert>
 Position::Position() : Position(fen::START_POSITION) {
 }
 
@@ -29,7 +30,7 @@ void Position::rebuild_derived_state() {
 	pawn_hash = calculate_pawn_hash();
 	material_score = calculate_material_score();
 	positional_score = calculate_positional_score();
-
+    calculate_checkers();
     history.clear();
 	history.reserve(256);
     repetition_tracker.clear();
@@ -94,6 +95,10 @@ std::uint64_t Position::calculate_pawn_hash() const noexcept {
         }
     }
     return pawn_key;
+}
+void Position::calculate_checkers() noexcept {
+    checkers = get_square_attackers(
+        get_king_square(side_to_move), flip_color(side_to_move));
 }
 void Position::rebuild_occupancy() {
     color_pieces(Color::White) = 0;
@@ -165,6 +170,7 @@ void Position::push_current_state_to_history() {
     current_state.move_count = full_move_number;
     current_state.current_twofold_count = repetition_tracker.get_twofold();
     current_state.current_repetition_tracker_start = repetition_tracker.get_start();
+    current_state.checkers = checkers;
 }
 void Position::make_move(const Move& move) {
 
@@ -176,6 +182,7 @@ void Position::make_move(const Move& move) {
     update_en_passsant_rights(move);
     update_king_square(move);
     update_pieces(move);
+    update_checkers(move);
     update_pieces_hash(move);
     update_turn_rights(move);
     update_move_count(move);
@@ -210,7 +217,7 @@ void Position::update_positional_score(const Move& move) {
         positional_score.mg_score -= get_mg_pos_score(move.get_capture_color(), move.piece_captured, move.get_capture_square());
         positional_score.eg_score -= get_eg_pos_score(move.get_capture_color(), move.piece_captured, move.get_capture_square());
     }
-    if (move.is_castle)
+    if (move.is_castle())
     {
         bool king_side = move.to_square > move.from_square;
         int old_rook_square = king_side ? move.to_square + 1 : move.to_square - 2;
@@ -236,40 +243,40 @@ void Position::update_game_phase(const Move& move) {
         game_phase += piece_weight;
     }
 }
-void Position::update_castle_rights(const Move& move){
+void Position::update_castle_rights(const Move& move) {
 
-zobrist_hash ^= Zobrist::castling_keys[castling_rights]; // Remove old rights from hash
+    zobrist_hash ^= Zobrist::castling_keys[castling_rights]; // Remove old rights from hash
 
-// if King moves
-if (move.piece_moved == PieceType::King)
-{
-    if (move.move_color == Color::White)
+    // if King moves
+    if (move.piece_moved == PieceType::King)
     {
-        castling_rights &= ~CastlingRights::WhiteKingside;
-        castling_rights &= ~CastlingRights::WhiteQueenside;
+        if (move.move_color == Color::White)
+        {
+            castling_rights &= ~CastlingRights::WhiteKingside;
+            castling_rights &= ~CastlingRights::WhiteQueenside;
+        }
+        else
+        {
+            castling_rights &= ~CastlingRights::BlackKingside;
+            castling_rights &= ~CastlingRights::BlackQueenside;
+        }
+
+
     }
-else
-{
-    castling_rights &= ~CastlingRights::BlackKingside;
-    castling_rights &= ~CastlingRights::BlackQueenside;
-}
+    // 2. If a rook moves FROM its starting square, remove that one right
+    if (move.from_square == 7)  castling_rights &= ~CastlingRights::WhiteKingside;
+    if (move.from_square == 0)  castling_rights &= ~CastlingRights::WhiteQueenside;
+    if (move.from_square == 63) castling_rights &= ~CastlingRights::BlackKingside;
+    if (move.from_square == 56) castling_rights &= ~CastlingRights::BlackQueenside;
+
+    // 3. If an enemy rook is captured ON its starting square, remove that right
+    if (move.to_square == 7)   castling_rights &= ~CastlingRights::WhiteKingside;
+    if (move.to_square == 0)   castling_rights &= ~CastlingRights::WhiteQueenside;
+    if (move.to_square == 63)  castling_rights &= ~CastlingRights::BlackKingside;
+    if (move.to_square == 56)  castling_rights &= ~CastlingRights::BlackQueenside;
 
 
-}
-// 2. If a rook moves FROM its starting square, remove that one right
-if (move.from_square == 7)  castling_rights &= ~CastlingRights::WhiteKingside;
-if (move.from_square == 0)  castling_rights &= ~CastlingRights::WhiteQueenside;
-if (move.from_square == 63) castling_rights &= ~CastlingRights::BlackKingside;
-if (move.from_square == 56) castling_rights &= ~CastlingRights::BlackQueenside;
-
-// 3. If an enemy rook is captured ON its starting square, remove that right
-if (move.to_square == 7)   castling_rights &= ~CastlingRights::WhiteKingside;
-if (move.to_square == 0)   castling_rights &= ~CastlingRights::WhiteQueenside;
-if (move.to_square == 63)  castling_rights &= ~CastlingRights::BlackKingside;
-if (move.to_square == 56)  castling_rights &= ~CastlingRights::BlackQueenside;
-
-
-zobrist_hash ^= Zobrist::castling_keys[castling_rights]; // Add new rights to hash
+    zobrist_hash ^= Zobrist::castling_keys[castling_rights]; // Add new rights to hash
 }
 void Position::update_en_passsant_rights(const Move& move) {
     if (en_passant_square != Square::NO_SQUARE) {
@@ -281,14 +288,48 @@ void Position::update_en_passsant_rights(const Move& move) {
         en_passant_square = move.move_color == Color::White ? move.to_square - 8 : move.to_square + 8;
     }
     if (en_passant_square != Square::NO_SQUARE) {
-		//In Fute maybe only do if there is a pawn that could take en passant.
-            zobrist_hash ^= Zobrist::en_passant_keys[get_file(en_passant_square)];
+        //In Fute maybe only do if there is a pawn that could take en passant.
+        zobrist_hash ^= Zobrist::en_passant_keys[get_file(en_passant_square)];
     }
 }
 void Position::update_king_square(const Move& move) {
     if (move.piece_moved == PieceType::King) {
         king_squares(move.move_color) = move.to_square;
     }
+}
+void Position::update_checkers(const Move& move) {
+    checkers = 0;
+    const Color checked_color = flip_color(move.move_color);
+    const Square checked_king = get_king_square(checked_color);
+
+    if (!move.check_is_known()) {
+        checkers = get_square_attackers(checked_king, move.move_color);
+    }
+    else if (move.gives_check()) {
+        if (move.direct_check()) {
+            const Square direct_checker = move.is_castle()
+                ? (move.to_square > move.from_square
+                    ? move.to_square - 1
+                    : move.to_square + 1)
+                : move.to_square;
+            checkers |= bit64(direct_checker);
+        }
+
+        if (move.discovered_check()) {
+            checkers |= (pieces(move.move_color, PieceType::Bishop)
+                | pieces(move.move_color, PieceType::Queen))
+                & bishop_attacks(checked_king, all_pieces);
+            checkers |= (pieces(move.move_color, PieceType::Rook)
+                | pieces(move.move_color, PieceType::Queen))
+                & rook_attacks(checked_king, all_pieces);
+        }
+    }
+
+#ifndef NDEBUG
+    const Bitboard expected_checkers =
+        get_square_attackers(checked_king, move.move_color);
+    assert(checkers == expected_checkers);
+#endif
 }
 void Position::update_pieces(const Move& move) {
     PieceType piece_reached = move.promotion_piece == PieceType::None ? move.piece_moved : move.promotion_piece;
@@ -303,7 +344,7 @@ void Position::update_pieces(const Move& move) {
     if (move.piece_captured != PieceType::None)
     {
         Color other_color = move.get_capture_color();
-        Square capture_square = move.is_en_passant ? (move.move_color == Color::White ? move.to_square - 8 : move.to_square + 8) : move.to_square;
+        Square capture_square = move.is_en_passant() ? (move.move_color == Color::White ? move.to_square - 8 : move.to_square + 8) : move.to_square;
 
         pieces(other_color,move.piece_captured) ^= bit64(capture_square);
         color_pieces(other_color) ^= bit64(capture_square);
@@ -311,7 +352,7 @@ void Position::update_pieces(const Move& move) {
 
     }
 
-    if (move.is_castle)
+    if (move.is_castle())
     {
         bool king_side = move.to_square > move.from_square;
         Square old_rook_square = king_side ? move.to_square + 1 : move.to_square - 2;
@@ -340,13 +381,13 @@ void Position::update_pieces_hash(const Move& move) {
     if (move.piece_captured != PieceType::None)
     {
         int other_color = color_index(move.get_capture_color());
-        Square capture_square = move.is_en_passant ? (move.move_color == Color::White ? move.to_square - 8 : move.to_square + 8) : move.to_square;
+        Square capture_square = move.is_en_passant() ? (move.move_color == Color::White ? move.to_square - 8 : move.to_square + 8) : move.to_square;
         zobrist_hash ^= Zobrist::piece_keys[other_color][piece_index(move.piece_captured)][square_index(capture_square)];
         if (move.piece_captured == PieceType::Pawn) {
             pawn_hash ^= Zobrist::piece_keys[other_color][piece_index(move.piece_captured)][square_index(capture_square)];
         }
     }
-    if (move.is_castle)
+    if (move.is_castle())
     {
         bool king_side = move.to_square > move.from_square;
         int rook = piece_index(PieceType::Rook);
@@ -401,6 +442,7 @@ void Position::recover_position_state(const StateInfo& previous_state) {
     material_score = previous_state.material_score;
     halfmove_clock = previous_state.half_moves;
     full_move_number = previous_state.move_count;
+    checkers = previous_state.checkers;
 }
 Square Position::make_null_move() {
     Square original_ep_square = en_passant_square;
@@ -409,6 +451,7 @@ Square Position::make_null_move() {
     en_passant_square = NO_SQUARE;
 	side_to_move = flip_color(side_to_move);
     zobrist_hash ^= Zobrist::black_to_move_key;
+    checkers = 0;
     return original_ep_square;
 }
 void Position::undo_null_move(Square original_ep_square) {
@@ -483,6 +526,7 @@ StateInfo Position::get_state_info() const {
     state.move_count = full_move_number;
     state.current_twofold_count = repetition_tracker.get_twofold();
     state.current_repetition_tracker_start = repetition_tracker.get_start();
+    state.checkers = checkers;
 	return state;
 }
 bool Position::any_appeared_more_than(int count) const {

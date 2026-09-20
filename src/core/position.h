@@ -79,10 +79,10 @@ public:
 	bool is_square_attacked(Square square, Color attacker_color) const;
 	Bitboard get_square_attackers(Square square, Color attacker_color) const;
 	Bitboard get_checkers() const {
-		return get_square_attackers(get_king_square(side_to_move), flip_color(side_to_move));
+		return checkers;
 	}
 	bool in_check() const {
-		return is_square_attacked(get_king_square(side_to_move), flip_color(side_to_move));
+		return checkers != 0;
 	}
 	StateInfo get_state_info() const;
 	bool is_repetition_draw(int repeat = 3) const {
@@ -117,6 +117,7 @@ private:
 	std::uint64_t calculate_pawn_hash() const noexcept;
 	EvaluationResult calculate_material_score() const noexcept;
 	EvaluationResult calculate_positional_score() const noexcept;
+	void calculate_checkers() noexcept;
 	void push_current_state_to_history();
 	void update_material_score(const Move& move);
 	void update_positional_score(const Move& move);
@@ -129,6 +130,7 @@ private:
 	void update_pieces_hash(const Move& move);
 	void update_move_count(const Move& move);
 	void update_repetition_tracker();
+	void update_checkers(const Move& move);
 	void recover_position_state(const StateInfo& previous_state);
 	bool is_square_attacked_by_pawn(Square square, Color attacker_color) const;
 
@@ -151,5 +153,6 @@ private:
 	std::uint64_t pawn_hash{ 0 };
 	EvaluationResult positional_score{ 0, 0 };
 	EvaluationResult material_score{ 0,0 };
+	Bitboard checkers{};
 
 };
