@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. Hardware Optimization Toggle
 option(USE_NATIVE_ARCH "Optimize for current CPU" ON)
 option(ENABLE_QSEARCH_DIAGNOSTICS "Collect detailed search benchmark diagnostics" OFF)
+option(ENABLE_SPSA_TUNING "Build with the SPSA tuning entry point" OFF)
 
 # 2. Conservative default TT size (in MB).
 # GUIs can still select a larger Hash value for long searches.
@@ -14,8 +15,7 @@ set(DEFAULT_TT_MB 128)
 set(TT_SIZE_MB ${DEFAULT_TT_MB} CACHE STRING "Transposition table size in MB")
 
 # 3. Define the Executable
-add_executable(Chess-Bot_Engine
-    src/app/main.cpp
+set(ENGINE_SOURCES
     src/core/fen.cpp
     src/core/notation_utils.cpp
     src/core/position.cpp
@@ -34,6 +34,19 @@ add_executable(Chess-Bot_Engine
     src/tools/benchmark.cpp
     src/uci/uci.cpp
 )
+
+if(ENABLE_SPSA_TUNING)
+    list(APPEND ENGINE_SOURCES
+        "src/SPSA Tuning/main.cpp"
+        "src/SPSA Tuning/tuner.cpp"
+        "src/SPSA Tuning/threadpool.cpp"
+        "src/SPSA Tuning/TuneEval.cpp"
+    )
+else()
+    list(APPEND ENGINE_SOURCES src/app/main.cpp)
+endif()
+
+add_executable(Chess-Bot_Engine ${ENGINE_SOURCES})
 
 target_include_directories(Chess-Bot_Engine PRIVATE
     include

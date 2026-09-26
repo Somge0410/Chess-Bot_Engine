@@ -78,6 +78,12 @@ enum EvalParam {
 	PARAM_COUNT
 };
 
+
+extern EvaluationResult EvalWeights[PARAM_COUNT];
+
+constexpr int PARAM_START = Pawn;
+constexpr int PARAM_END = KNIGHT_OUTPOST_WITH_OPPOSITE_BISHOP + 1;
+constexpr int PARAM_LENGTH = PARAM_END - PARAM_START;
 constexpr uint8_t PASSED_PAWN_BUCKET[64] = {
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 1, 1, 2, 2, 3, 3,
