@@ -1,6 +1,7 @@
 ﻿#include "fen.h"
 #include "bitboard.h"
 #include <array>
+#include <charconv>
 #include <cctype>
 #include <sstream>
 #include <stdexcept>
@@ -103,11 +104,19 @@ namespace fen {
                 data.en_passant_square = to_square(file, rank);
             }
         }
+        int parse_fen_number(std::string_view field, const int fallback) noexcept {
+            int value = fallback;
+            const auto result = std::from_chars(field.data(), field.data() + field.size(), value);
+            if (result.ec != std::errc{} || result.ptr != field.data() + field.size() || value < 0) {
+                return fallback;
+            }
+            return value;
+        }
         void parse_fen_half_move(std::string_view field, FenData& data) {
-            data.halfmove_clock = std::stoi(std::string{ field });
+            data.halfmove_clock = parse_fen_number(field, 0);
         }
         void parse_fen_move(std::string_view field, FenData& data) {
-            data.full_move_number = std::stoi(std::string{ field });
+            data.full_move_number = parse_fen_number(field, 1);
         }
 
 
