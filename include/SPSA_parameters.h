@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 
 // For Pruning and search
-inline int FUTILITY_MARGIN_D1 = 244;
-inline int FUTILITY_MARGIN_D2 = 460;
+inline int FUTILITY_MARGIN_D1 = 231;
+inline int FUTILITY_MARGIN_D2 = 481;
 inline int DELTA_MARGIN = 179;
 inline int MAX_QUIET_PLY = 7;
 
