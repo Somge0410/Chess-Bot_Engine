@@ -207,7 +207,7 @@ PieceType MoveGenerator::remedy_mask_for_check(const Position& pos, CheckInfo& c
     if (checker == PieceType::Queen || checker == PieceType::Rook || checker == PieceType::Bishop) check_info.remedy_mask |= LINE_BETWEEN(check_info.own_king_sq, checker_square);
     return checker;
 }
-template <bool captures_only>
+template <bool captures_only,bool with_checks>
 void MoveGenerator::generate_king_moves(MoveList& moves, const Position& pos, const CheckInfo& check_info) {
     Bitboard possible_moves = KING_ATTACKS[check_info.own_king_sq] & ~check_info.own_pieces;
     Bitboard quiet = possible_moves & ~check_info.op_pieces;
@@ -215,7 +215,7 @@ void MoveGenerator::generate_king_moves(MoveList& moves, const Position& pos, co
     const bool is_discovered_candidate =
         (bit64(check_info.own_king_sq) & check_info.disc_check_info) != 0;
     const Bitboard discovery_line = is_discovered_candidate
-        ? LINE_BETWEEN(check_info.own_king_sq, check_info.op_king_sq)
+        ? Complete_Line(check_info.own_king_sq, check_info.op_king_sq)
         : 0;
 
     while (captures)
@@ -232,7 +232,7 @@ void MoveGenerator::generate_king_moves(MoveList& moves, const Position& pos, co
             pos.get_piece_type_on_square(check_info.op_color, destination_square),
             PieceType::None, false, false, false, discovered_check));
     }
-    if constexpr (captures_only) return;
+    if constexpr (captures_only && !with_checks) return;
 
     while (quiet) {
         const Square destination_square = pop_lsb(quiet);
@@ -242,6 +242,9 @@ void MoveGenerator::generate_king_moves(MoveList& moves, const Position& pos, co
         }
         const bool discovered_check = is_discovered_candidate
             && (bit64(destination_square) & discovery_line) == 0;
+        if constexpr (with_checks) {
+			if (!discovered_check) continue;
+        }
         moves.push_back(Move(check_info.own_king_sq, destination_square,
             PieceType::King, check_info.own_color, PieceType::None,
             PieceType::None, false, false, false, discovered_check));
@@ -420,7 +423,7 @@ void MoveGenerator::generate_pawn_pushes(MoveList& moves, const Position& pos, C
         const bool discovered_candidate =
             (bit64(from) & check_info.disc_check_info) != 0;
         const Bitboard discovery_line = discovered_candidate
-            ? LINE_BETWEEN(from, check_info.op_king_sq)
+            ? Complete_Line(from, check_info.op_king_sq)
             : 0;
 
         const auto append_push = [&](Square to, PieceType promotion) {
@@ -493,7 +496,7 @@ void MoveGenerator::generate_pawn_captures(MoveList& moves, const Position& pos,
         const bool discovered_candidate =
             (bit64(from) & check_info.disc_check_info) != 0;
         const Bitboard discovery_line = discovered_candidate
-            ? LINE_BETWEEN(from, check_info.op_king_sq)
+            ? Complete_Line(from, check_info.op_king_sq)
             : 0;
 
         Bitboard captures = attack_bb & check_info.op_pieces

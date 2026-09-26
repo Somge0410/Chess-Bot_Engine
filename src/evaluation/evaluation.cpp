@@ -406,7 +406,7 @@ void eval_king_safety(EvaluationResult& score, const EvalContext& ctx, Trace* tr
 			uint64_t op_bishop_queen_on_mask = bishop_attack_mask & (ctx.get_pieces(ecolor, PieceType::Bishop) | ctx.get_pieces(ecolor, PieceType::Queen));
 			while (op_bishop_queen_on_mask) {
 				int sq = lsb(op_bishop_queen_on_mask);
-				uint64_t line_between = Complete_Line(to_square(sq), to_square(king_squares[color]));
+				uint64_t line_between = LINE_BETWEEN(to_square(sq), to_square(king_squares[color]));
 				int count = popcount(line_between & ctx.get_pieces(color, PieceType::Pawn));
 				if (count > 6) count = 6;
 				next_to_open_diagonal_count[count] += color == 0 ? 1 : -1;

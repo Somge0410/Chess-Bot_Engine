@@ -123,6 +123,9 @@ struct Move{
     bool gives_double_check() const {
         return direct_check() && discovered_check();
     }
+    PieceType get_piece_reached() const {
+		return promotion_piece == PieceType::None ? piece_moved : promotion_piece;
+    }
 
 };
 inline Move recover_move_from_int(uint16_t m_int) {

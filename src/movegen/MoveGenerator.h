@@ -41,7 +41,7 @@ private:
 	static void pawn_checking_squares(const Position& pos, CheckInfo& check_info);
 	static PieceType remedy_mask_for_check(const Position& pos, CheckInfo& check_info, const Bitboard& checkers);
 
-	template <bool captures_only = false>
+	template <bool captures_only = false, bool with_checks = false>
     static void generate_king_moves(MoveList& moves,const Position& pos, const CheckInfo& check_info);
 
     template <bool captures_only = false, bool with_checks = false>

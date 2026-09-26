@@ -15,7 +15,12 @@ static inline bool find_least_see_attacker(
     const PieceBoards& pieces
 ) {
     for(PieceType piece: {PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King}) {
-        uint64_t attackers = piece_attacks(to_square(to_sq), side, occupancy, piece);
+        const Bitboard attack_mask = piece == PieceType::Pawn
+            ? pawn_attacks(to_square(to_sq), flip_color(side))
+            : piece_attacks(to_square(to_sq), side, occupancy, piece);
+
+        Bitboard attackers =
+            attack_mask & pieces(side, piece) & occupancy;
         if (attackers) {
             out_piece_type = piece;
             out_from_sq = lsb(attackers);
@@ -100,10 +105,10 @@ static int see_move(
         pos,
         move.from_square,
         move.to_square,
-        move.to_square,
+        move.get_capture_square(),
         move.move_color,
         move.piece_captured,
-        move.piece_moved
+        move.get_piece_reached()
     );
 }
 

@@ -193,7 +193,7 @@ void Position::undo_move() {
     history.pop_back();
 }
 bool Position::is_square_attacked_by_pawn(Square square, Color attacker_color) const {
-    Bitboard pawn_attackers = pieces(attacker_color, PieceType::Pawn) & PAWN_ATTACKS[color_index(attacker_color)][square_index(square)];
+    Bitboard pawn_attackers = pieces(attacker_color, PieceType::Pawn) & PAWN_ATTACKS[color_index(flip_color(attacker_color))][square_index(square)];
     return pawn_attackers != 0;
 }
 void Position::update_material_score(const Move& move) {
@@ -488,7 +488,7 @@ Bitboard Position::get_attacks_for_color(Color color) const {
 }
 bool Position::is_square_attacked(Square square, Color attacker_color) const {
     for(PieceType piece : {PieceType::Pawn, PieceType::Knight, PieceType::Bishop, PieceType::Rook, PieceType::Queen, PieceType::King}) {
-        if(pieces(attacker_color, piece) & piece_attacks(square, attacker_color, all_pieces, piece)) {
+        if(pieces(attacker_color, piece) & piece_attacks(square, flip_color(attacker_color), all_pieces, piece)) {
             return true;
         }
     }
