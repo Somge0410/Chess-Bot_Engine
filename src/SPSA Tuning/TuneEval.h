@@ -26,7 +26,7 @@ public:
     // Tuning configuration
     constexpr static bool retune_from_zero = false;  // Start with current values
     constexpr static double preferred_k = 0;  // Auto-determine K
-    constexpr static int32_t max_epoch = 20000;  // Maximum epochs
+    constexpr static int32_t max_epoch = 1000;  // Maximum epochs
     constexpr static bool enable_qsearch = false;  // No quiescence search
     constexpr static bool filter_in_check = false;  // Skip positions in check
     
