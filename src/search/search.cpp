@@ -465,7 +465,7 @@ SearchResult Engine::terminal_eval(const Position& pos, bool king_is_in_check,in
 }
 
 bool Engine::move_could_result_in_repetition(Position& pos, Move& move, int count) {
-    if (move.piece_captured != PieceType::None || move.piece_moved == PieceType::Pawn || move.is_castle) return false;
+    if (move.piece_captured != PieceType::None || move.piece_moved == PieceType::Pawn || move.is_castle()) return false;
     return pos.has_twofold();
 }
 void Engine::recover_move_fully(Move& move,const Position& pos) {
@@ -473,8 +473,8 @@ void Engine::recover_move_fully(Move& move,const Position& pos) {
     move.piece_moved = pos.get_piece_type_on_square(move.from_square);
     move.piece_captured = pos.get_piece_type_on_square(move.to_square);
 	int abs = std::abs(move.to_square - move.from_square);
-	move.is_castle = move.piece_moved == PieceType::King && abs == 2;
-    move.is_en_passant = move.piece_moved == PieceType::Pawn && move.to_square==pos.get_en_passant_rights();
+	move.set_castle(move.piece_moved == PieceType::King && abs == 2);
+    move.set_en_passant(move.piece_moved == PieceType::Pawn && move.to_square == pos.get_en_passant_rights());
 }
 
 void Engine::iterative_deepening_new(int thread_id, bool is_master, Move& io_best_move, int& io_best_score, const Position& position, TimeControlDecision& tc , ThreadLocalData* tls) {

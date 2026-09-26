@@ -287,7 +287,7 @@ void Board::update_positional_score(const Move& move){
         positional_score.mg_score-=get_mg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
         positional_score.eg_score-=get_eg_pos_score(move.get_capture_color(),move.piece_captured,move.get_capture_square());
     }
-    if (move.is_castle)
+    if (move.is_castle())
     {
         bool king_side=move.to_square>move.from_square;
         int old_rook_square=king_side ? move.to_square+1:move.to_square-2;
@@ -387,13 +387,13 @@ void Board::update_pieces_hash(const Move& move){
     if (move.piece_captured!=PieceType::None)
     {
         int other_color=to_int(move.get_capture_color());
-        int capture_square=move.is_en_passant ? (move.move_color==Color::White ? move.to_square-8:move.to_square+8):move.to_square;
+        int capture_square=move.is_en_passant() ? (move.move_color==Color::White ? move.to_square-8:move.to_square+8):move.to_square;
         zobrist_hash^=Zobrist::piece_keys[other_color][to_int(move.piece_captured)][capture_square];
         if (move.piece_captured==PieceType::Pawn){
             pawn_key^=Zobrist::piece_keys[other_color][to_int(move.piece_captured)][capture_square];
 		}
     }
-    if (move.is_castle)
+    if (move.is_castle())
     {
         bool king_side=move.to_square>move.from_square;
         int rook=to_int(PieceType::Rook);
@@ -435,7 +435,7 @@ void Board::update_pieces(const Move& move){
     if (move.piece_captured!=PieceType::None)
     {   
         Color other_color=move.get_capture_color();
-        int capture_square=move.is_en_passant ? (move.move_color==Color::White ? move.to_square-8:move.to_square+8):move.to_square;
+        int capture_square=move.is_en_passant() ? (move.move_color==Color::White ? move.to_square-8:move.to_square+8):move.to_square;
         
         pieces[to_int(other_color)][to_int(move.piece_captured)]^=1ULL<< capture_square;
         color_pieces[to_int(other_color)]^=1ULL<<capture_square;
@@ -443,7 +443,7 @@ void Board::update_pieces(const Move& move){
         
     }
 
-    if (move.is_castle)
+    if (move.is_castle())
     {
         bool king_side= move.to_square>move.from_square;
         int old_rook_square=king_side ? move.to_square+1: move.to_square-2;
@@ -466,7 +466,7 @@ void Board::update_move_count(const Move& move){
     if (turn==to_int(Color::Black)){
         move_count++;
     }
-    if (move.piece_captured != PieceType::None || move.piece_moved == PieceType::Pawn || move.is_castle) {
+    if (move.piece_captured != PieceType::None || move.piece_moved == PieceType::Pawn || move.is_castle()) {
         half_moves = 0;
     }
     else
