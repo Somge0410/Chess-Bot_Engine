@@ -1,16 +1,16 @@
-#pragma once
+﻿#pragma once
 
 inline constexpr int MATE_SCORE = 32000;
 inline constexpr int MAX_PLY = 128;
 inline constexpr int MATE_THRESHOLD = MATE_SCORE - MAX_PLY;
 
 // For Pruning and search
-inline int FUTILITY_MARGIN_D1 = 244;
-inline int FUTILITY_MARGIN_D2 = 460;
+inline int FUTILITY_MARGIN_D1 = 231;
+inline int FUTILITY_MARGIN_D2 = 481;
 inline int MAX_QUIET_PLY = 7;
 
 // --- NEU: Late Move Reduction (LMR) ---
-inline int LMR_MIN_DEPTH = 2;
+inline int LMR_MIN_DEPTH = 1;
 inline int LMR_FIRST_REDUCED_MOVE = 3;
 inline int LMR_REDUCTION_AMOUNT = 2;
 
@@ -18,7 +18,7 @@ inline int LMR_REDUCTION_AMOUNT = 2;
 inline int NMP_MIN_DEPTH = 5;
 inline int NMP_REDUCTION = 2;
 inline int NMP_DEPTH_DIVISOR = 6;
-inline int NMP_EVAL_DIVISOR = 196;
+inline int NMP_EVAL_DIVISOR = 200;
 inline int NMP_MAX_EVAL_REDUCTION = 2;
 
 // --- NEU: Move Ordering ---
