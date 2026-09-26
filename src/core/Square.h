@@ -39,7 +39,10 @@ constexpr inline Square operator+(Square square, int offset) noexcept {
 constexpr inline Square operator-(Square square, int offset) noexcept {
 	return to_square(square_index(square) - offset);
 }
-
+constexpr inline bool is_single_push_area(Square square, Color color) noexcept {
+    int rank = get_rank(square);
+    return (color == Color::White && rank < 6) || (color == Color::Black && rank >1);
+}
 inline int king_distance(int sq1, int sq2) {
     int file1 = sq1 % 8;
     int rank1 = sq1 / 8;

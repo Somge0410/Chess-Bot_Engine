@@ -23,4 +23,5 @@ struct StateInfo {
     uint64_t half_moves : 10;
     uint64_t move_count : 9;
     uint64_t current_repetition_tracker_start : 10;
+    Bitboard checkers;
 };

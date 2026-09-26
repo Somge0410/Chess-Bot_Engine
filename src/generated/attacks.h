@@ -60,3 +60,19 @@ inline Bitboard pawn_attacks(Bitboard pawns,Color color) {
 	}
 	return attacks;
 }
+inline Bitboard pawn_single_pushes(Bitboard pawns, Color color) {
+	Bitboard pushes = 0ULL;
+	if (color == Color::White) {
+		return (pawns << 8);
+	} else {
+		return (pawns >> 8);
+	}
+}
+inline Bitboard pawn_double_pushes(Bitboard pawns, Color color) {
+	Bitboard pushes = 0ULL;
+	if (color == Color::White) {
+		return (pawns  << 16);
+	} else {
+		return (pawns  >> 16);
+	}
+}

@@ -19,6 +19,7 @@ inline constexpr uint64_t EXTENDED_CENTER_MASK =
     1ULL << 18 | 1ULL << 19 | 1ULL << 20 | 1ULL << 21;
 inline constexpr uint64_t FOUR_CORNER_MASK =
     (1ULL << 0) | (1ULL << 7) | (1ULL << 56) | (1ULL << 63);
+
 inline constexpr LineBetweenTable LINE_BETWEEN = { {
     { 0x1ULL, 0x3ULL, 0x7ULL, 0xfULL, 0x1fULL, 0x3fULL, 0x7fULL, 0xffULL,
       0x101ULL, 0x201ULL, 0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL, 0x0ULL,
