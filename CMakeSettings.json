@@ -11,6 +11,24 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": ""
     },
+     {
+       "name": "x64-Release-Perft",
+       "generator": "Ninja",
+       "configurationType": "Release",
+       "inheritEnvironments": [ "msvc_x64_x64" ],
+       "buildRoot": "${projectDir}\\out\\build\\${name}",
+       "installRoot": "${projectDir}\\out\\install\\${name}",
+       "cmakeCommandArgs": "",
+       "buildCommandArgs": "Chess-Bot_PerftTests",
+       "ctestCommandArgs": "",
+       "variables": [
+         {
+           "name": "BUILD_TESTING",
+           "value": "ON",
+           "type": "BOOL"
+         }
+       ]
+     },
     {
       "name": "x64-Release",
       "generator": "Ninja",

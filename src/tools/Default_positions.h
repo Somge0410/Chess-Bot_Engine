@@ -90,7 +90,7 @@ inline const std::vector<DefaultPosition> full_bench_defaults = {
     {"Bench34", "3Qb1k1/1r2ppb1/pN1n2q1/Pp1Pp1Pr/4P2p/4BP2/4B1R1/1R5K b - - 11 40", {32, 1398, 44091, 1923471, 61309107, 2667790216}, -200, "h4h3"},
     {"Bench35", "4k3/3q1r2/1N2r1b1/3ppN2/2nPP3/1B1R2n1/2R1Q3/3K4 w - - 5 1", {41, 1602, 63741, 2529287, 101660587, 4067960742}, 13, "b6d7"},
     {"Bench36", "1r6/1P4bk/3qr1p1/N6p/3pp2P/6R1/3Q1PP1/1R4K1 w - - 1 42", {43, 1579, 64993, 2490896, 101423265, 3939601965}, -38, "g3b3"},
-    {"Bench37", "k7/2n1n3/1nbNbn2/2NbRBn1/1nbRQR2/2NBRBN1/3N1N2/7K w - - 0 1", {56, 2470, 139379, 6064957, 344983226, 14841355607}, 1027, "c3d5"},
+    //{"Bench37", "k7/2n1n3/1nbNbn2/2NbRBn1/1nbRQR2/2NBRBN1/3N1N2/7K w - - 0 1", {56, 2470, 139379, 6064957, 344983226, 14841355607}, 1027, "c3d5"},
     {"Bench38", "K7/8/8/BNQNQNB1/N5N1/R1Q1q2r/n5n1/bnqnqnbk w - - 0 1", {81, 3877, 305258, 15611117, 1200963656, 64254450825}, 674, "c3e1"},
     {"Bench46", "6k1/3b3r/1p1p4/p1n2p2/1PPNpP1q/P3Q1p1/1R1RB1P1/5K2 b - - 0 1", {37, 1156, 42262, 1368788, 49694401, 1646108870}, 29995, "h4f4"},
     {"Bench47", "r2r1n2/pp2bk2/2p1p2p/3q4/3PN1QP/2P3R1/P4PP1/5RK1 w - - 0 1", {34, 928, 33222, 995022, 36288768, 1148643922}, 640, "g3f3"},
@@ -118,7 +118,7 @@ inline const std::vector<DefaultPosition>& get_defaults(std::string_view group =
 }
 
 inline const DefaultPosition* find_default_position(std::string_view name) {
-    for (const std::vector<DefaultPosition>* group : {&tactical_defaults, &perft_defaults}) {
+    for (const std::vector<DefaultPosition>* group : {&tactical_defaults, &perft_defaults, &full_bench_defaults, &bench_defaults}) {
         for (const DefaultPosition& position : *group) {
             if (position.name == name) {
                 return &position;

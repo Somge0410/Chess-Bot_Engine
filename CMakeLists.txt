@@ -1,6 +1,8 @@
 ﻿cmake_minimum_required(VERSION 3.10)
 project(Chess-Bot_Engine LANGUAGES CXX)
 
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -60,6 +62,33 @@ target_include_directories(Chess-Bot_Engine PRIVATE
     src/uci
     src/generated
 )
+
+if(BUILD_TESTING)
+    add_executable(Chess-Bot_PerftTests
+        src/tests/perft_tests.cpp
+        src/core/fen.cpp
+        src/core/position.cpp
+        src/core/zobrist.cpp
+        src/evaluation/weights.cpp
+        src/movegen/MoveGenerator.cpp
+        src/tools/perft.cpp
+    )
+
+    target_include_directories(Chess-Bot_PerftTests PRIVATE
+        src/core
+        src/evaluation
+        src/movegen
+        src/tools
+        src/uci
+        src/generated
+    )
+
+    add_test(NAME perft_regression COMMAND Chess-Bot_PerftTests)
+    set_tests_properties(perft_regression PROPERTIES
+        LABELS "perft;slow"
+        RUN_SERIAL TRUE
+    )
+endif()
 
 # 4. Pass build options as compile definitions
 target_compile_definitions(Chess-Bot_Engine PRIVATE
