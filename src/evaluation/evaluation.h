@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <algorithm>
 #include "bitboard.h"
 #include "position.h"
 #include "see.h"
@@ -110,6 +111,7 @@ enum EvalTerms : uint8_t {
 };
 
 inline int tapered(EvaluationResult score, int game_phase) {
+	game_phase = std::clamp(game_phase, 0, MAX_GAME_PHASE);
 	return (score.mg_score * game_phase + score.eg_score * (24 - game_phase)) / 24;
 }
 

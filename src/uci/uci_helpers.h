@@ -27,7 +27,10 @@ inline std::string move_to_uci(const Move& m) {
 
     return out;
 }
+#pragma once
+
 #include <string>
+#include <string_view>
 #include <vector>
 #include <stdexcept>
 
@@ -35,9 +38,9 @@ inline std::string move_to_uci(const Move& m) {
 #include "MoveGenerator.h"
 #include "position.h"
 
-inline Move parse_uci_move(const Position& position, const std::string& s) {
-    if (s.size() < 4)
-        throw std::runtime_error("Invalid UCI move: " + s);
+inline Move parse_uci_move(const Position& position, std::string_view s) {
+    if (s.size() != 4 && s.size() != 5)
+        throw std::runtime_error("Invalid UCI move: " + std::string(s));
 
     int from_file = s[0] - 'a';
     int from_rank = s[1] - '1';
@@ -56,7 +59,8 @@ inline Move parse_uci_move(const Position& position, const std::string& s) {
         case 'b': promo = PieceType::Bishop; break;
         case 'n': promo = PieceType::Knight; break;
         default:
-            throw std::runtime_error("Invalid promotion piece in UCI move: " + s);
+            throw std::runtime_error(
+                "Invalid promotion piece in UCI move: " + std::string(s));
         }
     }
 
@@ -72,5 +76,5 @@ inline Move parse_uci_move(const Position& position, const std::string& s) {
         }
     }
 
-    throw std::runtime_error("No legal move matching UCI: " + s);
+    throw std::runtime_error("No legal move matching UCI: " + std::string(s));
 }

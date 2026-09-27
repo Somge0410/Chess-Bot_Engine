@@ -124,6 +124,9 @@ struct EvaluationResult {
 		this->eg_score = static_cast<int16_t>(this->eg_score * multiplier);
 		return *this;
 	}
+	bool operator==(const EvaluationResult& other) const {
+		return mg_score == other.mg_score && eg_score == other.eg_score;
+	}
 };
 inline EvaluationResult operator+(EvaluationResult lhs, const EvaluationResult& rhs) {
 	lhs += rhs;

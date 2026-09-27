@@ -14,7 +14,9 @@ struct StateInfo {
     EvaluationResult material_score{};               // 4 bytes
     // 3. Bit-Fields (All 10 variables packed into a single 8-byte memory block)
     Color side_to_move : 2;
-    uint64_t game_phase : 5;
+    // Keep the raw phase so a promotion above MAX_GAME_PHASE can be undone
+    // without losing the excess phase units. Consumers clamp it to 0..24.
+    uint64_t game_phase : 8;
     Square white_king_square : 6;
     Square black_king_square : 6;
     EnPassantRights en_passant_square : 7;

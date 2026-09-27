@@ -10,8 +10,8 @@
 
 #include "Default_positions.h"
 #include "perft.h"
+#include "perft_tests.h"
 #include "position.h"
-#include "zobrist.h"
 
 namespace {
 constexpr std::uint64_t NODE_LIMIT = 200'000'000ULL;
@@ -36,9 +36,7 @@ std::string perft_position_key(std::string_view fen) {
 }
 }
 
-int main() {
-    Zobrist::initialize_keys();
-
+int run_perft_tests() {
     const std::array<std::reference_wrapper<const std::vector<DefaultPosition>>, 4>
         position_groups = {
             std::cref(tactical_defaults),

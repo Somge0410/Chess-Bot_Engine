@@ -24,6 +24,6 @@ constexpr int phase_weight(PieceType piece_type) noexcept {
 	case PieceType::None:
 		return PHASE_WEIGHTS[6];
 	default:
-		break;
+		return 0;
 	}
 }

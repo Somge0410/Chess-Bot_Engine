@@ -1,13 +1,32 @@
 ﻿#pragma once
 #include "types.h"
+#include <algorithm>
 #include <string_view>
 #include <vector>
+#include "phase.h"
 #include "state.h"
 #include "repetition.h"
 #include "Move.h"
 struct AttackerInfo {
 	int count{};
 	Square first_attacker_square{ NO_SQUARE };
+};
+struct RegressionTestState {
+	uint64_t zobrist;
+	uint64_t pawn_key;
+	int game_phase;
+	EvaluationResult material_score;
+	EvaluationResult positional_score;
+	Bitboard checkers;
+
+	bool operator==(const RegressionTestState& other) const {
+		return zobrist == other.zobrist &&
+			   pawn_key == other.pawn_key &&
+			   game_phase == other.game_phase &&
+			   material_score == other.material_score &&
+			   positional_score == other.positional_score &&
+			   checkers == other.checkers;
+	}
 };
 class Position {
 public:
@@ -71,6 +90,9 @@ public:
 		return positional_score;
 	}
 	int get_game_phase() const {
+		return std::clamp(game_phase, 0, MAX_GAME_PHASE);
+	}
+	int get_raw_game_phase() const {
 		return game_phase;
 	}
 	Square get_king_square(Color color) const {
@@ -107,17 +129,32 @@ public:
 	AttackerInfo attackers_more_than(const Square square, const Color attacker_color, const int bound = 2) const;
 	bool has_enough_material_for_nmp() const;
 	//other
+	RegressionTestState get_regression_test_state() const {
+		return RegressionTestState{
+			zobrist_hash,
+			pawn_hash,
+			game_phase,
+			material_score,
+			positional_score,
+			checkers,
+		};
+	}
+	RegressionTestState calculate_regression_test_state() const {
+		return RegressionTestState{
+			calculate_zobrist_hash(),
+			calculate_pawn_hash(),
+			calculate_game_phase(),
+			calculate_material_score(),
+			calculate_positional_score(),
+			calculate_checkers(),
+		};
+	}
+
 
 private:
 	void rebuild_derived_state();
 	void rebuild_occupancy();
 	void find_king_squares();
-	int calculate_game_phase() const noexcept;
-	std::uint64_t calculate_zobrist_hash() const noexcept;
-	std::uint64_t calculate_pawn_hash() const noexcept;
-	EvaluationResult calculate_material_score() const noexcept;
-	EvaluationResult calculate_positional_score() const noexcept;
-	void calculate_checkers() noexcept;
 	void push_current_state_to_history();
 	void update_material_score(const Move& move);
 	void update_positional_score(const Move& move);
@@ -133,6 +170,13 @@ private:
 	void update_checkers(const Move& move);
 	void recover_position_state(const StateInfo& previous_state);
 	bool is_square_attacked_by_pawn(Square square, Color attacker_color) const;
+
+	int calculate_game_phase() const noexcept;
+	std::uint64_t calculate_zobrist_hash() const noexcept;
+	std::uint64_t calculate_pawn_hash() const noexcept;
+	EvaluationResult calculate_material_score() const noexcept;
+	EvaluationResult calculate_positional_score() const noexcept;
+	Bitboard calculate_checkers() const noexcept;
 
 	PieceBoards pieces{};
 	ColorBoards color_pieces{};

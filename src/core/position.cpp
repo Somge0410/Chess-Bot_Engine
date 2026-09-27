@@ -30,7 +30,7 @@ void Position::rebuild_derived_state() {
 	pawn_hash = calculate_pawn_hash();
 	material_score = calculate_material_score();
 	positional_score = calculate_positional_score();
-    calculate_checkers();
+    checkers=calculate_checkers();
     history.clear();
 	history.reserve(256);
     repetition_tracker.clear();
@@ -47,7 +47,7 @@ int Position::calculate_game_phase() const noexcept
             pieces(Color::Black, piece)
         ) * phase_weight(piece);
 	}
-	return std::min(phase, MAX_GAME_PHASE);
+	return phase;
 }
 std::uint64_t Position::calculate_zobrist_hash() const noexcept
 {
@@ -96,8 +96,8 @@ std::uint64_t Position::calculate_pawn_hash() const noexcept {
     }
     return pawn_key;
 }
-void Position::calculate_checkers() noexcept {
-    checkers = get_square_attackers(
+Bitboard Position::calculate_checkers() const noexcept {
+    return get_square_attackers(
         get_king_square(side_to_move), flip_color(side_to_move));
 }
 void Position::rebuild_occupancy() {

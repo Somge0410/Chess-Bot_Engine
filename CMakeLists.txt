@@ -64,28 +64,45 @@ target_include_directories(Chess-Bot_Engine PRIVATE
 )
 
 if(BUILD_TESTING)
+    # Keep the historical target name so existing Visual Studio/CMake launch
+    # configurations continue to work. Its main is regression.cpp, so this
+    # executable now runs every regression suite, not only perft.
     add_executable(Chess-Bot_PerftTests
+        src/tests/regression.cpp
         src/tests/perft_tests.cpp
+        src/tests/make_undo_test.cpp
         src/core/fen.cpp
+        src/core/notation_utils.cpp
         src/core/position.cpp
         src/core/zobrist.cpp
+        src/evaluation/evaluation.cpp
         src/evaluation/weights.cpp
         src/movegen/MoveGenerator.cpp
+        src/search/engine.cpp
+        src/search/move_ordering.cpp
+        src/search/quiescence.cpp
+        src/search/search.cpp
+        src/search/search_diagnostics.cpp
+        src/search/thread_pool.cpp
+        src/search/time_manager.cpp
+        src/search/transposition_table.cpp
         src/tools/perft.cpp
     )
 
     target_include_directories(Chess-Bot_PerftTests PRIVATE
+        src/tests
         src/core
         src/evaluation
         src/movegen
+        src/search
         src/tools
         src/uci
         src/generated
     )
 
-    add_test(NAME perft_regression COMMAND Chess-Bot_PerftTests)
-    set_tests_properties(perft_regression PROPERTIES
-        LABELS "perft;slow"
+    add_test(NAME regression COMMAND Chess-Bot_PerftTests)
+    set_tests_properties(regression PROPERTIES
+        LABELS "regression;perft;make-undo;self-play;slow"
         RUN_SERIAL TRUE
     )
 endif()
