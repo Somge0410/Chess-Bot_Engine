@@ -15,6 +15,7 @@
 #include "uci_helpers.h"  // move_to_uci, parse_uci_move
 #include "uci.h"
 #include "search_parameters.h"
+#include "perft.h"
 
 #ifndef GIT_COMMIT
 #define GIT_COMMIT "unknown"

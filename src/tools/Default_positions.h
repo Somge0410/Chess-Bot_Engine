@@ -12,6 +12,7 @@ struct DefaultPosition {
     std::string_view best_move;
 };
 
+
 inline const std::vector<DefaultPosition> tactical_defaults = {
     {"Kf7", "8/4k2r/3P3q/1pN2pp1/2R1p3/P3P1P1/1Q3PK1/8 b - - 0 42", {6, 226, 5402, 170492, 4476114, 141973960}, 404, "e7f7"},
     {"Qe1", "q2r2r1/1k2b3/4P2p/1pp5/3p1B1P/1PQP2P1/2P2P2/R5K1 w - - 0 34", {37, 1279, 43442, 1497292, 49564117, 1698802420}, 521, "c3e1"},
@@ -101,3 +102,24 @@ inline constexpr std::vector<DefaultPosition> full_bench_defaults = {
     {"Bench44", "8/8/3P3k/8/1p6/8/1P6/1K3n2 b - - 0 1", {10, 54, 617, 3436, 39370, 274828}, -39, "f1d2"},
     {"Bench45", "8/R7/2q5/8/6k1/8/1P5p/K6R w - - 0 124", {24, 719, 15219, 417612, 9120434, 243688117}, 0, "h1h2"},
 };
+static void print_default_positions(const std::vector<DefaultPosition>& DEFAULT_POSITIONS) {
+    std::cout << "info string presets";
+    for (const auto& preset : DEFAULT_POSITIONS) {
+        std::cout << ' ' << preset.name;
+    }
+    std::cout << "\n";
+    std::cout.flush();
+}
+inline constexpr std::vector<DefaultPosition> get_defaults(std::string name="") {
+    if(name == "tactical") {
+        return tactical_defaults;
+    } else if(name == "perft") {
+        return perft_defaults;
+    } else if(name == "bench") {
+        return bench_defaults;
+    } else if(name == "full_bench") {
+        return full_bench_defaults;
+    } else {
+        return bench_defaults;
+	}
+}
