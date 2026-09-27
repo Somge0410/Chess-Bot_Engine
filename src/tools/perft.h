@@ -1,15 +1,9 @@
-﻿#pragma once
-#include <string_view>
-#include <vector>
+#pragma once
+
 #include <cstdint>
-#include "fen.h"
-#include "Default_positions.h"
 
+class Position;
 
-// 64 is the maximum depth perft will ever reach
-MoveList perft_lists[64];
-
-// Add a 'ply' parameter to track how deep in the tree we are
-static uint64_t perft(Board& board, int depth, int ply = 0);
-
-static void run_perft(const Board& root_board, int depth);
+[[nodiscard]] std::uint64_t perft(Position& position, int depth);
+void run_perft(const Position& root_position, int depth);
+void print_legal_moves(const Position& position);

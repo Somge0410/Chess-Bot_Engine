@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "Default_positions.h"
+
 #if ENABLE_QSEARCH_DIAGNOSTICS
 struct SearchDiagnostics;
 void print_search_diagnostics_summary(const SearchDiagnostics& diagnostics,
@@ -13,7 +15,7 @@ void print_search_diagnostics_summary(const SearchDiagnostics& diagnostics,
 #endif
 
 int run_benchmark(
-    const std::vector<std::pair<std::string, std::string>>& positions,
+    const std::vector<DefaultPosition>& positions,
     bool tt_bench = false,
     int depth = 12,
     std::size_t tt_size_mb = 128);

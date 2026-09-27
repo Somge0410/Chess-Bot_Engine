@@ -23,6 +23,7 @@ Move Engine::search(const Position& position, const SearchLimits& limits) {
 
     nodes.store(0, std::memory_order_relaxed);
     qnodes.store(0, std::memory_order_relaxed);
+    last_search_score.store(0, std::memory_order_relaxed);
 #if ENABLE_QSEARCH_DIAGNOSTICS
     qply_sum.store(0, std::memory_order_relaxed);
     quiet_checks_searched.store(0, std::memory_order_relaxed);
@@ -52,9 +53,13 @@ Move Engine::search(const Position& position, const SearchLimits& limits) {
 	stop_search.store(false, std::memory_order_relaxed);
 
     Position pos = position;
-	MoveList root_moves;
+    MoveList root_moves;
 	MoveGenerator::generate_moves(pos, root_moves);
-    if (root_moves.empty()) return Move();
+    if (root_moves.empty()) {
+        last_search_score.store(pos.in_check() ? -MATE_SCORE : 0,
+            std::memory_order_relaxed);
+        return Move();
+    }
     if (root_moves.size() == 1) {
         std::cout << "info depth " << 0;
 
@@ -75,6 +80,7 @@ Move Engine::search(const Position& position, const SearchLimits& limits) {
     thread_pool.execute(position, limits, use_threads, tc,
         best_move_so_far, best_score_so_far, &tls_data);
     tls_data.flush_counters(this, true);
+	last_search_score.store(best_score_so_far, std::memory_order_relaxed);
 	return best_move_so_far;
 }
 

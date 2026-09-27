@@ -101,3 +101,5 @@ struct ThreadLocalData {
     uint32_t nodes_until_time_check{ TIME_CHECK_INTERVAL };
     void flush_counters(Engine* engine, bool force = false);
 };
+
+extern thread_local ThreadLocalData tls_data;

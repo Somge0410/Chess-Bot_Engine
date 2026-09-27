@@ -32,6 +32,7 @@ set(ENGINE_SOURCES
     src/search/time_manager.cpp
     src/search/transposition_table.cpp
     src/tools/benchmark.cpp
+    src/tools/perft.cpp
     src/uci/uci.cpp
 )
 

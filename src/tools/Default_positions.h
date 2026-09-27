@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <cstdint>
+#include <iostream>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -25,7 +27,7 @@ inline const std::vector<DefaultPosition> tactical_defaults = {
     {"a4", "8/8/6k1/ppppp1P1/5pK1/P1PP1P2/1P6/8 b - - 0 41", {8, 68, 669, 6180, 62924, 605808}, 564, "a5a4"},
     {"g5", "rnb1k2r/pp4p1/8/2bQPp2/5q1p/1PN4K/PB1PBPP1/R4R2 b kq - 3 21", {42, 1813, 62788, 2645572, 91670743, 3804120340}, 377, "g7g5"},
     };
-inline constexpr std::vector<DefaultPosition> perft_defaults = {
+inline const std::vector<DefaultPosition> perft_defaults = {
     {"Bench1", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", {20, 400, 8902, 197281, 4865609, 119060324}, 35, "e2e4"},
     {"kiwipete", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", {48, 2039, 97862, 4085603, 193690690, 8031647685}, -199, "d5e6"},
     {"perft2", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", {14, 191, 2812, 43238, 674624, 11030083}, 0, "b4f4"},
@@ -34,7 +36,7 @@ inline constexpr std::vector<DefaultPosition> perft_defaults = {
     {"perft5", "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", {46, 2079, 89890, 3894594, 164075551, 6923051137}, 217, "c3d5"},
 
 };
-inline constexpr std::vector<DefaultPosition> bench_defaults = {
+inline const std::vector<DefaultPosition> bench_defaults = {
     {"Kf7", "8/4k2r/3P3q/1pN2pp1/2R1p3/P3P1P1/1Q3PK1/8 b - - 0 42", {6, 226, 5402, 170492, 4476114, 141973960}, 404, "e7f7"},
     {"Qe1", "q2r2r1/1k2b3/4P2p/1pp5/3p1B1P/1PQP2P1/2P2P2/R5K1 w - - 0 34", {37, 1279, 43442, 1497292, 49564117, 1698802420}, 521, "c3e1"},
     {"h6", "7b/8/3k4/4pK1P/8/6B1/8/8 w - - 3 50", {11, 91, 1099, 11068, 139532, 1513057}, 685, "h5h6"},
@@ -51,7 +53,7 @@ inline constexpr std::vector<DefaultPosition> bench_defaults = {
     {"perft5", "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", {46, 2079, 89890, 3894594, 164075551, 6923051137}, 217, "c3d5"},
 };
 
-inline constexpr std::vector<DefaultPosition> full_bench_defaults = {
+inline const std::vector<DefaultPosition> full_bench_defaults = {
     {"Bench1", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", {20, 400, 8902, 197281, 4865609, 119060324}, 35, "e2e4"},
     {"Bench2", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 10", {48, 2039, 97862, 4085603, 193690690, 8031647685}, -199, "d5e6"},
     {"Bench3", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 11", {14, 191, 2812, 43238, 674624, 11030083}, 0, "b4f4"},
@@ -102,24 +104,46 @@ inline constexpr std::vector<DefaultPosition> full_bench_defaults = {
     {"Bench44", "8/8/3P3k/8/1p6/8/1P6/1K3n2 b - - 0 1", {10, 54, 617, 3436, 39370, 274828}, -39, "f1d2"},
     {"Bench45", "8/R7/2q5/8/6k1/8/1P5p/K6R w - - 0 124", {24, 719, 15219, 417612, 9120434, 243688117}, 0, "h1h2"},
 };
-static void print_default_positions(const std::vector<DefaultPosition>& DEFAULT_POSITIONS) {
-    std::cout << "info string presets";
-    for (const auto& preset : DEFAULT_POSITIONS) {
-        std::cout << ' ' << preset.name;
-    }
-    std::cout << "\n";
-    std::cout.flush();
-}
-inline constexpr std::vector<DefaultPosition> get_defaults(std::string name="") {
-    if(name == "tactical") {
+inline const std::vector<DefaultPosition>& get_defaults(std::string_view group = {}) {
+    if (group == "tactical") {
         return tactical_defaults;
-    } else if(name == "perft") {
+    }
+    if (group == "perft") {
         return perft_defaults;
-    } else if(name == "bench") {
-        return bench_defaults;
-    } else if(name == "full_bench") {
+    }
+    if (group == "full_bench") {
         return full_bench_defaults;
-    } else {
-        return bench_defaults;
-	}
+    }
+    return bench_defaults;
+}
+
+inline const DefaultPosition* find_default_position(std::string_view name) {
+    for (const std::vector<DefaultPosition>* group : {&tactical_defaults, &perft_defaults}) {
+        for (const DefaultPosition& position : *group) {
+            if (position.name == name) {
+                return &position;
+            }
+        }
+    }
+    return nullptr;
+}
+
+inline bool try_get_default_position(std::string_view name, std::string& out_fen) {
+    const DefaultPosition* position = find_default_position(name);
+    if (position == nullptr) {
+        return false;
+    }
+    out_fen = position->fen;
+    return true;
+}
+
+inline void print_default_positions() {
+    std::cout << "info string presets";
+    for (const std::vector<DefaultPosition>* group : {&tactical_defaults, &perft_defaults}) {
+        for (const DefaultPosition& preset : *group) {
+            std::cout << ' ' << preset.name;
+        }
+    }
+    std::cout << '\n';
+    std::cout.flush();
 }

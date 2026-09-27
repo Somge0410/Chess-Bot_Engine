@@ -5,6 +5,7 @@
 
 #include "Squares.h"
 #include "benchmark.h"
+#include "Default_positions.h"
 #include "evaluation.h"
 #include "see.h"
 #include "uci.h"
@@ -42,13 +43,13 @@ int main(int argc, char* argv[]) {
     Zobrist::initialize_keys();
 
     if (argc >= 2 && std::string(argv[1]) == "bench") {
-        return run_benchmark(get_bench_positions());
+        return run_benchmark(get_defaults("bench"));
     }
     if (argc >= 2 && std::string(argv[1]) == "bench_full") {
-        return run_benchmark(get_full_bench_positions());
+        return run_benchmark(get_defaults("full_bench"));
     }
     if (argc >= 2 && std::string(argv[1]) == "bench_tt") {
-        return run_benchmark(get_full_bench_positions(), true);
+        return run_benchmark(get_defaults("full_bench"), true);
     }
     if (argc >= 2 && std::string(argv[1]) == "bench_game") {
         return run_benchmark_game();

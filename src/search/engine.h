@@ -29,6 +29,9 @@ public:
     void flush_node_counters();
     uint64_t get_total_nodes();
     uint64_t get_qnodes();
+    int get_last_search_score() const {
+        return last_search_score.load(std::memory_order_relaxed);
+    }
 #if ENABLE_QSEARCH_DIAGNOSTICS
     SearchDiagnostics get_search_diagnostics(bool include_tt_occupancy = true);
 #endif
@@ -73,6 +76,7 @@ private:
     ThreadLocalData tls_data;
     std::atomic<uint64_t> nodes{ 0 };
     std::atomic<uint64_t> qnodes{ 0 };
+    std::atomic<int> last_search_score{ 0 };
 #if ENABLE_QSEARCH_DIAGNOSTICS
     std::atomic<uint64_t> qply_sum{ 0 };
     std::atomic<uint64_t> quiet_checks_searched{ 0 };

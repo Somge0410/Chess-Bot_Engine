@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
@@ -415,10 +416,11 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
 #endif
 
 int run_benchmark(
-    const std::vector<std::pair<std::string, std::string>>& positions,
+    const std::vector<DefaultPosition>& positions,
     bool tt_bench,
     int depth,
     std::size_t tt_size_mb) {
+    constexpr int REFERENCE_MATE_THRESHOLD = 29000;
     SearchLimits limits;
     limits.depth = depth;
 
@@ -428,6 +430,14 @@ int run_benchmark(
 #endif
     uint64_t total_qnodes = 0;
     uint64_t total_time_ms = 0;
+    double squared_error_sum = 0.0;
+    double absolute_error_sum = 0.0;
+    double cp_squared_error_sum = 0.0;
+    double cp_absolute_error_sum = 0.0;
+    std::size_t evaluation_samples = 0;
+    std::size_t cp_evaluation_samples = 0;
+    std::size_t best_move_samples = 0;
+    std::size_t best_move_matches = 0;
 
     std::cout << "info string bench start positions " << positions.size()
               << " depth " << depth
@@ -439,8 +449,8 @@ int run_benchmark(
         persistent_engine = std::make_unique<Engine>(tt_size_mb);
     }
 
-    for (const auto& [name, fen] : positions) {
-        Position pos(fen);
+    for (const DefaultPosition& reference : positions) {
+        Position pos(reference.fen);
         std::unique_ptr<Engine> isolated_engine;
         Engine* engine = persistent_engine.get();
         if (!engine) {
@@ -451,6 +461,30 @@ int run_benchmark(
         const auto start = std::chrono::steady_clock::now();
         const Move best = engine->search(pos, limits);
         const auto end = std::chrono::steady_clock::now();
+        const int actual_score = engine->get_last_search_score();
+        const int score_error = actual_score - reference.eval_score;
+        const double absolute_error = std::abs(static_cast<double>(score_error));
+        const bool has_best_move = best.from_square != NO_SQUARE
+            && best.to_square != NO_SQUARE;
+        const std::string best_move = has_best_move ? move_to_uci(best) : "0000";
+        const bool has_reference_move = !reference.best_move.empty();
+        const bool best_move_matches_reference = has_reference_move
+            && best_move == reference.best_move;
+
+        squared_error_sum += static_cast<double>(score_error) * score_error;
+        absolute_error_sum += absolute_error;
+        ++evaluation_samples;
+        if (std::abs(reference.eval_score) < REFERENCE_MATE_THRESHOLD) {
+            cp_squared_error_sum += static_cast<double>(score_error) * score_error;
+            cp_absolute_error_sum += absolute_error;
+            ++cp_evaluation_samples;
+        }
+        if (has_reference_move) {
+            ++best_move_samples;
+            if (best_move_matches_reference) {
+                ++best_move_matches;
+            }
+        }
 
         const uint64_t elapsed_ms = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
@@ -481,8 +515,15 @@ int run_benchmark(
             : 0.0;
 #endif
 
-        std::cout << "info string bench pos " << name
-                  << " bestmove " << move_to_uci(best)
+        std::cout << "info string bench pos " << reference.name
+                  << " bestmove " << best_move
+                  << " expectedbest "
+                  << (has_reference_move ? reference.best_move : "none")
+                  << " bestmatch "
+                  << (has_reference_move ? (best_move_matches_reference ? "yes" : "no") : "n/a")
+                  << " eval " << actual_score
+                  << " expectedeval " << reference.eval_score
+                  << " evalerror " << score_error
                   << " time " << elapsed_ms
                   << " nodes " << nodes;
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -539,11 +580,36 @@ int run_benchmark(
     const uint64_t nps = total_time_ms > 0
         ? (total_nodes * 1000ULL) / total_time_ms
         : 0;
+    const double rmse = evaluation_samples > 0
+        ? std::sqrt(squared_error_sum / static_cast<double>(evaluation_samples))
+        : 0.0;
+    const double mae = evaluation_samples > 0
+        ? absolute_error_sum / static_cast<double>(evaluation_samples)
+        : 0.0;
+    const double cp_rmse = cp_evaluation_samples > 0
+        ? std::sqrt(cp_squared_error_sum / static_cast<double>(cp_evaluation_samples))
+        : 0.0;
+    const double cp_mae = cp_evaluation_samples > 0
+        ? cp_absolute_error_sum / static_cast<double>(cp_evaluation_samples)
+        : 0.0;
+    const double best_move_accuracy = best_move_samples > 0
+        ? 100.0 * static_cast<double>(best_move_matches)
+            / static_cast<double>(best_move_samples)
+        : 0.0;
     std::cout << "info string bench total positions " << positions.size()
               << " depth " << depth
               << " time " << total_time_ms
               << " nodes " << total_nodes
               << " nps " << nps << "\n";
+    std::cout << std::fixed << std::setprecision(2)
+              << "info string bench accuracy evalsamples " << evaluation_samples
+              << " rmse " << rmse
+              << " mae " << mae
+              << " cpsamples " << cp_evaluation_samples
+              << " cprmse " << cp_rmse
+              << " cpmae " << cp_mae
+              << " bestmoves " << best_move_matches << '/' << best_move_samples
+              << " bestmoveaccuracy " << best_move_accuracy << "%\n";
     std::cout << "Nodes searched: " << total_nodes << "\n";
     std::cout << "Nodes/second: " << nps << '\n';
 #if ENABLE_QSEARCH_DIAGNOSTICS
