@@ -422,3 +422,4 @@ out/
 test_engine
 Chess-Bot_Engine
 *.exey
+/on = Get-Content -Raw CMakeSettings.json  ConvertFrom-Json; $json.configurations  Select-Object -ExpandProperty name
