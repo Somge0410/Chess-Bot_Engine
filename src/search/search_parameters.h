@@ -10,8 +10,8 @@ inline int FUTILITY_MARGIN_D2 = 481;
 inline int MAX_QUIET_PLY = 7;
 
 // --- NEU: Late Move Reduction (LMR) ---
-inline int LMR_MIN_DEPTH = 1;
-inline int LMR_FIRST_REDUCED_MOVE = 3;
+inline int LMR_MIN_DEPTH = 2;
+inline int LMR_FIRST_REDUCED_MOVE = 5;
 inline int LMR_REDUCTION_AMOUNT = 2;
 
 // --- NEU: Null Move Pruning (NMP) ---
@@ -67,10 +67,10 @@ inline double MAX_MOVE_COUNT_REDUCTION = 8.0;
 
 
 inline double TIME_MARGIN = 0.4083;
-inline double LOG_BASE = 0.209;
-inline double LOG_DIV = 3.36;
-inline double Q_LOG_BASE = 1.37;
-inline double Q_LOG_DIV = 3.356;
+inline double LOG_BASE = 0.299;
+inline double LOG_DIV = 3.837;
+inline double Q_LOG_BASE = 1.296;
+inline double Q_LOG_DIV = 3.2079;
 
 // --- NEU: Root Move Perturbation (Multi-Threading) ---
 inline int ROOT_PERTURBATION_MIN_HELPERS = 2; 
