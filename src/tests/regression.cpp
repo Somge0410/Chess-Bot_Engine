@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 
 #include "make_undo_test.h"
 #include "perft_tests.h"
@@ -28,3 +28,4 @@ int main() {
     std::cout << "All regression suites passed\n";
     return 0;
 }
+ 
