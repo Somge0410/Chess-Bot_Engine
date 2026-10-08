@@ -107,7 +107,7 @@ SearchResult Engine::negamax(Position& pos, int depth, int alpha, int beta, int 
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
 #else
-    if (pos.is_fifty_move_rule_draw() || pos.is_repetition_draw(3)) {
+    if (pos.is_fifty_move_rule_draw() || pos.is_repetition_draw(2)) {
         return { .score = 0,.best_move = Move(),.is_tempered = true };
     }
 #endif
