@@ -71,6 +71,7 @@ if(BUILD_TESTING)
         src/tests/regression.cpp
         src/tests/perft_tests.cpp
         src/tests/make_undo_test.cpp
+        src/tests/tactical_tests.cpp
         src/core/fen.cpp
         src/core/notation_utils.cpp
         src/core/position.cpp
@@ -102,7 +103,7 @@ if(BUILD_TESTING)
 
     add_test(NAME regression COMMAND Chess-Bot_PerftTests)
     set_tests_properties(regression PROPERTIES
-        LABELS "regression;perft;make-undo;self-play;slow"
+        LABELS "regression;perft;make-undo;tactical;self-play;slow"
         RUN_SERIAL TRUE
     )
 endif()

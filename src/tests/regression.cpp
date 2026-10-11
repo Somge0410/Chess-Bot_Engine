@@ -2,6 +2,7 @@
 
 #include "make_undo_test.h"
 #include "perft_tests.h"
+#include "tactical_tests.h"
 #include "zobrist.h"
 
 int main() {
@@ -16,6 +17,11 @@ int main() {
 
     std::cout << "=== Perft regression ===\n";
     if (run_perft_tests() != 0) {
+        ++failed_suites;
+    }
+
+    std::cout << "=== Tactical search regression ===\n";
+    if (run_tactical_tests() != 0) {
         ++failed_suites;
     }
 
