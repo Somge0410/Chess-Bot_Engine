@@ -30,7 +30,7 @@ inline int COUNTERMOVE_STAGE = 3;
 inline int QUIET_STAGE = 2;
 inline int LOSING_CAPTURE_STAGE = 1;
  
-inline int CAPTURE_SCORE_TIEBREAK_DIVISOR = 16;
+inline int CAPTURE_SCORE_TIEBREAK_DIVISOR = 14;
 
 // --- NEU: History Heuristic ---
 inline int HISTORY_BONUS_MULTIPLIER = 8;  // bonus = depth * depth * multiplier
@@ -80,9 +80,9 @@ inline int ROOT_PERTURBATION_MAX_BAND_SIZE = 16;
 inline int REVERSE_FUTILITY_MAX_DEPTH = 7;
 inline int REVERSE_FUTILITY_MARGIN = 138;
 
-inline int PAWN_PUSH_SCORE1 = 40;
+inline int PAWN_PUSH_SCORE1 = 52;
 inline int PAWN_PUSH_SCORE2 = 20;
-inline int PAWN_PUSH_SCORE3 = 50;
-inline int PAWN_PUSH_SCORE4 = 160;
-inline int PAWN_PUSH_SCORE5 = 25;
-inline int PAWN_PUSH_SCORE6 = 60;
+inline int PAWN_PUSH_SCORE3 = 40;
+inline int PAWN_PUSH_SCORE4 = 156;
+inline int PAWN_PUSH_SCORE5 = 10;
+inline int PAWN_PUSH_SCORE6 = 65;
