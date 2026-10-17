@@ -83,3 +83,4 @@ inline int get_promotion_square(int square, Color color) {
 
 constexpr Bitboard NOT_FILE_A = 0xfefefefefefefefe;
 constexpr Bitboard NOT_FILE_H = 0x7f7f7f7f7f7f7f7f;
+

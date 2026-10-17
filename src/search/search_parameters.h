@@ -4,6 +4,11 @@ inline constexpr int MATE_SCORE = 32000;
 inline constexpr int MAX_PLY = 128;
 inline constexpr int MATE_THRESHOLD = MATE_SCORE - MAX_PLY;
 
+// Pawn-cache entries per worker: 2^PAWN_TABLE_SIZE_LOG2.
+inline constexpr int PAWN_TABLE_MIN_SIZE_LOG2 = 2;
+inline constexpr int PAWN_TABLE_MAX_SIZE_LOG2 = 20;
+inline int PAWN_TABLE_SIZE_LOG2 = 12;
+
 // For Pruning and search
 inline int FUTILITY_MARGIN_D1 = 231;
 inline int FUTILITY_MARGIN_D2 = 481;

@@ -40,6 +40,7 @@ static void print_search_diagnostics(Engine& engine) {
 #endif
 
 #define SPSA_INT_PARAMS(X) \
+    X(PAWN_TABLE_SIZE_LOG2, PAWN_TABLE_MIN_SIZE_LOG2, PAWN_TABLE_MAX_SIZE_LOG2) \
     X(FUTILITY_MARGIN_D1, 0, 10000) \
     X(FUTILITY_MARGIN_D2, 0, 10000) \
     X(MAX_QUIET_PLY, 1, 64) \

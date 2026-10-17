@@ -3,8 +3,10 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <cassert>
 
 #include "Move.h"
+#include "pawn_table.h"
 #include "search_diagnostics.h"
 #include "search_parameters.h"
 
@@ -52,6 +54,9 @@ struct ThreadLocalData {
         for (TTDiagnostics& diagnostics : tt_diagnostics) {
             diagnostics = {};
         }
+        if (pawn_table) {
+            pawn_table->reset_diagnostics();
+        }
 #endif
         nodes_until_time_check = TIME_CHECK_INTERVAL;
     }
@@ -67,6 +72,18 @@ struct ThreadLocalData {
         nodes_until_time_check = TIME_CHECK_INTERVAL;
         return true;
     }
+
+    PawnTable& get_pawn_table() {
+        assert(pawn_table != nullptr);
+        return *pawn_table;
+    }
+
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    void publish_pawn_table_diagnostics(Engine* engine) const;
+#endif
+
+    // Owned by Engine for the master, or by the helper's worker_loop scope.
+    PawnTable* pawn_table{};
 
     MoveList move_lists[MAX_PLY];
     MoveList qmove_lists[QSEARCH_PLY_CAPACITY];

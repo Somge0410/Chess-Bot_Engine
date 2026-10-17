@@ -17,6 +17,9 @@ Engine::Engine(size_t tt_size_mb)
 Move Engine::search(const Position& position, const SearchLimits& limits) {
     auto tc = decide_time_control(position, limits);
     initialize_lmr_tables();
+    if (pawn_table) {
+        pawn_table->resize(PAWN_TABLE_SIZE_LOG2);
+    }
     tt.new_search();
     int use_threads = thread_pool.thread_count();
     if (tc.time_ms < 20) use_threads = 1;
@@ -25,6 +28,10 @@ Move Engine::search(const Position& position, const SearchLimits& limits) {
     qnodes.store(0, std::memory_order_relaxed);
     last_search_score.store(0, std::memory_order_relaxed);
 #if ENABLE_QSEARCH_DIAGNOSTICS
+    {
+        std::lock_guard<std::mutex> lock(pawn_table_diagnostics_mutex);
+        pawn_table_diagnostics = {};
+    }
     qply_sum.store(0, std::memory_order_relaxed);
     quiet_checks_searched.store(0, std::memory_order_relaxed);
     qnodes_in_check.store(0, std::memory_order_relaxed);
@@ -56,11 +63,17 @@ Move Engine::search(const Position& position, const SearchLimits& limits) {
     MoveList root_moves;
 	MoveGenerator::generate_moves(pos, root_moves);
     if (root_moves.empty()) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        tls_data.publish_pawn_table_diagnostics(this);
+#endif
         last_search_score.store(pos.in_check() ? -MATE_SCORE : 0,
             std::memory_order_relaxed);
         return Move();
     }
     if (root_moves.size() == 1) {
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        tls_data.publish_pawn_table_diagnostics(this);
+#endif
         std::cout << "info depth " << 0;
 
         std::cout << " score cp " << 0;
@@ -72,6 +85,10 @@ Move Engine::search(const Position& position, const SearchLimits& limits) {
         std::cout.flush();
 		return root_moves[0];
     }
+    if (!pawn_table) {
+        pawn_table = std::make_unique<PawnTable>();
+        tls_data.pawn_table = pawn_table.get();
+    }
 	sort_moves(root_moves, pos, 0, Move(), false, &tls_data);
     Move best_move_so_far = root_moves[0];
 	int best_score_so_far = -MATE_SCORE;
@@ -80,6 +97,9 @@ Move Engine::search(const Position& position, const SearchLimits& limits) {
     thread_pool.execute(position, limits, use_threads, tc,
         best_move_so_far, best_score_so_far, &tls_data);
     tls_data.flush_counters(this, true);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+    tls_data.publish_pawn_table_diagnostics(this);
+#endif
 	last_search_score.store(best_score_so_far, std::memory_order_relaxed);
 	return best_move_so_far;
 }
@@ -121,6 +141,10 @@ uint64_t Engine::get_qnodes() {
 SearchDiagnostics Engine::get_search_diagnostics(bool include_tt_occupancy) {
     flush_node_counters();
     SearchDiagnostics diagnostics{};
+    {
+        std::lock_guard<std::mutex> lock(pawn_table_diagnostics_mutex);
+        diagnostics.pawn_table = pawn_table_diagnostics;
+    }
     diagnostics.main_nodes = nodes.load(std::memory_order_relaxed);
     diagnostics.qnodes = qnodes.load(std::memory_order_relaxed);
     diagnostics.qply_sum = qply_sum.load(std::memory_order_relaxed);

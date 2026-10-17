@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include "pawn_table.h"
 
 #ifndef ENABLE_QSEARCH_DIAGNOSTICS
 #define ENABLE_QSEARCH_DIAGNOSTICS 0
@@ -211,6 +212,7 @@ struct AtomicTTDiagnostics {
 };
 
 struct SearchDiagnostics {
+    PawnTableDiagnostics pawn_table{};
     uint64_t main_nodes = 0;
     uint64_t qnodes = 0;
     uint64_t qply_sum = 0;
