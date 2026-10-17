@@ -143,3 +143,27 @@ CSV numeric formatting follows the Windows locale, recorded as `CsvCulture` in
 
 Keep other CPU-heavy work stopped during the sweep. A long full sweep can take
 considerable time; the shorter example above only verifies the script.
+
+## OpenBench builds on small hosts
+
+The OpenBench `makefile` defaults to one build job and builds only the
+`Chess-Bot_Engine` target. It explicitly disables regression-test targets,
+diagnostics, and the separate local SPSA-tuner entry point. Release optimization
+and LTO remain enabled; evaluation and search settings are unchanged.
+
+Use the ordinary OpenBench build command on a Raspberry Pi:
+
+```sh
+make EXE=MyEngine
+```
+
+Larger machines can explicitly request additional build jobs:
+
+```sh
+make BUILD_JOBS=2 EXE=MyEngine
+```
+
+OpenBench's `CC`, `CXX`, and `EXE` arguments are still supported. An outer
+`make -j` does not remove the explicit inner CMake job limit. These settings apply
+to future builds after deploying the updated source; they do not change a running
+build, cap total RAM use, or control OpenBench's separate Fastchess build process.
