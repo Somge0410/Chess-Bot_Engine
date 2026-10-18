@@ -49,7 +49,7 @@ else()
     list(APPEND ENGINE_SOURCES src/app/main.cpp)
 endif()
 
-add_executable(Chess-Bot_Engine ${ENGINE_SOURCES})
+add_executable(Chess-Bot_Engine ${ENGINE_SOURCES} "src/evaluation/eval_context.h" "src/evaluation/pawns.cpp" "src/evaluation/pawn_table.h" "src/evaluation/pawn_table.cpp" "src/evaluation/king_safety.cpp" "src/evaluation/pieces.cpp" "src/evaluation/trace.h" "src/evaluation/eval_internal.h")
 
 target_include_directories(Chess-Bot_Engine PRIVATE
     include
@@ -72,6 +72,7 @@ if(BUILD_TESTING)
         src/tests/perft_tests.cpp
         src/tests/make_undo_test.cpp
         src/tests/tactical_tests.cpp
+        src/tests/pawn_table_tests.cpp
         src/core/fen.cpp
         src/core/notation_utils.cpp
         src/core/position.cpp
@@ -88,7 +89,7 @@ if(BUILD_TESTING)
         src/search/time_manager.cpp
         src/search/transposition_table.cpp
         src/tools/perft.cpp
-    )
+     "src/evaluation/eval_context.h" "src/evaluation/pawns.cpp" "src/evaluation/pawn_table.h" "src/evaluation/pawn_table.cpp" "src/evaluation/king_safety.cpp" "src/evaluation/pieces.cpp" "src/evaluation/trace.h" "src/evaluation/eval_internal.h")
 
     target_include_directories(Chess-Bot_PerftTests PRIVATE
         src/tests
@@ -100,6 +101,13 @@ if(BUILD_TESTING)
         src/uci
         src/generated
     )
+
+    target_compile_definitions(Chess-Bot_PerftTests PRIVATE
+        ENABLE_QSEARCH_DIAGNOSTICS=$<BOOL:${ENABLE_QSEARCH_DIAGNOSTICS}>
+    )
+
+    add_test(NAME pawn-table COMMAND Chess-Bot_PerftTests pawn-table)
+    set_tests_properties(pawn-table PROPERTIES LABELS "regression;evaluation;pawn-table")
 
     add_test(NAME regression COMMAND Chess-Bot_PerftTests)
     set_tests_properties(regression PROPERTIES
