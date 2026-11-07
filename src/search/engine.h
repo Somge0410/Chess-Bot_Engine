@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cstdint>
 #include <limits>
+#include <memory>
+#include <mutex>
 #include <string>
 
 #include "position.h"
@@ -74,10 +76,13 @@ private:
     TranspositionTable tt;
     TimeManager time_manager;
     ThreadLocalData tls_data;
+    std::unique_ptr<PawnTable> pawn_table;
     std::atomic<uint64_t> nodes{ 0 };
     std::atomic<uint64_t> qnodes{ 0 };
     std::atomic<int> last_search_score{ 0 };
 #if ENABLE_QSEARCH_DIAGNOSTICS
+    mutable std::mutex pawn_table_diagnostics_mutex;
+    PawnTableDiagnostics pawn_table_diagnostics{};
     std::atomic<uint64_t> qply_sum{ 0 };
     std::atomic<uint64_t> quiet_checks_searched{ 0 };
     std::atomic<uint64_t> qnodes_in_check{ 0 };

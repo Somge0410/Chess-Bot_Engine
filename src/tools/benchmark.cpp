@@ -44,6 +44,19 @@ void print_diagnostic_row(const std::string& prefix, const std::string& label,
               << ": " << std::right << value << '\n';
 }
 
+void print_pawn_table_fields(const PawnTableDiagnostics& diagnostics) {
+    std::cout << " pawnprobes " << diagnostics.probes
+              << " pawnhits " << diagnostics.hits
+              << " pawnhitrate " << percentage(diagnostics.hits, diagnostics.probes)
+              << " pawnmisses " << diagnostics.misses
+              << " pawnstores " << diagnostics.stores
+              << " pawnreplacements " << diagnostics.replacements
+              << " pawnoccupied " << diagnostics.occupied_entries
+              << " pawncapacity " << diagnostics.capacity_entries
+              << " pawnfill " << percentage(diagnostics.occupied_entries,
+                    diagnostics.capacity_entries);
+}
+
 void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
     const TTDiagnostics& diagnostics) {
     print_diagnostic_section(prefix, diagnostic_text("TRANSPOSITION TABLE / ", mode_name));
@@ -105,7 +118,9 @@ void print_tt_diagnostics(const std::string& prefix, const char* mode_name,
     }
 }
 
-void accumulate_tt_snapshot(SearchDiagnostics& total, const SearchDiagnostics& snapshot) {
+void accumulate_table_snapshots(SearchDiagnostics& total, const SearchDiagnostics& snapshot) {
+    total.pawn_table.capacity_entries += snapshot.pawn_table.capacity_entries;
+    total.pawn_table.occupied_entries += snapshot.pawn_table.occupied_entries;
     total.tt_capacity_entries += snapshot.tt_capacity_entries;
     total.tt_occupied_entries += snapshot.tt_occupied_entries;
     total.tt_current_generation_entries += snapshot.tt_current_generation_entries;
@@ -116,6 +131,7 @@ void accumulate_tt_snapshot(SearchDiagnostics& total, const SearchDiagnostics& s
 
 void accumulate_search_diagnostics(SearchDiagnostics& total, const SearchDiagnostics& diagnostics,
     bool include_tt_snapshot) {
+    total.pawn_table.add(diagnostics.pawn_table, false);
     total.main_nodes += diagnostics.main_nodes;
     total.qnodes += diagnostics.qnodes;
     total.qply_sum += diagnostics.qply_sum;
@@ -138,7 +154,7 @@ void accumulate_search_diagnostics(SearchDiagnostics& total, const SearchDiagnos
         total.tt[i].add(diagnostics.tt[i]);
     }
     if (include_tt_snapshot) {
-        accumulate_tt_snapshot(total, diagnostics);
+        accumulate_table_snapshots(total, diagnostics);
     }
     for (std::size_t i = 0; i < SEARCH_DIAG_COUNTER_COUNT; ++i) {
         total.detail[i] += diagnostics.detail[i];
@@ -407,6 +423,25 @@ void print_search_diagnostics_summary(const SearchDiagnostics& d, const std::str
         diagnostic_text(d.tt_cluster_occupancy[0], " | ", d.tt_cluster_occupancy[1], " | ",
             d.tt_cluster_occupancy[2], " | ", d.tt_cluster_occupancy[3], " | ",
             d.tt_cluster_occupancy[4]));
+    print_diagnostic_section(p, "PAWN TABLE");
+    print_diagnostic_row(p, "Probes", diagnostic_text(d.pawn_table.probes));
+    print_diagnostic_row(p, "Successful probes",
+        diagnostic_text(d.pawn_table.hits, "  (",
+            percentage(d.pawn_table.hits, d.pawn_table.probes), "% of probes)"));
+    print_diagnostic_row(p, "Misses", diagnostic_text(d.pawn_table.misses));
+    print_diagnostic_row(p, "Stores", diagnostic_text(d.pawn_table.stores));
+    print_diagnostic_row(p, "Empty-slot inserts", diagnostic_text(d.pawn_table.empty_inserts));
+    print_diagnostic_row(p, "Same-key updates", diagnostic_text(d.pawn_table.same_key_updates));
+    print_diagnostic_row(p, "Replacements", diagnostic_text(d.pawn_table.replacements));
+    print_diagnostic_row(p, "Occupied entries", diagnostic_text(d.pawn_table.occupied_entries));
+    print_diagnostic_row(p, "Capacity entries", diagnostic_text(d.pawn_table.capacity_entries));
+    print_diagnostic_row(p, "Fill rate",
+        diagnostic_text(percentage(d.pawn_table.occupied_entries,
+            d.pawn_table.capacity_entries), "%"));
+    print_diagnostic_row(p, "Occupancy snapshot",
+        tt_snapshot_is_final ? "final participating-worker tables"
+                             : "sum of participating-worker table snapshots");
+
     print_tt_diagnostics(p, "Negamax", negamax_tt);
     print_tt_diagnostics(p, "Quiescence", d.tt[static_cast<std::size_t>(TTMode::Quiescence)]);
     std::cout << p << "========================================\n";
@@ -562,6 +597,7 @@ int run_benchmark(
                       << " ttcurrentfill " << percentage(diagnostics.tt_current_generation_entries,
                             diagnostics.tt_capacity_entries);
         }
+        print_pawn_table_fields(diagnostics.pawn_table);
 #endif
         std::cout << "\n";
         std::cout.flush();
@@ -570,6 +606,8 @@ int run_benchmark(
 #if ENABLE_QSEARCH_DIAGNOSTICS
     if (tt_bench && persistent_engine) {
         const SearchDiagnostics final_snapshot = persistent_engine->get_search_diagnostics(true);
+        total_diagnostics.pawn_table.capacity_entries = final_snapshot.pawn_table.capacity_entries;
+        total_diagnostics.pawn_table.occupied_entries = final_snapshot.pawn_table.occupied_entries;
         total_diagnostics.tt_capacity_entries = final_snapshot.tt_capacity_entries;
         total_diagnostics.tt_occupied_entries = final_snapshot.tt_occupied_entries;
         total_diagnostics.tt_current_generation_entries = final_snapshot.tt_current_generation_entries;
@@ -623,8 +661,8 @@ int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
     limits.movetime = std::max(1, movetime_ms);
 
     Position pos;
-    Engine white(tt_size_mb);
-    Engine black(tt_size_mb);
+    auto white = std::make_unique<Engine>(tt_size_mb);
+    auto black = std::make_unique<Engine>(tt_size_mb);
     uint64_t total_nodes = 0;
     uint64_t total_time_ms = 0;
     int plies_played = 0;
@@ -656,7 +694,7 @@ int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
         }
 
         const bool white_to_move = pos.is_white_to_move();
-        Engine& engine = white_to_move ? white : black;
+        Engine& engine = white_to_move ? *white : *black;
         const auto start = std::chrono::steady_clock::now();
         const Move best = engine.search(pos, limits);
         const auto end = std::chrono::steady_clock::now();
@@ -728,6 +766,7 @@ int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
                   << " firstmovecutoffs " << percentage(
                       diagnostics.first_move_beta_cutoffs, diagnostics.beta_cutoffs)
                   << " ttfill deferred";
+        print_pawn_table_fields(diagnostics.pawn_table);
 #endif
         std::cout << '\n';
         std::cout.flush();
@@ -736,8 +775,8 @@ int run_benchmark_game(int movetime_ms, std::size_t tt_size_mb, int max_moves) {
     }
 
 #if ENABLE_QSEARCH_DIAGNOSTICS
-    accumulate_tt_snapshot(total_diagnostics, white.get_search_diagnostics(true));
-    accumulate_tt_snapshot(total_diagnostics, black.get_search_diagnostics(true));
+    accumulate_table_snapshots(total_diagnostics, white->get_search_diagnostics(true));
+    accumulate_table_snapshots(total_diagnostics, black->get_search_diagnostics(true));
 #endif
 
     const uint64_t nps = total_time_ms > 0

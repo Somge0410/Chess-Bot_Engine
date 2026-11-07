@@ -1,6 +1,7 @@
 ﻿#include "thread_pool.h"
 
 #include <algorithm>
+#include <memory>
 
 #include "engine.h"
 
@@ -85,6 +86,7 @@ void SearchThreadPool::worker_loop(int thread_id, uint64_t initial_job_id) {
     Move local_best;
     int local_score = 0;
     ThreadLocalData tls_data;
+    std::unique_ptr<PawnTable> pawn_table;
 
     while (true) {
         Position position;
@@ -104,6 +106,13 @@ void SearchThreadPool::worker_loop(int thread_id, uint64_t initial_job_id) {
             limits = job_.limits;
         }
 
+        if (!pawn_table) {
+            pawn_table = std::make_unique<PawnTable>();
+            tls_data.pawn_table = pawn_table.get();
+        }
+        else {
+            pawn_table->resize(PAWN_TABLE_SIZE_LOG2);
+        }
         tls_data.clear_counters();
         Move best_move = local_best;
         int best_score = local_score;
@@ -111,6 +120,9 @@ void SearchThreadPool::worker_loop(int thread_id, uint64_t initial_job_id) {
         engine_.iterative_deepening_new(
             thread_id, false, best_move, best_score, position, time_control, &tls_data);
         tls_data.flush_counters(&engine_, true);
+#if ENABLE_QSEARCH_DIAGNOSTICS
+        tls_data.publish_pawn_table_diagnostics(&engine_);
+#endif
         local_best = best_move;
         local_score = best_score;
 

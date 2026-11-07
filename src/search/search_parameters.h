@@ -4,7 +4,12 @@ inline constexpr int MATE_SCORE = 32000;
 inline constexpr int MAX_PLY = 128;
 inline constexpr int MATE_THRESHOLD = MATE_SCORE - MAX_PLY;
 
-// For Pruning and search
+// Pawn-cache entries per worker: 2^PAWN_TABLE_SIZE_LOG2.
+inline constexpr int PAWN_TABLE_MIN_SIZE_LOG2 = 2;
+inline constexpr int PAWN_TABLE_MAX_SIZE_LOG2 = 20;
+inline int PAWN_TABLE_SIZE_LOG2 = 12;
+
+// For Pruning and search 
 inline int FUTILITY_MARGIN_D1 = 231;
 inline int FUTILITY_MARGIN_D2 = 481;
 inline int MAX_QUIET_PLY = 7;
@@ -28,7 +33,7 @@ inline int MVV_LVA_STAGE = 5;
 inline int KILLER_STAGE = 4;
 inline int COUNTERMOVE_STAGE = 3;
 inline int QUIET_STAGE = 2;
-inline int LOSING_CAPTURE_STAGE = 1;
+inline int LOSING_CAPTURE_STAGE = 1; 
  
 inline int CAPTURE_SCORE_TIEBREAK_DIVISOR = 14;
 

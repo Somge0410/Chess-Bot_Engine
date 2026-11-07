@@ -18,6 +18,15 @@
 
 thread_local ThreadLocalData tls_data;
 
+#if ENABLE_QSEARCH_DIAGNOSTICS
+void ThreadLocalData::publish_pawn_table_diagnostics(Engine* engine) const {
+    if (pawn_table) {
+        std::lock_guard<std::mutex> lock(engine->pawn_table_diagnostics_mutex);
+        engine->pawn_table_diagnostics.add(pawn_table->diagnostics());
+    }
+}
+#endif
+
 void ThreadLocalData::flush_counters(Engine* engine,bool force) {
     if (force || nodes > 10000) {
         engine->nodes.fetch_add(nodes, std::memory_order_relaxed);
@@ -162,7 +171,9 @@ SearchResult Engine::negamax(Position& pos, int depth, int alpha, int beta, int 
     if (nmp_candidate) increment_diagnostic(tls, SearchDiagCounter::NmpCandidates);
 #endif
     if (!king_is_in_check && ((depth <= REVERSE_FUTILITY_MAX_DEPTH && !is_pv_node) || nmp_candidate)) {
-        static_eval = pos.is_white_to_move() ? evaluate(pos, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(pos, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        static_eval = evaluate(pos, nullptr,
+            EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE, &tls->get_pawn_table());
+        if (!pos.is_white_to_move()) static_eval = -static_eval;
     }
     if (!king_is_in_check && depth <= REVERSE_FUTILITY_MAX_DEPTH && std::abs(beta) < MATE_THRESHOLD && !is_pv_node) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -225,8 +236,11 @@ SearchResult Engine::negamax(Position& pos, int depth, int alpha, int beta, int 
 	{
         if (static_eval != -MATE_SCORE)
             current_eval = static_eval;
-        else
-            current_eval = pos.is_white_to_move() ? evaluate(pos, nullptr, EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE) : -evaluate(pos,nullptr,EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE);
+        else {
+            current_eval = evaluate(pos, nullptr,
+                EVAL_MATERIAL | EVAL_POSITIONAL | EVAL_PAWN_STRUCTURE, &tls->get_pawn_table());
+            if (!pos.is_white_to_move()) current_eval = -current_eval;
+        }
     }
     
     // Late Move Reduction prerequisites here

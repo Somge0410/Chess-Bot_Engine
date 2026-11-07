@@ -70,7 +70,8 @@ int Engine::quiescence_search(Position& pos, int alpha, int beta, int search_ply
 #if ENABLE_QSEARCH_DIAGNOSTICS
         increment_diagnostic(tls, SearchDiagCounter::QSoftCapStaticReturns);
 #endif
-        return pos.is_white_to_move() ? evaluate(pos) : -evaluate(pos);
+        const int score = evaluate(pos, nullptr, EvalAll, &tls->get_pawn_table());
+        return pos.is_white_to_move() ? score : -score;
 	}
     if (qply >=max_qply_index) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -82,7 +83,8 @@ int Engine::quiescence_search(Position& pos, int alpha, int beta, int search_ply
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QHardCapStaticReturns);
 #endif
-            return pos.is_white_to_move() ? evaluate(pos) : -evaluate(pos);
+            const int score = evaluate(pos, nullptr, EvalAll, &tls->get_pawn_table());
+            return pos.is_white_to_move() ? score : -score;
         }
         else {
 #if ENABLE_QSEARCH_DIAGNOSTICS
@@ -103,7 +105,8 @@ int Engine::quiescence_search(Position& pos, int alpha, int beta, int search_ply
         }
     }
     else {
-        int stand_pat = pos.is_white_to_move() ? evaluate(pos) : -evaluate(pos);
+        int stand_pat = evaluate(pos, nullptr, EvalAll, &tls->get_pawn_table());
+        if (!pos.is_white_to_move()) stand_pat = -stand_pat;
         if (stand_pat >= beta) {
 #if ENABLE_QSEARCH_DIAGNOSTICS
             increment_diagnostic(tls, SearchDiagCounter::QStandPatCutoffs);
