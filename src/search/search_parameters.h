@@ -46,13 +46,13 @@ inline double ASPIRATION_WINDOW_MULTIPLIER = 2.6458;
 
 // --- NEU: Time Management ---
 inline int MOVE_OVERHEAD_MS = 50;
-inline double MOVES_TO_GO = 40;
-inline double MOVES_TO_GO_MG = 30;
-inline double MOVES_TO_GO_EG = 33;
+inline double MOVES_TO_GO = 37;
+inline double MOVES_TO_GO_MG = 23;
+inline double MOVES_TO_GO_EG = 35;
 inline int MOVE_COUNT_THRESHOLD = 20;
 inline double MIN_MOVES_TO_GO = 10;
 inline double MAX_MOVES_TO_GO = 70;
-inline double INC_USAGE_FACTOR = 0.9; 
+inline double INC_USAGE_FACTOR = 0.9146; 
 inline double MOVE_COUNT_WEIGHT = 0.1;
 inline double REFERENCE_TIME = 300000.0; // 5 minutes
 inline double MAX_MULTIPLIER_FAST = 1.4907;
