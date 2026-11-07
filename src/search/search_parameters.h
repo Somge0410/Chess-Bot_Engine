@@ -9,7 +9,7 @@ inline constexpr int PAWN_TABLE_MIN_SIZE_LOG2 = 2;
 inline constexpr int PAWN_TABLE_MAX_SIZE_LOG2 = 20;
 inline int PAWN_TABLE_SIZE_LOG2 = 12;
 
-// For Pruning and search
+// For Pruning and search 
 inline int FUTILITY_MARGIN_D1 = 231;
 inline int FUTILITY_MARGIN_D2 = 481;
 inline int MAX_QUIET_PLY = 7;
